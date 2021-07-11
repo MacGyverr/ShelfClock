@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <script type="text/javascript" src="js/jquery-3.5.1.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <title>Shelf Clock</title>
+	
+<script type="text/javascript">	
+window.addEventListener("load", startup, false);
+
+function startup() {
+	}
+function msg() {alert("Sorry, not ready yet!");}
+
+function showClock() {$.post("/goClockMode");}
+function startCountdown() {
+    var h = $('#hoursCD').val();
+    var m = $('#minutesCD').val();
+    var s = $('#secondsCD').val();
+    if (isNaN(h) || isNaN(m) || isNaN(s)) {
+        $('#validNrs').show();
+        return;
+    } else {
+        $('#validNrs').hide();
+    }
+    var ms = (h * 60 * 60 * 1000) + (m * 60 * 1000) + (s * 1000);
+    var countdown = { ms: ms};
+    console.log(countdown);
+    $.post("/goCountdownMode", countdown);
+}
+function showTemperature() {$.post("/goTemperatureMode");}
+function showScoreboard() {
+    var left = $('#scoreboardLeft').val();
+    var right = $('#scoreboardRight').val();
+    if (isNaN(left) || isNaN(right)) {
+        $('#validNrs').show();
+        return;
+    } else {
+        $('#validNrs').hide();
+    }
+    var scoreboard = {
+        left: left,
+        right: right
+    };
+    $.post("/goScoreboardMode", scoreboard);
+}
+
+function startTimer() {
+    var h = $('#hoursCD').val();
+    var m = $('#minutesCD').val();
+    var s = $('#secondsCD').val();
+    if (isNaN(h) || isNaN(m) || isNaN(s)) {
+        $('#validNrs').show();
+        return;
+    } else {
+        $('#validNrs').hide();
+    }
+    var ms = (h * 60 * 60 * 1000) + (m * 60 * 1000) + (s * 1000);
+    var countdown = { ms: ms};
+    console.log(countdown);
+    $.post("/goStopwatchMode", countdown);
+}
+
+function showLightshow0() {$.post("/goLightshowMode", { lightshowMode: 0 }); console.log(0); }
+function showLightshow1() {$.post("/goLightshowMode", { lightshowMode: 1 }); console.log(1); }
+function showLightshow2() {$.post("/goLightshowMode", { lightshowMode: 2 }); console.log(2); }
+function showLightshow3() {$.post("/goLightshowMode", { lightshowMode: 3 }); console.log(3); }
+function showLightshow4() {$.post("/goLightshowMode", { lightshowMode: 4 }); console.log(4); }
+function showLightshow5() {$.post("/goLightshowMode", { lightshowMode: 5 }); console.log(5); }
+function showLightshow6() {$.post("/goLightshowMode", { lightshowMode: 6 }); console.log(6); }
+function showLightshow7() {$.post("/goLightshowMode", { lightshowMode: 7 }); console.log(7); }
+function showLightshow8() {$.post("/goLightshowMode", { lightshowMode: 8 }); console.log(8); }
+function showLightshow9() {$.post("/goLightshowMode", { lightshowMode: 9 }); console.log(9); }
+function showDate() {$.post("/goDateMode");}
+function showHumidity() {$.post("/goHumidityMode");}	
+function showSpectrum0() {$.post("/goSpectrumMode", { spectrumMode: 0 }); console.log(0); }
+function showSpectrum1() {$.post("/goSpectrumMode", { spectrumMode: 1 }); console.log(1); }
+function showSpectrum2() {$.post("/goSpectrumMode", { spectrumMode: 2 }); console.log(2); }
+function showSpectrum3() {$.post("/goSpectrumMode", { spectrumMode: 3 }); console.log(3); }
+function showSpectrum4() {$.post("/goSpectrumMode", { spectrumMode: 4 }); console.log(4); }
+function showSpectrum5() {$.post("/goSpectrumMode", { spectrumMode: 5 }); console.log(5); }
+function showSpectrum6() {$.post("/goSpectrumMode", { spectrumMode: 6 }); console.log(6); }
+function showSpectrum7() {$.post("/goSpectrumMode", { spectrumMode: 7 }); console.log(7); }
+function showSpectrum8() {$.post("/goSpectrumMode", { spectrumMode: 8 }); console.log(8); }
+function showSpectrum9() {$.post("/goSpectrumMode", { spectrumMode: 9 }); console.log(9); }
+function showSpectrum10() {$.post("/goSpectrumMode", { spectrumMode: 10 }); console.log(10); }
+function showSpectrum11() {$.post("/goSpectrumMode", { spectrumMode: 11 }); console.log(11); }
+function displayOff() {$.post("/goDisplayOffMode");}
+function scrollingMode() {$.post("/goScrollingMode");}
+function getpreset1() {$.post("/getPreset1");}
+function getpreset2() {$.post("/getPreset2");}
+
+
+function upleft() {
+    var left = $('#scoreboardLeft').val();
+    if (left < 99 && !isNaN(left)) {
+        var newval = parseInt(left) + 1;
+        $('#scoreboardLeft').val(newval);
+        showScoreboard();
+    }
+}
+
+function downleft() {
+    var left = $('#scoreboardLeft').val();
+    if (left > 0 && !isNaN(left)) {
+        var newval = parseInt(left) - 1;
+        $('#scoreboardLeft').val(newval);
+        showScoreboard();
+    }
+}
+
+function upright() {
+    var right = $('#scoreboardRight').val();
+    if (right < 99 && !isNaN(right)) {
+        var newval = parseInt(right) + 1;
+        $('#scoreboardRight').val(newval);
+        showScoreboard();
+    }
+}
+
+function downright() {
+    var right = $('#scoreboardRight').val();
+    if (right > 0 && !isNaN(right)) {
+        var newval = parseInt(right) - 1;
+        $('#scoreboardRight').val(newval);
+        showScoreboard();
+    }
+}
+
+function getscoreboardColorLeft() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+	 $("#scoreboardButtonLeftTop").css('background-color',this.responseText);
+	 $("#scoreboardButtonLeftBottom").css('background-color',this.responseText);
+    }
+  };
+  xhttp.open("GET", "getscoreboardColorLeftRGB", true);
+  xhttp.send();
+}
+
+function getscoreboardColorRight() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+	 $("#scoreboardButtonRightTop").css('background-color',this.responseText);
+	 $("#scoreboardButtonRightBottom").css('background-color',this.responseText);
+    }
+  };
+  xhttp.open("GET", "getscoreboardColorRightRGB", true);
+  xhttp.send();
+}
+
+window.addEventListener("load", myInit, true); function myInit(){
+  getscoreboardColorLeft()
+  getscoreboardColorRight()
+  }
+</script>	
+
+<style type="text/css">
+
+		
+.styled {
+            width:125px;
+    border: 0;
+    line-height: 2.5;
+    padding: 0 5px;
+    font-size: 1rem;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 220, 1);
+    background-image: linear-gradient(to top left,
+                                      rgba(0, 0, 0, .2),
+                                      rgba(0, 0, 0, .2) 30%,
+                                      rgba(0, 0, 0, 0));
+    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
+                inset -2px -2px 3px rgba(0, 0, 0, .6);
+}
+		
+.red-styled {
+            width:125px;
+    border: 0;
+    line-height: 2.5;
+    padding: 0 1px;
+    font-size: 1rem;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+    border-radius: 10px;
+    background-color: rgba(220, 0, 0, 1);
+    background-image: linear-gradient(to top left,
+                                      rgba(0, 0, 0, .2),
+                                      rgba(0, 0, 0, .2) 30%,
+                                      rgba(0, 0, 0, 0));
+    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
+                inset -2px -2px 3px rgba(0, 0, 0, .6);
+}
+		
+.orange-styled {
+            width:125px;
+    border: 0;
+    line-height: 2.5;
+    padding: 0 5px;
+    font-size: 1rem;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+    border-radius: 10px;
+    background-color: rgba(255, 128, 0, 1);
+    background-image: linear-gradient(to top left,
+                                      rgba(0, 0, 0, .2),
+                                      rgba(0, 0, 0, .2) 30%,
+                                      rgba(0, 0, 0, 0));
+    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
+                inset -2px -2px 3px rgba(0, 0, 0, .6);
+}
+		
+.yellow-styled {
+            width:125px;
+    border: 0;
+    line-height: 2.5;
+    padding: 0 5px;
+    font-size: 1rem;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 0, 1);
+    background-image: linear-gradient(to top left,
+                                      rgba(0, 0, 0, .2),
+                                      rgba(0, 0, 0, .2) 30%,
+                                      rgba(0, 0, 0, 0));
+    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
+                inset -2px -2px 3px rgba(0, 0, 0, .6);
+}
+
+.ltgrey-styled {
+            width:125px;
+    border: 0;
+    line-height: 2.5;
+    padding: 0 5px;
+    font-size: 1rem;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+    border-radius: 10px;
+    background-color: rgba(128, 128, 128, 1);
+    background-image: linear-gradient(to top left,
+                                      rgba(0, 0, 0, .2),
+                                      rgba(0, 0, 0, .2) 30%,
+                                      rgba(0, 0, 0, 0));
+    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
+                inset -2px -2px 3px rgba(0, 0, 0, .6);
+}
+
+.ltgreylong-styled {
+            width:255px;
+    border: 0;
+    line-height: 2.5;
+    padding: 0 5px;
+    font-size: 1rem;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+    border-radius: 10px;
+    background-color: rgba(128,128,128, 1);
+    background-image: linear-gradient(to top left,
+                                      rgba(0, 0, 0, .2),
+                                      rgba(0, 0, 0, .2) 30%,
+                                      rgba(0, 0, 0, 0));
+    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
+                inset -2px -2px 3px rgba(0, 0, 0, .6);
+}
+
+.purple-styled {
+            width:125px;
+    border: 0;
+    line-height: 2.5;
+    padding: 0 5px;
+    font-size: 1rem;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+    border-radius: 10px;
+    background-color: rgba(128, 0, 255, 1);
+    background-image: linear-gradient(to top left,
+                                      rgba(0, 0, 0, .2),
+                                      rgba(0, 0, 0, .2) 30%,
+                                      rgba(0, 0, 0, 0));
+    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
+                inset -2px -2px 3px rgba(0, 0, 0, .6);
+}
+
+
+.styled:hover {
+    background-color: rgba(0, 255, 0, 1);
+}
+
+.styled:active {
+    box-shadow: inset -2px -2px 3px rgba(255, 255, 255, .6),
+                inset 2px 2px 3px rgba(0, 0, 0, .6);
+}
+
+.red-styled:hover {
+    background-color: rgba(0, 255, 0, 1);
+}
+
+.yellow-styled:hover {
+    background-color: rgba(0, 255, 0, 1);
+}
+
+.red-styled:active {
+    box-shadow: inset -2px -2px 3px rgba(255, 255, 255, .6),
+                inset 2px 2px 3px rgba(0, 0, 0, .6);
+}
+.orange-styled:hover {
+    background-color: rgba(0, 255, 0, 1);
+}
+
+.orange-styled:active {
+    box-shadow: inset -2px -2px 3px rgba(255, 255, 255, .6),
+                inset 2px 2px 3px rgba(0, 0, 0, .6);
+}
+
+.ltgrey-styled:hover {
+    background-color: rgba(0, 255, 0, 1);
+}
+
+.ltgreylong-styled:hover {
+    background-color: rgba(0, 255, 0, 1);
+}
+.ltgrey-styled:active {
+    box-shadow: inset -2px -2px 3px rgba(255, 255, 255, .6),
+                inset 2px 2px 3px rgba(0, 0, 0, .6);
+}
+
+.ltgreylong-styled:active {
+    box-shadow: inset -2px -2px 3px rgba(255, 255, 255, .6),
+                inset 2px 2px 3px rgba(0, 0, 0, .6);
+}
+
+.purple-styled:hover {
+    background-color: rgba(0, 255, 0, 1);
+}
+
+.purple-styled:active {
+    box-shadow: inset -2px -2px 3px rgba(255, 255, 255, .6),
+                inset 2px 2px 3px rgba(0, 0, 0, .6);
+}
+
+.action_btn {
+	width: 300px;
+	margin: 0 auto;
+	display: inline;
+}
+
+
+</style>	
+	
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4">
+        <a class="navbar-brand" href="./index.html">Shelf Clock</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
+            aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link active" href="./index.html">Home  <span class="sr-only">(current)</span></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="./settings.html">Settings</a>
+                </li>
+        </div>
+    </nav>
+
+<div class="row" style="margin: 10px 10px;">
+	<div class="col-12">
+		<div class="row" style="margin: 10px 10px;">
+			<div class="card">		
+				<div class="card-body">
+					<form>
+						<div style="text-align: center;">
+							<strong>Select Display Mode</strong>
+						</div>
+						<br>
+						<div class="w3-col s4">
+							<form>
+								<input type="button" class="favorite styled" value="Clock" id="clock" onclick="showClock()">
+								<input type="button" class="favorite styled" value="Date" id="date" onclick="showDate()">
+							</form>
+							<br>
+							<br>
+							<form>
+								<input type="button" class="favorite styled" value="Temperature" onclick="showTemperature()">
+								<input type="button" class="favorite styled" value="Humidity" onclick="showHumidity()">
+							</form>
+							<br>
+							<form>
+								<input type="button" class="favorite styled" value="Scrolling" onclick="scrollingMode()">
+								<input type="button" class="favorite styled" value="Display Off" onclick="displayOff()">
+							</form>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+		<div class="row" style="margin: 10px 10px;">
+			<div class="card">		
+				<div class="card-body">
+					<form>
+						<div style="text-align: center;">
+							<strong>Load Saved Preset</strong>
+						</div>
+						<br>
+						<div class="w3-col s4">
+							<form>
+								<input type="button" class="favorite yellow-styled" value="Preset 1" onclick="getpreset1()">
+								<input type="button" class="favorite yellow-styled" value="Preset B" onclick="getpreset2()">
+							</form>
+							<br>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+		<div class="row" style="margin: 10px 10px;">
+            <div class="card">
+                <div class="card-body">
+                    <form>
+						<div style="text-align: center;">
+							<strong>Select Timer Mode</strong>
+						</div>
+                        <div class="form-row" style="text-align: center;">
+                            <div style="width:75px; text-align: center; margin: 0px 5px;">
+								<label>Hours</label>
+                            </div>
+                            <div style="width:75px; text-align: center; margin: 0px 2px;">
+								<label>Minutes</label>
+                            </div>
+                            <div style="width:75px; text-align: center; margin: 0px 12px;">
+								<label>Seconds</label>
+                            </div>
+                        </div>
+                        <div class="form-row" style="text-align: center;">
+                            <div style="width:75px; margin: 0px 5px;">
+                                <input type="text" class="form-control" value="00" id="hoursCD">
+                            </div>
+                            <div style="width:75px; margin: 0px 5px;">
+                                <input type="text" class="form-control" value="00" id="minutesCD">
+                            </div>
+                            <div style="width:75px; margin: 0px 5px;">
+                                <input type="text" class="form-control" value="00" id="secondsCD">
+                            </div>
+                        </div>
+						<br>
+						<form>
+							<input type="button" class="favorite red-styled" value="Start Countdown" onclick="startCountdown()">
+							<input type="button" class="favorite red-styled" value="Start Stopwatch" onclick="startTimer()">
+						</form>
+						<div id="validNrs" style="display: none;">
+							<br />
+							<div class="alert alert-danger" role="alert">
+								Please enter valid values!
+							</div>
+						</div>
+                    </form>
+                </div>
+            </div>
+        </div>	
+		<div class="row" style="margin: 10px 10px;">
+            <div class="card">
+                <div class="card-body">
+                    <form>
+						<div style="text-align: center;">
+							<strong>Scoreboard Mode</strong>
+						</div>
+                        <div class="form-row" style="text-align: center;">
+                            <div style="width:125px; text-align: center; margin: 0px 4px;">
+								<label>Left</label>
+									</div>
+									<div style="width:125px; text-align: center; margin: 0px 4px;">
+								<label>Right</label>
+                            </div>
+                        </div>
+						<form>
+							<input type="button" id="scoreboardButtonLeftTop" name="scoreboardButtonLeft" class="favorite ltgrey-styled" style="background-color: rgba(0, 128, 255, 1)" value="Up" onclick="upleft()">
+							<input type="button" id="scoreboardButtonRightTop" name="scoreboardButtonRight" class="favorite ltgrey-styled" style="background-color: rgba(0, 128, 255, 1)"value="Up" onclick="upright()">
+						</form>
+                        <div class="form-row" style="text-align: center;">
+                            <div style="width:125px; margin: 3px 4px;">
+                                <input type="text" class="form-control" value="00" id="scoreboardLeft">
+                            </div>
+                            <div style="width:125px; margin: 3px 4px;">
+                                <input type="text" class="form-control" value="00" id="scoreboardRight">
+                            </div>
+                        </div>
+						<form>
+							<input type="button" id="scoreboardButtonLeftBottom" name="scoreboardButtonLeft" class="favorite ltgrey-styled" style="background-color: rgba(0, 128, 255, 1)" value="Down" onclick="downleft()">
+							<input type="button" id="scoreboardButtonRightBottom" name="scoreboardButtonRight" class="favorite ltgrey-styled" style="background-color: rgba(0, 128, 255, 1)" value="Down" onclick="downright()">
+						</form>
+						<form>
+							<input type="button" class="favorite ltgreylong-styled" value="Update Scoreboard" onclick="showScoreboard()">
+						</form>
+						<div id="validNrs" style="display: none;">
+							<br />
+							<div class="alert alert-danger" role="alert">
+								Please enter valid values!
+							</div>
+						</div>
+                    </form>
+                </div>
+            </div>
+        </div>		
+		<div class="row" style="margin: 10px 10px;">
+			<div class="card">		
+				<div class="card-body">
+					<form>
+						<div style="text-align: center;">
+							<strong>Lightshow Modes</strong>
+						</div>
+						<br>
+						<form>
+							<input type="button" class="favorite orange-styled" value="Chase" onclick="showLightshow0()">
+							<input type="button" class="favorite orange-styled" value="Twinkles" onclick="showLightshow1()">
+						</form>
+						<br>
+						<form>
+							<input type="button" class="favorite orange-styled" value="Rainbow" onclick="showLightshow2()">
+							<input type="button" class="favorite orange-styled" value="Matrix" onclick="showLightshow3()">
+						</form>
+						<br>
+						<form>
+							<input type="button" class="favorite orange-styled" value="Rain" onclick="showLightshow4()">
+							<input type="button" class="favorite orange-styled" value="Fire" onclick="showLightshow5()">
+						</form>
+						<br>
+						<form>
+							<input type="button" class="favorite orange-styled" value="Snake" onclick="showLightshow6()">
+							<input type="button" class="favorite orange-styled" value="Cylon" onclick="showLightshow7()">
+						</form>
+					</form>
+				</div>
+			</div>
+		</div>
+		<div class="row" style="margin: 10px 10px;">
+			<div class="card">		
+				<div class="card-body">
+					<form>
+						<div style="text-align: center;">
+							<strong>Spectrum Analyzer</strong>
+						</div>
+						<br>
+						<form>
+							<input type="button" class="favorite purple-styled" value="BM Up" onclick="showSpectrum0()">
+							<input type="button" class="favorite purple-styled" value="TM Down" onclick="showSpectrum5()">
+						</form>
+						<br>
+						<form>
+							<input type="button" class="favorite purple-styled" value="CM Out" onclick="showSpectrum1()">
+							<input type="button" class="favorite purple-styled" value="CS In" onclick="showSpectrum6()">
+						</form>
+						<br>
+						<form>
+							<input type="button" class="favorite purple-styled" value="TL to BR" onclick="showSpectrum3()">
+							<input type="button" class="favorite purple-styled" value="TR to BL" onclick="showSpectrum8()">
+						</form>
+						<br>
+						<form>
+							<input type="button" class="favorite purple-styled" value="BL to TR" onclick="showSpectrum2()">
+							<input type="button" class="favorite purple-styled" value="BR to TL" onclick="showSpectrum7()">
+						</form>
+						<br>
+						<form>
+							<input type="button" class="favorite purple-styled" value="Vertical L" onclick="showSpectrum4()">
+							<input type="button" class="favorite purple-styled" value="Vertical R" onclick="showSpectrum10()">
+						</form>
+						<br>
+						<form>
+							<input type="button" class="favorite purple-styled" value="Horizontal L" onclick="showSpectrum9()">
+							<input type="button" class="favorite purple-styled" value="Horizontal R" onclick="showSpectrum11()">
+						</form>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+</body>
+
+</html>
