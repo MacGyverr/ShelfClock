@@ -36,3 +36,7 @@ https://github.com/helpquick/7-Segment-WiFi-Clock
 https://github.com/FastLED/FastLED/wiki/Overview
 https://github.com/mattncsu/FastLED_examples
 http://84.107.155.75/forum/index.php?action=view&id=300  (all the RTTL songs)
+
+
+I uploaded videos of it here.
+https://www.youtube.com/watch?v=FABxgoq68Fs&list=PLkV6jp60iXvjmrqkrMTHSjlMShLybMzkE
