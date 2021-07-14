@@ -15,12 +15,20 @@ New Years Mode
 Text Scroller
 Web Interface
 
+It uses the following hardware:
+LOLIN32 featherboard (ESP-WROOM-32)
+DS3231 AT24C32 IIC RTC Clock Module
+DHT11 Temperature Sensor
+Photosensitive Resistance Sensor
+SparkFun Sound Detector
+BTF-LIGHTING WS2812B RGB 5050SMD (271 of them)
+
 I made tons of settings, and the ability to save them as presets in NVS.
 
-Because it uses soooo much NVS space for Preferences and AutoConnect I had to create a newer partition scheme for the ESP32 that moves the NVS to just before SPIFFS and then takes away some space (this was easier then trying to get is to boot the App from a different location by extending the original NVS size. I included the cvs and text for it in parttition-info.txt
+Because it uses soooo much NVS space for Preferences and AutoConnect I had to create a newer partition scheme for the ESP32 that moves the NVS to just before SPIFFS and then takes away some space (this was easier then trying to get it to boot the App from a different memory location (other than 0x10000) after extending the original NVS size. I included the cvs and text for it in parttition-info.txt
 
 Note:
-I don't write C code nor do I write Javascript or CSS for that matter, but if there's something I want to do I can usually kludge together something together by using the infinite examples made by much smarter people out there.
+I don't write C code nor do I write Javascript or CSS for that matter, but if there's something I want to do I can usually kludge something together by using the infinite examples made by much smarter people out there.
 This is not my code as much as it is me researching and mixing 50 examples together, none of it is written efficiently or well. I use global variables everywhere, I don't release memory, or even initialize variables correctly. I know enough to know that I don't do any of it correctly.
 I just keep hacking on it until it works, and just barely most times.
 If you like this code and actually know what you are doing, please feel free to remake it the right way.
