@@ -38,6 +38,9 @@ I will try to add the list of libraries I use to compile this mess with soon.
 I included the modified STLs I used to make mine, basically smaller versions of DIY-Machines and more of them, so that they can be printed on my smaller single-color 3D printer.
 The 3D versions I made using TinkerCAD, here they are: https://www.tinkercad.com/things/fyxXr27PCph
 
+Thanks to the work by rjackr, you should be able to use between 6 and 9 LEDs per segment without any trouble.
+https://github.com/rjackr/ShelfClock/commit/4604793791f351333186262200bfa97d9bf8e52f
+
 Links to places I know I used code examples from:
 https://github.com/DIY-Machines/DigitalClockSmartShelving
 https://github.com/helpquick/7-Segment-WiFi-Clock
