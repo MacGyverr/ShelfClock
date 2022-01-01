@@ -24,15 +24,37 @@
 #define LED_PIN 2             // led control pin
 #define PHOTORESISTER_PIN 36  // select the analog input pin for the photoresistor
 #define MILLI_AMPS 2400 
-#define NUM_LEDS  350
 #define NUMBER_OF_DIGITS 7 //4 real, 3 fake
 #define LEDS_PER_SEGMENT 7
 #define SEGMENTS_PER_NUMBER 7
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
 #define SPECTRUM_PIXELS  37  //times 7 to get all 258 leds
+#define SEGMENTS_LEDS (SPECTRUM_PIXELS * LEDS_PER_SEGMENT)  // Number leds in all segments
+#define SPOT_LEDS (NUMBER_OF_DIGITS * 2)        // Number of Spotlight leds
+#define NUM_LEDS  (SEGMENTS_LEDS + SPOT_LEDS)   // Number of all leds
+
 #define PHOTO_SAMPLES 15  //number of samples to take from the photoresister
 
+#if LEDS_PER_SEGMENT == 6
+#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5
+#elif LEDS_PER_SEGMENT == 7
+#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6
+#elif LEDS_PER_SEGMENT == 8
+#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7
+#elif LEDS_PER_SEGMENT == 9
+#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7, n*LEDS_PER_SEGMENT+8
+#else
+ #error "Not supported Leds per segment. You need to add definition of seg(n) with needed number of elements according to formula above"
+#endif
+
+#define digit0 seg(0), seg(1), seg(2), seg(3), seg(4), seg(5), seg(6)
+#define fdigit1 seg(2), seg(7), seg(10), seg(15), seg(8), seg(3), seg(9)
+#define digit2 seg(10), seg(11), seg(12), seg(13), seg(14), seg(15), seg(16)
+#define fdigit3 seg(12), seg(17), seg(20), seg(25), seg(18), seg(13), seg(19)
+#define digit4 seg(20), seg(21), seg(22), seg(23), seg(24), seg(25), seg(26)
+#define fdigit5 seg(22), seg(27), seg(30), seg(35), seg(28), seg(23), seg(29)
+#define digit6 seg(30), seg(31), seg(32), seg(33), seg(34), seg(35), seg(36)
 
 const char* host = "shelfclock";
 const int   daylightOffset_sec = 3600;
@@ -80,7 +102,7 @@ byte greenMatrix[SPECTRUM_PIXELS];
 int lightshowSpeed = 1;
 int snakeLastDirection = 0;  //snake's last dirction
 int snakePosition = 0;  //snake's position
-int foodSpot = random(36);  //food spot
+int foodSpot = random(SPECTRUM_PIXELS-1);  //food spot
 int snakeWaiting = 0;  //waiting
 int getSlower = 180;
 int daysUptime = 0;
@@ -222,43 +244,37 @@ CRGB lightchaseColorTwo = CRGB::Red;
 
   CRGB oldsnakecolor = CRGB::Green;
   CRGB spotcolor = CHSV(random(0, 255), 255, 255);
-const uint16_t FAKE_LEDs[FAKE_NUM_LEDS] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,  //real digit #0
-                                      20,19,18,17,16,15,14,49,50,51,52,53,54,55,76,75,74,73,72,71,70,111,110,109,108,107,106,105,56,57,58,59,60,61,62,27,26,25,24,23,22,21,63,64,65,66,67,68,69,  //fake digit #1
-                                      70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,  //real digit #2
-                                      90,89,88,87,86,85,84,119,120,121,122,123,124,125,146,145,144,143,142,141,140,181,180,179,178,177,176,175,126,127,128,129,130,131,132,97,96,95,94,93,92,91,133,134,135,136,137,138,139,  //fake digit #3
-                                      140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,  //real digit #4
-                                      160,159,158,157,156,155,154,189,190,191,192,193,194,195,216,215,214,213,212,211,210,251,250,249,248,247,246,245,196,197,198,199,200,201,202,167,166,165,164,163,162,161,203,204,205,206,207,208,209,  //fake digit #5
-                                      210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,256,257,258};  //real digit #6
+  const uint16_t FAKE_LEDs[FAKE_NUM_LEDS] = {digit0, fdigit1, digit2, fdigit3, digit4, fdigit5, digit6};
 
 //fake LED layout for spectrum (from the middle out)
-const uint16_t FAKE_LEDs_C_BMUP[259] = {119,120,121,122,123,124,125,77,78,79,80,81,82,83,147,148,149,150,151,152,153,84,85,86,87,88,89,90,140,141,142,143,144,145,146,133,134,135,136,137,138,139,189,190,191,192,193,194,195,49,50,51,52,53,54,55,154,155,156,157,158,159,160,70,71,72,73,74,75,76,182,183,184,185,186,187,188,112,113,114,115,116,117,118,175,176,177,178,179,180,181,91,92,93,94,95,96,97,126,127,128,129,130,131,132,7,8,9,10,11,12,13,217,218,219,220,221,222,223,14,15,16,17,18,19,20,210,211,212,213,214,215,216,63,64,65,66,67,68,69,203,204,205,206,207,208,209,105,106,107,108,109,110,111,161,162,163,164,165,166,167,98,99,100,101,102,103,104,168,169,170,171,172,173,174,0,1,2,3,4,5,6,224,225,226,227,228,229,230,42,43,44,45,46,47,48,252,253,254,255,256,257,258,21,22,23,24,25,26,27,245,246,247,248,249,250,251,56,57,58,59,60,61,62,196,197,198,199,200,201,202,35,36,37,38,39,40,41,231,232,233,234,235,236,237,28,29,30,31,32,33,34,238,239,240,241,242,243,244};
+const uint16_t FAKE_LEDs_C_BMUP[SEGMENTS_LEDS] = {seg(17), seg(11), seg(21), seg(12), seg(20), seg(19), seg(27), seg(7), seg(22), seg(10), seg(26), seg(16), seg(25), seg(13), seg(18), seg(1), seg(31), seg(2), seg(30), seg(9), seg(29), seg(15), seg(23), seg(14), seg(24), seg(0), seg(32), seg(6), seg(36), seg(3), seg(35), seg(8), seg(28), seg(5), seg(33), seg(4), seg(34)};
 //fake LED layout for spectrum (bfrom the outside in)
-const uint16_t FAKE_LEDs_C_CMOT[259] = {133,134,135,136,137,138,139,182,183,184,185,186,187,188,112,113,114,115,116,117,118,140,141,142,143,144,145,146,91,92,93,94,95,96,97,175,176,177,178,179,180,181,84,85,86,87,88,89,90,119,120,121,122,123,124,125,126,127,128,129,130,131,132,147,148,149,150,151,152,153,98,99,100,101,102,103,104,168,169,170,171,172,173,174,77,78,79,80,81,82,83,203,204,205,206,207,208,209,63,64,65,66,67,68,69,154,155,156,157,158,159,160,105,106,107,108,109,110,111,161,162,163,164,165,166,167,70,71,72,73,74,75,76,196,197,198,199,200,201,202,49,50,51,52,53,54,55,189,190,191,192,193,194,195,56,57,58,59,60,61,62,252,253,254,255,256,257,258,42,43,44,45,46,47,48,210,211,212,213,214,215,216,21,22,23,24,25,26,27,245,246,247,248,249,250,251,14,15,16,17,18,19,20,238,239,240,241,242,243,244,7,8,9,10,11,12,13,217,218,219,220,221,222,223,28,29,30,31,32,33,34,224,225,226,227,228,229,230,35,36,37,38,39,40,41,231,232,233,234,235,236,237,0,1,2,3,4,5,6};
+const uint16_t FAKE_LEDs_C_CMOT[SEGMENTS_LEDS] = {seg(19), seg(26), seg(16), seg(20), seg(13), seg(25), seg(12), seg(17), seg(18), seg(21), seg(14), seg(24), seg(11), seg(29), seg(9), seg(22), seg(15), seg(23), seg(10), seg(28), seg(7), seg(27), seg(8), seg(36), seg(6), seg(30), seg(3), seg(35), seg(2), seg(34), seg(1), seg(31), seg(4), seg(32), seg(5), seg(33), seg(0)};
 //fake LED layout for spectrum (bottom-left to right-top)
-const uint16_t FAKE_LEDs_C_BLTR[259] = {224,225,226,227,228,229,230,217,218,219,220,221,222,223,189,190,191,192,193,194,195,210,211,212,213,214,215,216,252,253,254,255,256,257,258,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,203,204,205,206,207,208,209,154,155,156,157,158,159,160,147,148,149,150,151,152,153,119,120,121,122,123,124,125,140,141,142,143,144,145,146,182,183,184,185,186,187,188,161,162,163,164,165,166,167,196,197,198,199,200,201,202,168,169,170,171,172,173,174,175,176,177,178,179,180,181,133,134,135,136,137,138,139,84,85,86,87,88,89,90,77,78,79,80,81,82,83,49,50,51,52,53,54,55,70,71,72,73,74,75,76,112,113,114,115,116,117,118,91,92,93,94,95,96,97,126,127,128,129,130,131,132,98,99,100,101,102,103,104,105,106,107,108,109,110,111,63,64,65,66,67,68,69,14,15,16,17,18,19,20,7,8,9,10,11,12,13,0,1,2,3,4,5,6,42,43,44,45,46,47,48,21,22,23,24,25,26,27,56,57,58,59,60,61,62,28,29,30,31,32,33,34,35,36,37,38,39,40,41};
+const uint16_t FAKE_LEDs_C_BLTR[SEGMENTS_LEDS] = {seg(32), seg(31), seg(27), seg(30), seg(36), seg(33), seg(34), seg(35), seg(29), seg(22), seg(21), seg(17), seg(20), seg(26), seg(23), seg(28), seg(24), seg(25), seg(19), seg(12), seg(11), seg(7), seg(10), seg(16), seg(13), seg(18), seg(14), seg(15), seg(9), seg(2), seg(1), seg(0), seg(6), seg(3), seg(8), seg(4), seg(5)};
 //fake LED layout for spectrum (top-left to bottom-right) 
-const uint16_t FAKE_LEDs_C_TLBR[259] = {238,239,240,241,242,243,244,231,232,233,234,235,236,237,224,225,226,227,228,229,230,252,253,254,255,256,257,258,245,246,247,248,249,250,251,196,197,198,199,200,201,202,168,169,170,171,172,173,174,161,162,163,164,165,166,167,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,189,190,191,192,193,194,195,154,155,156,157,158,159,160,182,183,184,185,186,187,188,175,176,177,178,179,180,181,126,127,128,129,130,131,132,98,99,100,101,102,103,104,91,92,93,94,95,96,97,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,119,120,121,122,123,124,125,84,85,86,87,88,89,90,112,113,114,115,116,117,118,105,106,107,108,109,110,111,56,57,58,59,60,61,62,28,29,30,31,32,33,34,21,22,23,24,25,26,27,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,49,50,51,52,53,54,55,14,15,16,17,18,19,20,42,43,44,45,46,47,48,35,36,37,38,39,40,41,0,1,2,3,4,5,6,7,8,9,10,11,12,13};
+const uint16_t FAKE_LEDs_C_TLBR[SEGMENTS_LEDS] = {seg(34), seg(33), seg(32), seg(36), seg(35), seg(28), seg(24), seg(23), seg(29), seg(30), seg(31), seg(27), seg(22), seg(26), seg(25), seg(18), seg(14), seg(13), seg(19), seg(20), seg(21), seg(17), seg(12), seg(16), seg(15), seg(8), seg(4), seg(3), seg(9), seg(10), seg(11), seg(7), seg(2), seg(6), seg(5), seg(0), seg(1)};
 //fake LED layout for spectrum (top-middle down)  
-const uint16_t FAKE_LEDs_C_TMDN[259] = {126,127,128,129,130,131,132,98,99,100,101,102,103,104,168,169,170,171,172,173,174,91,92,93,94,95,96,97,175,176,177,178,179,180,181,133,134,135,136,137,138,139,56,57,58,59,60,61,62,196,197,198,199,200,201,202,105,106,107,108,109,110,111,161,162,163,164,165,166,167,112,113,114,115,116,117,118,182,183,184,185,186,187,188,84,85,86,87,88,89,90,140,141,142,143,144,145,146,119,120,121,122,123,124,125,28,29,30,31,32,33,34,238,239,240,241,242,243,244,21,22,23,24,25,26,27,245,246,247,248,249,250,251,63,64,65,66,67,68,69,203,204,205,206,207,208,209,70,71,72,73,74,75,76,154,155,156,157,158,159,160,77,78,79,80,81,82,83,147,148,149,150,151,152,153,35,36,37,38,39,40,41,231,232,233,234,235,236,237,42,43,44,45,46,47,48,252,253,254,255,256,257,258,14,15,16,17,18,19,20,210,211,212,213,214,215,216,49,50,51,52,53,54,55,189,190,191,192,193,194,195,0,1,2,3,4,5,6,224,225,226,227,228,229,230,7,8,9,10,11,12,13,217,218,219,220,221,222,223};
+const uint16_t FAKE_LEDs_C_TMDN[SEGMENTS_LEDS] = {seg(18), seg(14), seg(24), seg(13), seg(25), seg(19), seg(8), seg(28), seg(15), seg(23), seg(16), seg(26), seg(12), seg(20), seg(17), seg(4), seg(34), seg(3), seg(35), seg(9), seg(29), seg(10), seg(22), seg(11), seg(21), seg(5), seg(33), seg(6), seg(36), seg(2), seg(30), seg(7), seg(27), seg(0), seg(32), seg(1), seg(31)};
 //fake LED layout for spectrum (center-sides in)  
-const uint16_t FAKE_LEDs_C_CSIN[259] = {35,36,37,38,39,40,41,224,225,226,227,228,229,230,0,1,2,3,4,5,6,231,232,233,234,235,236,237,42,43,44,45,46,47,48,252,253,254,255,256,257,258,28,29,30,31,32,33,34,217,218,219,220,221,222,223,7,8,9,10,11,12,13,238,239,240,241,242,243,244,21,22,23,24,25,26,27,210,211,212,213,214,215,216,14,15,16,17,18,19,20,245,246,247,248,249,250,251,63,64,65,66,67,68,69,203,204,205,206,207,208,209,56,57,58,59,60,61,62,189,190,191,192,193,194,195,49,50,51,52,53,54,55,196,197,198,199,200,201,202,105,106,107,108,109,110,111,154,155,156,157,158,159,160,70,71,72,73,74,75,76,161,162,163,164,165,166,167,112,113,114,115,116,117,118,182,183,184,185,186,187,188,98,99,100,101,102,103,104,147,148,149,150,151,152,153,77,78,79,80,81,82,83,168,169,170,171,172,173,174,91,92,93,94,95,96,97,140,141,142,143,144,145,146,84,85,86,87,88,89,90,175,176,177,178,179,180,181,133,134,135,136,137,138,139,126,127,128,129,130,131,132,119,120,121,122,123,124,125};
+const uint16_t FAKE_LEDs_C_CSIN[SEGMENTS_LEDS] = {seg(5), seg(32), seg(0), seg(33), seg(6), seg(36), seg(4), seg(31), seg(1), seg(34), seg(3), seg(30), seg(2), seg(35), seg(9), seg(29), seg(8), seg(27), seg(7), seg(28), seg(15), seg(22), seg(10), seg(23), seg(16), seg(26), seg(14), seg(21), seg(11), seg(24), seg(13), seg(20), seg(12), seg(25), seg(19), seg(18), seg(17)};
 //fake LED layout for spectrum (bottom-right to left-top)
-const uint16_t FAKE_LEDs_C_BRTL[259] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,49,50,51,52,53,54,55,14,15,16,17,18,19,20,48,47,46,45,44,43,42,35,36,37,38,39,40,41,28,29,30,31,32,33,34,21,22,23,24,25,26,27,69,68,67,66,65,64,63,70,71,72,73,74,75,76,77,78,79,80,81,82,83,125,124,123,122,121,120,119,84,85,86,87,88,89,90,118,117,116,115,114,113,112,105,106,107,108,109,110,111,56,57,58,59,60,61,62,98,99,100,101,102,103,104,91,92,93,94,95,96,97,139,138,137,136,135,134,133,146,145,144,143,142,141,140,153,152,151,150,149,148,147,195,194,193,192,191,190,189,160,159,158,157,156,155,154,182,183,184,185,186,187,188,181,180,179,178,177,176,175,132,131,130,129,128,127,126,174,173,172,171,170,169,168,167,166,165,164,163,162,161,203,204,205,206,207,208,209,216,215,214,213,212,211,210,223,222,221,220,219,218,217,230,229,228,227,226,225,224,252,253,254,255,256,257,258,251,250,249,248,247,246,245,202,201,200,199,198,197,196,244,243,242,241,240,239,238,237,236,235,234,233,232,231};
+const uint16_t FAKE_LEDs_C_BRTL[SEGMENTS_LEDS] = {seg(0), seg(1), seg(7), seg(2), seg(6), seg(5), seg(4), seg(3), seg(9), seg(10), seg(11), seg(17), seg(12), seg(16), seg(15), seg(8), seg(14), seg(13), seg(19), seg(20), seg(21), seg(27), seg(22), seg(26), seg(25), seg(18), seg(24), seg(23), seg(29), seg(30), seg(31), seg(32), seg(36), seg(35), seg(28), seg(34), seg(33)};
 //fake LED layout for spectrum (top-right to bottom-left)
-const uint16_t FAKE_LEDs_C_TRBL[259] = {28,29,30,31,32,33,34,35,36,37,38,39,40,41,0,1,2,3,4,5,6,42,43,44,45,46,47,48,21,22,23,24,25,26,27,56,57,58,59,60,61,62,98,99,100,101,102,103,104,105,106,107,108,109,110,111,63,64,65,66,67,68,69,14,15,16,17,18,19,20,7,8,9,10,11,12,13,49,50,51,52,53,54,55,70,71,72,73,74,75,76,112,113,114,115,116,117,118,91,92,93,94,95,96,97,126,127,128,129,130,131,132,168,169,170,171,172,173,174,175,176,177,178,179,180,181,133,134,135,136,137,138,139,84,85,86,87,88,89,90,77,78,79,80,81,82,83,119,120,121,122,123,124,125,140,141,142,143,144,145,146,182,183,184,185,186,187,188,161,162,163,164,165,166,167,196,197,198,199,200,201,202,238,239,240,241,242,243,244,245,246,247,248,249,250,251,203,204,205,206,207,208,209,154,155,156,157,158,159,160,147,148,149,150,151,152,153,189,190,191,192,193,194,195,210,211,212,213,214,215,216,252,253,254,255,256,257,258,231,232,233,234,235,236,237,224,225,226,227,228,229,230,217,218,219,220,221,222,223};
+const uint16_t FAKE_LEDs_C_TRBL[SEGMENTS_LEDS] = {seg(4), seg(5), seg(0), seg(6), seg(3), seg(8), seg(14), seg(15), seg(9), seg(2), seg(1), seg(7), seg(10), seg(16), seg(13), seg(18), seg(24), seg(25), seg(19), seg(12), seg(11), seg(17), seg(20), seg(26), seg(23), seg(28), seg(34), seg(35), seg(29), seg(22), seg(21), seg(27), seg(30), seg(36), seg(33), seg(32), seg(31)};
 //fake LED layout for spectrum (horizontal parts)   
-const uint16_t FAKE_LEDs_C_OUTS[259] = {217,218,219,220,221,222,223,252,253,254,255,256,257,258,238,239,240,241,242,243,244,189,190,191,192,193,194,195,203,204,205,206,207,208,209,196,197,198,199,200,201,202,147,148,149,150,151,152,153,182,183,184,185,186,187,188,168,169,170,171,172,173,174,119,120,121,122,123,124,125,133,134,135,136,137,138,139,126,127,128,129,130,131,132,77,78,79,80,81,82,83,112,113,114,115,116,117,118,98,99,100,101,102,103,104,49,50,51,52,53,54,55,63,64,65,66,67,68,69,56,57,58,59,60,61,62,7,8,9,10,11,12,13,42,43,44,45,46,47,48,28,29,30,31,32,33,34,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281};
-const uint16_t FAKE_LEDs_C_OUTS2[259] = {7,8,9,10,11,12,13,42,43,44,45,46,47,48,28,29,30,31,32,33,34,49,50,51,52,53,54,55,63,64,65,66,67,68,69,56,57,58,59,60,61,62,77,78,79,80,81,82,83,112,113,114,115,116,117,118,98,99,100,101,102,103,104,119,120,121,122,123,124,125,133,134,135,136,137,138,139,126,127,128,129,130,131,132,147,148,149,150,151,152,153,182,183,184,185,186,187,188,168,169,170,171,172,173,174,189,190,191,192,193,194,195,203,204,205,206,207,208,209,196,197,198,199,200,201,202,217,218,219,220,221,222,223,252,253,254,255,256,257,258,238,239,240,241,242,243,244,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281};
+const uint16_t FAKE_LEDs_C_OUTS[SEGMENTS_LEDS] = {seg(31), seg(39), seg(36), seg(39), seg(34), seg(39), seg(27), seg(39), seg(29), seg(39), seg(28), seg(39), seg(21), seg(39), seg(26), seg(39), seg(24), seg(39), seg(17), seg(39), seg(19), seg(39), seg(18), seg(39), seg(11), seg(39), seg(16), seg(39), seg(14), seg(39), seg(7), seg(39),seg(9), seg(8), seg(1), seg(6), seg(4)};
+const uint16_t FAKE_LEDs_C_OUTS2[SEGMENTS_LEDS] = {seg(1), seg(39), seg(6), seg(39), seg(4), seg(39), seg(7), seg(39), seg(9), seg(39), seg(8), seg(39), seg(11), seg(39), seg(16), seg(39), seg(14), seg(39), seg(17), seg(39), seg(19), seg(39), seg(18), seg(39), seg(21), seg(39), seg(26), seg(39), seg(24), seg(39), seg(27), seg(39),seg(29), seg(28), seg(31), seg(36), seg(34)};
 //fake LED layout for spectrum (vertical parts)  
-const uint16_t FAKE_LEDs_C_VERT[259] = {224,225,226,227,228,229,230,231,232,233,234,235,236,237,210,211,212,213,214,215,216,245,246,247,248,249,250,251,154,155,156,157,158,159,160,161,162,163,164,165,166,167,140,141,142,143,144,145,146,175,176,177,178,179,180,181,84,85,86,87,88,89,90,91,92,93,94,95,96,97,70,71,72,73,74,75,76,105,106,107,108,109,110,111,14,15,16,17,18,19,20,21,22,23,24,25,26,27,0,1,2,3,4,5,6,35,36,37,38,39,40,41,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281};
-const uint16_t FAKE_LEDs_C_VERT2[259] = {0,1,2,3,4,5,6,35,36,37,38,39,40,41,14,15,16,17,18,19,20,21,22,23,24,25,26,27,70,71,72,73,74,75,76,105,106,107,108,109,110,111,84,85,86,87,88,89,90,91,92,93,94,95,96,97,140,141,142,143,144,145,146,175,176,177,178,179,180,181,154,155,156,157,158,159,160,161,162,163,164,165,166,167,210,211,212,213,214,215,216,245,246,247,248,249,250,251,224,225,226,227,228,229,230,231,232,233,234,235,236,237,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281};
+const uint16_t FAKE_LEDs_C_VERT[SEGMENTS_LEDS] = {seg(32), seg(39), seg(33), seg(39), seg(30), seg(39), seg(35), seg(39), seg(39), seg(22), seg(39), seg(23), seg(39), seg(39), seg(20), seg(39), seg(25), seg(39), seg(39), seg(12), seg(39), seg(13), seg(39), seg(39), seg(10), seg(39), seg(15), seg(39), seg(39), seg(2), seg(39), seg(3), seg(39), seg(0), seg(39), seg(5), seg(39)};
+const uint16_t FAKE_LEDs_C_VERT2[SEGMENTS_LEDS] = {seg(0), seg(39), seg(5), seg(39), seg(39), seg(2), seg(39), seg(3), seg(39), seg(39), seg(10), seg(39), seg(15), seg(39), seg(39), seg(12), seg(39), seg(13), seg(39), seg(39), seg(20), seg(39), seg(25), seg(39), seg(39), seg(22), seg(39), seg(23), seg(39), seg(30), seg(39), seg(35), seg(39), seg(32), seg(39), seg(33), seg(39)};
 
 //fake LED layout for fire display  
-const uint16_t FAKE_LEDs_C_FIRE[259] = {119,120,121,122,123,124,125,77,78,79,80,81,82,83,147,148,149,150,151,152,153,84,85,86,87,88,89,90,140,141,142,143,144,145,146,133,134,135,136,137,138,139,189,190,191,192,193,194,195,49,50,51,52,53,54,55,154,155,156,157,158,159,160,70,71,72,73,74,75,76,182,183,184,185,186,187,188,112,113,114,115,116,117,118,175,176,177,178,179,180,181,91,92,93,94,95,96,97,126,127,128,129,130,131,132,7,8,9,10,11,12,13,217,218,219,220,221,222,223,14,15,16,17,18,19,20,210,211,212,213,214,215,216,63,64,65,66,67,68,69,203,204,205,206,207,208,209,105,106,107,108,109,110,111,161,162,163,164,165,166,167,98,99,100,101,102,103,104,168,169,170,171,172,173,174,0,1,2,3,4,5,6,224,225,226,227,228,229,230,42,43,44,45,46,47,48,252,253,254,255,256,257,258,21,22,23,24,25,26,27,245,246,247,248,249,250,251,56,57,58,59,60,61,62,196,197,198,199,200,201,202,35,36,37,38,39,40,41,231,232,233,234,235,236,237,28,29,30,31,32,33,34,238,239,240,241,242,243,244};
+const uint16_t FAKE_LEDs_C_FIRE[SEGMENTS_LEDS] = {seg(17), seg(11), seg(21), seg(12), seg(20), seg(19), seg(27), seg(7), seg(22), seg(10), seg(26), seg(16), seg(25), seg(13), seg(18), seg(1), seg(31), seg(2), seg(30), seg(9), seg(29), seg(15), seg(23), seg(14), seg(24), seg(0), seg(32), seg(6), seg(36), seg(3), seg(35), seg(8), seg(28), seg(5), seg(33), seg(4), seg(34)};
 //fake LED layout for Rain display  
-const uint16_t FAKE_LEDs_C_RAIN[259] = {210,211,212,213,214,215,216,245,246,247,248,249,250,251,7,8,9,10,11,12,13,42,43,44,45,46,47,48,28,29,30,31,32,33,34,154,155,156,157,158,159,160,161,162,163,164,165,166,167,217,218,219,220,221,222,223,252,253,254,255,256,257,258,238,239,240,241,242,243,244,84,85,86,87,88,89,90,91,92,93,94,95,96,97,49,50,51,52,53,54,55,63,64,65,66,67,68,69,56,57,58,59,60,61,62,0,1,2,3,4,5,6,35,36,37,38,39,40,41,119,120,121,122,123,124,125,133,134,135,136,137,138,139,126,127,128,129,130,131,132,70,71,72,73,74,75,76,105,106,107,108,109,110,111,147,148,149,150,151,152,153,182,183,184,185,186,187,188,168,169,170,171,172,173,174,14,15,16,17,18,19,20,21,22,23,24,25,26,27,189,190,191,192,193,194,195,203,204,205,206,207,208,209,196,197,198,199,200,201,202,140,141,142,143,144,145,146,175,176,177,178,179,180,181,77,78,79,80,81,82,83,112,113,114,115,116,117,118,98,99,100,101,102,103,104,224,225,226,227,228,229,230,231,232,233,234,235,236,237};
+const uint16_t FAKE_LEDs_C_RAIN[SEGMENTS_LEDS] = {seg(30), seg(35), seg(1), seg(6), seg(4), seg(22), seg(23), seg(31), seg(36), seg(34), seg(12), seg(13), seg(7), seg(9), seg(8), seg(0), seg(5), seg(17), seg(19), seg(18), seg(10), seg(15), seg(21), seg(26), seg(24), seg(2), seg(3), seg(27), seg(29), seg(28), seg(20), seg(25), seg(11), seg(16), seg(14), seg(32), seg(33)};
 //fake LED layout for Snake display 
-const uint16_t FAKE_LEDs_SNAKE[259] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,49,50,51,52,53,54,55,14,15,16,17,18,19,20,42,43,44,45,46,47,48,35,36,37,38,39,40,41,28,29,30,31,32,33,34,21,22,23,24,25,26,27,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,119,120,121,122,123,124,125,84,85,86,87,88,89,90,112,113,114,115,116,117,118,105,106,107,108,109,110,111,56,57,58,59,60,61,62,98,99,100,101,102,103,104,91,92,93,94,95,96,97,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,189,190,191,192,193,194,195,154,155,156,157,158,159,160,182,183,184,185,186,187,188,175,176,177,178,179,180,181,126,127,128,129,130,131,132,168,169,170,171,172,173,174,161,162,163,164,165,166,167,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,252,253,254,255,256,257,258,245,246,247,248,249,250,251,196,197,198,199,200,201,202,238,239,240,241,242,243,244,231,232,233,234,235,236,237};
+const uint16_t FAKE_LEDs_SNAKE[SEGMENTS_LEDS] = {seg(0), seg(1), seg(7), seg(2), seg(6), seg(5), seg(4), seg(3), seg(9), seg(10), seg(11), seg(17), seg(12), seg(16), seg(15), seg(8), seg(14), seg(13), seg(19), seg(20), seg(21), seg(27), seg(22), seg(26), seg(25), seg(18), seg(24), seg(23), seg(29), seg(30), seg(31), seg(32), seg(36), seg(35), seg(28), seg(34), seg(33)};
 
 
 const char * rickroll2 = "Together:d=8,o=5,b=225:4d#,f.,c#.,c.6,4a#.,4g.,f.,d#.,c.,4a#,2g#,4d#,f.,c#.,c.6,2a#,g.,f.,1d#.,d#.,4f,c#.,c.6,2a#,4g.,4f,d#.,f.,g.,4g#.,g#.,4a#,c.6,4c#6,4c6,4a#,4g.,4g#,4a#,2g#";
@@ -738,12 +754,12 @@ void displayTimeMode() {  //main clock function
       tinyhourColor = hourColor;
       if (ClockColorSettings == 4 && pastelColors == 0){ tinyhourColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ tinyhourColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-        for (int i=224; i<231; i++) { LEDs[i] = tinyhourColor;}
+        for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhourColor;}
       if (ClockColorSettings == 4 && pastelColors == 0){ tinyhourColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ tinyhourColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-        for (int i=231; i<238; i++) { LEDs[i] = tinyhourColor;}
+        for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhourColor;}
   	} else {
-  	    for (int i=224; i<238; i++) { LEDs[i] = CRGB::Black;}
+  	    for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black;}
   	  }
       displayNumber(h2,5,hourColor);
       displayNumber(m1,2,minColor);
@@ -763,11 +779,11 @@ void displayTimeMode() {  //main clock function
     tinyhourColor = hourColor;
     if (ClockColorSettings == 4 && pastelColors == 0){ tinyhourColor = CHSV(random(0, 255), 255, 255); }
     if (ClockColorSettings == 4 && pastelColors == 1){ tinyhourColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=224; i<231; i++) { LEDs[i] = tinyhourColor;}
+      for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhourColor;}
     if (ClockColorSettings == 4 && pastelColors == 0){ tinyhourColor = CHSV(random(0, 255), 255, 255); }
     if (ClockColorSettings == 4 && pastelColors == 1){ tinyhourColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=231; i<238; i++) { LEDs[i] = tinyhourColor;}
-  } else {for (int i=224; i<238; i++) { LEDs[i] = CRGB::Black;}
+      for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhourColor;}
+  } else {for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black;}
    }
     	displayNumber(h2,5,hourColor);
     	displayNumber(m1,3,minColor);
@@ -866,18 +882,18 @@ void displayDateMode() {  //main date function
     tinymonthColor = monthColor;
     if (DateColorSettings == 4 && pastelColors == 0){ tinymonthColor = CHSV(random(0, 255), 255, 255); }
     if (DateColorSettings == 4 && pastelColors == 1){ tinymonthColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=224; i<231; i++) { LEDs[i] = tinymonthColor;}
+      for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinymonthColor;}
     if (DateColorSettings == 4 && pastelColors == 0){ tinymonthColor = CHSV(random(0, 255), 255, 255); }
     if (DateColorSettings == 4 && pastelColors == 1){ tinymonthColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=231; i<238; i++) { LEDs[i] = tinymonthColor;}
-  } else {for (int i=224; i<238; i++) { LEDs[i] = CRGB::Black;}
+      for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinymonthColor;}
+  } else {for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black;}
    }
     displayNumber(m2,5,monthColor);
     displayNumber(d1,2,dayColor);
     displayNumber(d2,0,dayColor); 
     if ((DateColorSettings == 4 ) && pastelColors == 0){ separatorColor = CHSV(random(0, 255), 255, 255); }
     if ((DateColorSettings == 4 ) && pastelColors == 1){ separatorColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=140; i<147; i++) { LEDs[i] = separatorColor;}  //separator
+      for (int i=(20*LEDS_PER_SEGMENT); i<(21*LEDS_PER_SEGMENT); i++) { LEDs[i] = separatorColor;}  //separator
   }
   
   if (dateDisplayType == 1) {    //Space-Padded (MMDD)
@@ -893,11 +909,11 @@ void displayDateMode() {  //main date function
     tinymonthColor = monthColor;
     if (DateColorSettings == 4 && pastelColors == 0){ tinymonthColor = CHSV(random(0, 255), 255, 255); }
     if (DateColorSettings == 4 && pastelColors == 1){ tinymonthColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=224; i<231; i++) { LEDs[i] = tinymonthColor;}
+      for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinymonthColor;}
     if (DateColorSettings == 4 && pastelColors == 0){ tinymonthColor = CHSV(random(0, 255), 255, 255); }
     if (DateColorSettings == 4 && pastelColors == 1){ tinymonthColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=231; i<238; i++) { LEDs[i] = tinymonthColor;}
-  } else {for (int i=224; i<238; i++) { LEDs[i] = CRGB::Black;}
+      for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinymonthColor;}
+  } else {for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black;}
    }
       displayNumber(m2,5,monthColor);
       displayNumber(d1,3,dayColor);
@@ -1017,13 +1033,13 @@ void displayTemperatureMode() {   //miain temp function
     tinytempColor = tempColor;
     if (tempColorSettings == 4 && pastelColors == 0){ tinytempColor = CHSV(random(0, 255), 255, 255); }
     if (tempColorSettings == 4 && pastelColors == 1){ tinytempColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=224; i<231; i++) { LEDs[i] = tinytempColor;}  //1xx split across 2 for color reasons
+    for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinytempColor;}  //1xx split across 2 for color reasons
     if (tempColorSettings == 4 && pastelColors == 0){ tinytempColor = CHSV(random(0, 255), 255, 255); }
     if (tempColorSettings == 4 && pastelColors == 1){ tinytempColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=231; i<238; i++) { LEDs[i] = tinytempColor;}  //1xx split across 2 for color reasons
+    for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinytempColor;}  //1xx split across 2 for color reasons
     if (tempColorSettings == 4 && pastelColors == 0){ degreeColor = CHSV(random(0, 255), 255, 255); }
     if (tempColorSettings == 4 && pastelColors == 1){ degreeColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=70; i<77; i++) { LEDs[i] = degreeColor;}  //period goes here
+    for (int i=(10*LEDS_PER_SEGMENT); i<(11*LEDS_PER_SEGMENT); i++) { LEDs[i] = degreeColor;}  //period goes here
   }
   if ((tempDisplayType == 4) && (correctedTemp < 100)) {  //4-Just Temperature (79) under 100
     displayNumber(t2,4,tempColor);
@@ -1083,7 +1099,7 @@ void displayHumidityMode() {   //main humidity function
     displayNumber(t4,1,symbolColor);
     if (humiColorSettings == 4 && pastelColors == 0){ humiDecimalColor = CHSV(random(0, 255), 255, 255); }
     if (humiColorSettings == 4 && pastelColors == 1){ humiDecimalColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=84; i<91; i++) { LEDs[i] = humiDecimalColor;}  //period goes here
+    for (int i=(12*LEDS_PER_SEGMENT); i<(13*LEDS_PER_SEGMENT); i++) { LEDs[i] = humiDecimalColor;}  //period goes here
   }
   if ((humiDisplayType == 1) && (sensorHumi >= 100)) {   //1-Humidity with Decimal (34.9) over 100
     displayNumber(t2,5,humiColor);
@@ -1092,13 +1108,13 @@ void displayHumidityMode() {   //main humidity function
     tinyhumiColor = humiColor;
     if (humiColorSettings == 4 && pastelColors == 0){ tinyhumiColor = CHSV(random(0, 255), 255, 255); }
     if (humiColorSettings == 4 && pastelColors == 1){ tinyhumiColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=224; i<231; i++) { LEDs[i] = tinyhumiColor;}  //1xx split across 2 for color reasons
+    for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhumiColor;}  //1xx split across 2 for color reasons
     if (humiColorSettings == 4 && pastelColors == 0){ tinyhumiColor = CHSV(random(0, 255), 255, 255); }
     if (humiColorSettings == 4 && pastelColors == 1){ tinyhumiColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=231; i<238; i++) { LEDs[i] = tinyhumiColor;} //1xx
+    for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhumiColor;} //1xx
     if (humiColorSettings == 4 && pastelColors == 0){ humiDecimalColor = CHSV(random(0, 255), 255, 255); }
     if (humiColorSettings == 4 && pastelColors == 1){ humiDecimalColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=70; i<77; i++) { LEDs[i] = humiDecimalColor;}   //period goes here
+    for (int i=(10*LEDS_PER_SEGMENT); i<(11*LEDS_PER_SEGMENT); i++) { LEDs[i] = humiDecimalColor;}   //period goes here
   }
   if ((humiDisplayType == 2) && (sensorHumi < 100)) {  //2-Just Humidity (79) under 100
     displayNumber(t2,4,humiColor);
@@ -1557,6 +1573,7 @@ void scroll(String IncomingString) {    //main scrolling function
     if( SentenceLetter == ':') { LetterNumber = 27; }
     if( SentenceLetter == '^') { LetterNumber = 26; }
     if( SentenceLetter == '\'') { LetterNumber = 17; }
+    if( SentenceLetter == '%') { LetterNumber = 15; }
     TranslatedSentence[(realposition*2)+6] = LetterNumber;  //letter starting at position 7 
     TranslatedSentence[(realposition*2)+7] = 96; //add padding to next position because fake digit shares a leg with adjacent real ones and can't be on at the same time
   }  
@@ -1564,7 +1581,7 @@ void scroll(String IncomingString) {    //main scrolling function
   if (scrollColorSettings == 1 && pastelColors == 0){ scrollColor = CHSV(random(0, 255), 255, 255); }
   if (scrollColorSettings == 1 && pastelColors == 1){ scrollColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
   for (uint16_t finalposition=0; finalposition<((IncomingString.length()*2)+6); finalposition++){  //count to end of padded array
-    for (int i=0; i<259; i++) { LEDs[i] = CRGB::Black;  }    //clear 
+    for (int i=0; i<SEGMENTS_LEDS; i++) { LEDs[i] = CRGB::Black;  }    //clear 
     if( TranslatedSentence[finalposition] != 96) { displayNumber(TranslatedSentence[finalposition],6,scrollColor); }
     if( TranslatedSentence[finalposition+1] != 96) { displayNumber(TranslatedSentence[finalposition+1],5,scrollColor); }
     if( TranslatedSentence[finalposition+2] != 96) { displayNumber(TranslatedSentence[finalposition+2],4,scrollColor); }
@@ -1689,7 +1706,7 @@ void displayNumber(uint16_t number, byte segment, CRGB color) {   //main digit r
       break;    
   }
 
-  for (byte i=0; i<NUMBER_OF_DIGITS; i++){                // 7 segments
+  for (byte i=0; i<SEGMENTS_PER_NUMBER; i++){                // 7 segments
     if (fakeclockrunning == 0 && (((ClockColorSettings == 4 && clockMode == 0) || (DateColorSettings == 4 && clockMode == 7) || (tempColorSettings == 4 && clockMode == 2) || (humiColorSettings == 4 && clockMode == 8)) && pastelColors == 0))  { color = CHSV(random(0, 255), 255, 255);}
     if (fakeclockrunning == 0 && (((ClockColorSettings == 4 && clockMode == 0) || (DateColorSettings == 4 && clockMode == 7) || (tempColorSettings == 4 && clockMode == 2) || (humiColorSettings == 4 && clockMode == 8)) && pastelColors == 1)) { color = CRGB(random(0, 255), random(0, 255), random(0, 255));}
     for (byte j=0; j<LEDS_PER_SEGMENT; j++ ){              // 7 LEDs per segment
@@ -1704,7 +1721,7 @@ void displayNumber(uint16_t number, byte segment, CRGB color) {   //main digit r
 
 void allBlank() {   //clears all non-shelf LEDs to black
   //  Serial.println("allblank function");
-  for (int i=0; i<259; i++) {
+  for (int i=0; i<SEGMENTS_LEDS; i++) {
     LEDs[i] = CRGB::Black;
   }
   FastLED.show();
@@ -1721,25 +1738,25 @@ void allBlank() {   //clears all non-shelf LEDs to black
 void fakeClock(int loopy) {  //flashes 12:00 like all old clocks did
   fakeclockrunning = 1;
   for (int i=0; i<loopy; i++) {
-      for (int i=224; i<238; i++) { LEDs[i] = CRGB::Red;}
+      for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Red;}
       displayNumber(2,5,CRGB::Red);
-      for (int i=177; i<180; i++) { LEDs[i] = CRGB::Black; }
-      for (int i=142; i<145; i++) { LEDs[i] = CRGB::Black; }
+      for (int i=(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Black; }
+      for (int i=(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Black; }
       displayNumber(0,2,CRGB::Red);
       displayNumber(0,0,CRGB::Red); 
       FastLED.show();
       delay(500);
-      for (int i=224; i<238; i++) { LEDs[i] = CRGB::Black;}
+      for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black;}
       displayNumber(2,5,CRGB::Black);
-      for (int i=177; i<180; i++) { LEDs[i] = CRGB::Red; }
-      for (int i=142; i<145; i++) { LEDs[i] = CRGB::Red; }
+      for (int i=(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Red; }
+      for (int i=(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Red; }
       displayNumber(0,2,CRGB::Black);
       displayNumber(0,0,CRGB::Black); 
       FastLED.show();
       delay(500);
    }
-  for (int i=175; i<182; i++) { LEDs[i] = CRGB::Black; }
-  for (int i=140; i<147; i++) { LEDs[i] = CRGB::Black; }
+  for (int i=(25*LEDS_PER_SEGMENT); i<(26*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black; }
+  for (int i=(20*LEDS_PER_SEGMENT); i<(21*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black; }
   fakeclockrunning = 0;  // so the digit render knows not to apply the rainbow colors
 }  //end of fakeClock
 
@@ -1751,11 +1768,11 @@ void ShelfDownLights() {  //turns on the drop lights on the underside of each sh
  if ((suspendType != 2 || isAsleep == 0) && useSpotlights == 1) {  //not sleeping? suposed to be running?
   unsigned long currentMillis = millis();  
   if (currentMillis - prevTime2 >= 250) {  //run everything inside here every quarter second
-    for (int i=259; i<273; i++) {
+    for (int i=SEGMENTS_LEDS; i<NUM_LEDS; i++) {
         if (spotlightsColorSettings == 0){ spotlightsColor = CRGB(r0_val, g0_val, b0_val);  LEDs[i] = spotlightsColor;}
         if ((spotlightsColorSettings == 1 && pastelColors == 0)  && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { spotlightsColor = CHSV(random(0, 255), 255, 255);  LEDs[i] = spotlightsColor;}
         if ((spotlightsColorSettings == 1 && pastelColors == 1)  && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { spotlightsColor = CRGB(random(0, 255), random(0, 255), random(0, 255));  LEDs[i] = spotlightsColor;}
-        if (spotlightsColorSettings == 2 ){ LEDs[i] = colorWheel2(((i-259)  * 18 + colorWheelPositionTwo) % 256); }
+        if (spotlightsColorSettings == 2 ){ LEDs[i] = colorWheel2(((i-SEGMENTS_LEDS)  * 18 + colorWheelPositionTwo) % 256); }
         if (spotlightsColorSettings == 3 ){ LEDs[i] = colorWheel2(((255) + colorWheelPositionTwo) % 256); }
     }
     colorWheelPositionTwo = colorWheelPositionTwo - 1; // SPEED OF 2nd COLOR WHEEL
@@ -1764,7 +1781,7 @@ void ShelfDownLights() {  //turns on the drop lights on the underside of each sh
     prevTime2 = currentMillis;
   }
  } else {  //or turn them all off
-  for (int i=259; i<273; i++) {
+  for (int i=SEGMENTS_LEDS; i<NUM_LEDS; i++) {
     LEDs[i] = CRGB::Black;
     FastLED.show();
   }
@@ -1783,27 +1800,27 @@ void BlinkDots() {  //displays the 2 dots in the middle of the time (colon)
     if (colonType == 0) {
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=177; i<180; i++) { LEDs[i] = colonColor;}
+      for (int i=25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=142; i<145; i++) { LEDs[i] = colonColor;}
+      for (int i=20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
     }
     if (colonType == 1) {
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=175; i<182; i++) { LEDs[i] = colonColor;}
+      for (int i=25*LEDS_PER_SEGMENT; i<26*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=140; i<147; i++) { LEDs[i] = colonColor;}
+      for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
     }
     if (colonType == 2) {
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=140; i<147; i++) { LEDs[i] = colonColor;}
+	  for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
     }
   } else {
-    for (int i=175; i<182; i++) { LEDs[i] = CRGB::Black; }
-    for (int i=140; i<147; i++) { LEDs[i] = CRGB::Black; }
+	  for (int i=25*LEDS_PER_SEGMENT; i<26*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
+	  for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
   }
   dotsOn = !dotsOn;  
 }//end of shelf and gaps
@@ -2159,7 +2176,7 @@ void Snake() {  //real random snake mode with random food changing its color
   int Level = map(audio_input, 100, 2000, 1, 10);
   if (audio_input < 100){  Level = 1;  }
   if (audio_input > 2000){  Level = 10;  }
-  if (snakeWaiting > random((30/Level),(600/Level))) {snakeWaiting = 0; foodSpot = random(36); spotcolor = CHSV(random(0, 255), 255, 255); if (getSlower > 3){  getSlower =  getSlower / 3;  }}  //waiting time is up, pick new spot, new color, reset speed
+  if (snakeWaiting > random((30/Level),(600/Level))) {snakeWaiting = 0; foodSpot = random(SPECTRUM_PIXELS-1); spotcolor = CHSV(random(0, 255), 255, 255); if (getSlower > 3){  getSlower =  getSlower / 3;  }}  //waiting time is up, pick new spot, new color, reset speed
   if (getSlower > 1000){  getSlower = 1000;  }
   int fake =  foodSpot * LEDS_PER_SEGMENT;   //draw food
   for (byte s=0; s<LEDS_PER_SEGMENT; s++ ){              // 7 LEDs per segment
