@@ -266,7 +266,7 @@ function getcolonType() {
 function getgmtOffset_sec() {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
-    if (this.readyState == 6 && this.status == 200) {
+    if (this.readyState == 4 && this.status == 200) {
 	 if (this.responseText == -43200) {document.getElementById("timezoneSelect").selectedIndex = 1;}
 	 if (this.responseText == -39600) {document.getElementById("timezoneSelect").selectedIndex = 2;}
 	 if (this.responseText == -36000) {document.getElementById("timezoneSelect").selectedIndex = 3;}
