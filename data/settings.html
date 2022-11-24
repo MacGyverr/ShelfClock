@@ -5,24 +5,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <script type="text/javascript" src="js/jquery-3.5.1.min.js"></script>
-    <script type="text/javascript" src="js/bootstrap.min.js"></script>
     <script type="text/javascript" src="js/moment-with-locales.js"></script>
-    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <script type="text/javascript" src="js/main.js"></script>
 <script type="text/javascript">	
 
-function getpastelColors() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("colorPalette1").checked = true;}
-     if (this.responseText == 1) {document.getElementById("colorPalette2").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getpastelColors", true);
-  xhttp.send();
-}
-
-
+/*
 function getrangeBrightness() {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
@@ -267,46 +255,13 @@ function getgmtOffset_sec() {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
-	 if (this.responseText == -43200) {document.getElementById("timezoneSelect").selectedIndex = 1;}
-	 if (this.responseText == -39600) {document.getElementById("timezoneSelect").selectedIndex = 2;}
-	 if (this.responseText == -36000) {document.getElementById("timezoneSelect").selectedIndex = 3;}
-	 if (this.responseText == -34200) {document.getElementById("timezoneSelect").selectedIndex = 4;}
-	 if (this.responseText == -32400) {document.getElementById("timezoneSelect").selectedIndex = 5;}
-	 if (this.responseText == -28800) {document.getElementById("timezoneSelect").selectedIndex = 6;}
-	 if (this.responseText == -25200) {document.getElementById("timezoneSelect").selectedIndex = 7;}
-	 if (this.responseText == -21600) {document.getElementById("timezoneSelect").selectedIndex = 8;}
-	 if (this.responseText == -18000) {document.getElementById("timezoneSelect").selectedIndex = 9;}
-	 if (this.responseText == -16200) {document.getElementById("timezoneSelect").selectedIndex = 10;}
-	 if (this.responseText == -14400) {document.getElementById("timezoneSelect").selectedIndex = 11;}
-	 if (this.responseText == -12600) {document.getElementById("timezoneSelect").selectedIndex = 12;}
-	 if (this.responseText == -10800) {document.getElementById("timezoneSelect").selectedIndex = 13;}
-	 if (this.responseText == -7200) {document.getElementById("timezoneSelect").selectedIndex = 14;}
-	 if (this.responseText == -3600) {document.getElementById("timezoneSelect").selectedIndex = 15;}
-	 if (this.responseText == 0) {document.getElementById("timezoneSelect").selectedIndex = 16;}
-	 if (this.responseText == 3600) {document.getElementById("timezoneSelect").selectedIndex = 17;}
-	 if (this.responseText == 7200) {document.getElementById("timezoneSelect").selectedIndex = 18;}
-	 if (this.responseText == 10800) {document.getElementById("timezoneSelect").selectedIndex = 19;}
-	 if (this.responseText == 12600) {document.getElementById("timezoneSelect").selectedIndex = 20;}
-	 if (this.responseText == 14400) {document.getElementById("timezoneSelect").selectedIndex = 21;}
-	 if (this.responseText == 16200) {document.getElementById("timezoneSelect").selectedIndex = 22;}
-	 if (this.responseText == 18000) {document.getElementById("timezoneSelect").selectedIndex = 23;}
-	 if (this.responseText == 19800) {document.getElementById("timezoneSelect").selectedIndex = 24;}
-	 if (this.responseText == 20700) {document.getElementById("timezoneSelect").selectedIndex = 25;}
-	 if (this.responseText == 21600) {document.getElementById("timezoneSelect").selectedIndex = 26;}
-	 if (this.responseText == 23400) {document.getElementById("timezoneSelect").selectedIndex = 27;}
-	 if (this.responseText == 25200) {document.getElementById("timezoneSelect").selectedIndex = 28;}
-	 if (this.responseText == 28800) {document.getElementById("timezoneSelect").selectedIndex = 29;}
-	 if (this.responseText == 31500) {document.getElementById("timezoneSelect").selectedIndex = 30;}
-	 if (this.responseText == 32400) {document.getElementById("timezoneSelect").selectedIndex = 31;}
-	 if (this.responseText == 34200) {document.getElementById("timezoneSelect").selectedIndex = 32;}
-	 if (this.responseText == 36000) {document.getElementById("timezoneSelect").selectedIndex = 33;}
-	 if (this.responseText == 37800) {document.getElementById("timezoneSelect").selectedIndex = 34;}
-	 if (this.responseText == 39600) {document.getElementById("timezoneSelect").selectedIndex = 35;}
-	 if (this.responseText == 41400) {document.getElementById("timezoneSelect").selectedIndex = 36;}
-	 if (this.responseText == 43200) {document.getElementById("timezoneSelect").selectedIndex = 37;}
-	 if (this.responseText == 45900) {document.getElementById("timezoneSelect").selectedIndex = 38;}
-	 if (this.responseText == 46800) {document.getElementById("timezoneSelect").selectedIndex = 39;}
-	 if (this.responseText == 50400) {document.getElementById("timezoneSelect").selectedIndex = 40;}
+	 if (this.responseText == -36000) {document.getElementById("timezoneSelect").selectedIndex = 1;}
+     if (this.responseText == -32400) {document.getElementById("timezoneSelect").selectedIndex = 2;}
+     if (this.responseText == -28800) {document.getElementById("timezoneSelect").selectedIndex = 3;}
+     if (this.responseText == -25200) {document.getElementById("timezoneSelect").selectedIndex = 4;}
+     if (this.responseText == -21600) {document.getElementById("timezoneSelect").selectedIndex = 5;}
+     if (this.responseText == -18000) {document.getElementById("timezoneSelect").selectedIndex = 6;}
+     if (this.responseText == -14400) {document.getElementById("timezoneSelect").selectedIndex = 7;}
     }
   };
   xhttp.open("GET", "getgmtOffset_sec", true);
@@ -1498,107 +1453,38 @@ function setDateTime() {
     var datetime = { year: y, month: n, day: d, hour: h, min: m, sec: s };
     console.log(datetime);
     $.post("/setdate", datetime);
-}
-</script>	
-<style type="text/css">
-
-.slider-wrapper {
-  display: inline-block;
-  width: 290px;
-  height: 50px;
-  padding: 0;
-}		
-	
-.yellow-styled {
-            width:155px;
-    border: 0;
-    line-height: 2.5;
-    padding: 0 5px;
-    font-size: 1rem;
-    text-align: center;
-    color: #fff;
-    text-shadow: 1px 1px 1px #000;
-    border-radius: 10px;
-    background-color: rgba(255, 255, 0, 1);
-    background-image: linear-gradient(to top left,
-                                      rgba(0, 0, 0, .2),
-                                      rgba(0, 0, 0, .2) 30%,
-                                      rgba(0, 0, 0, 0));
-    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
-                inset -2px -2px 3px rgba(0, 0, 0, .6);
-}
-
-.ltgreylong-styled {
-            width:315px;
-    border: 0;
-    line-height: 2.5;
-    padding: 0 5px;
-    font-size: 1rem;
-    text-align: center;
-    color: #fff;
-    text-shadow: 1px 1px 1px #000;
-    border-radius: 10px;
-    background-color: rgba(128,128,128, 1);
-    background-image: linear-gradient(to top left,
-                                      rgba(0, 0, 0, .2),
-                                      rgba(0, 0, 0, .2) 30%,
-                                      rgba(0, 0, 0, 0));
-    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
-                inset -2px -2px 3px rgba(0, 0, 0, .6);
-}
-
-.yellow-styled:hover {
-    background-color: rgba(0, 255, 0, 1);
-}
-
-.ltgreylong-styled:hover {
-    background-color: rgba(0, 255, 0, 1);
-}
-
-.action_btn {
-	width: 300px;
-	margin: 0 auto;
-	display: inline;
-}
-
-.narrow-font {
-  font-family: 'Open Sans Condensed', sans-serif;
-}
-.set-width {
-  width: 290px;
-}
-</style>		
-	
+}*/
+</script>		
     <title>Shelf Clock</title>
 </head>
-
 <body>
-
-    <nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4">
-        <a class="navbar-brand" href="./index.html">Shelf Clock</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
-            aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav mr-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="./index.html">Home </a>
-                </li>
-                <li class="nav-item active">
-                    <a class="nav-link" href="./settings.html">Settings <span class="sr-only">(current)</span></a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="./_ac">Setup Wifi</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="./update">Update Firmware</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="./debugpage">Debug Info</a>
-                </li>
-        </div>
-    </nav>
+  <nav>
+    <a href="./index.html">Shelf Clock</a>
+    <button title="Expand Navigation">
+      <span></span>
+    </button>
+    <div>
+      <ul>
+        <li><a href="./index.html">Home</a></li>
+        <li><a href="./settings.html">Settings</a></li>
+        <li><a href="./_ac">Setup Wifi</a></li>
+        <li><a href="./update">Update Firmware</a></li>
+        <li><a href="./debugpage">Debug Info</a></li>
+      </ul>
+    </div>   
+  </nav>
+  <form>
+    <section>
+      <h2>Global Settings:</h2>
+      <div>
+        <div>
+          <h3>Random Color Palette:</h3>
+          <label><input type="radio" name="colorPalette" value="0"> Major Color Palette</label>
+          <label><input type="radio" name="colorPalette" value="1"> Pastel Color Palette</label>
+        </div>		
+      </div>
+    </section>
+  </form>
 
 <div class="row" style="margin: 10px 10px;" "width: 380px;">
 	<div class="col-12">
@@ -1726,46 +1612,13 @@ function setDateTime() {
 						<br>		
 						<select name="timezoneSelect" id="timezoneSelect">
 							<option value="-28800" disabled hidden selected>--Choose an option--</option>
-							<option value="-43200">(UTC-12) Baker Island</option>
-							<option value="-39600">(UTC-11) Samoa Standard</option>
-							<option value="-36000">(UTC-10) Hawaii</option>
-							<option value="-34200">(UTC-9:30) Marquesas Islands</option>
-							<option value="-32400">(UTC-9) Alaska</option>
-							<option value="-28800">(UTC-8) Pasific</option>
-							<option value="-25200">(UTC-7) Mountain</option>
-							<option value="-21600">(UTC-6) Central</option>
-							<option value="-18000">(UTC-5) Eastern</option>
-							<option value="-16200">(UTC-4:30)</option>
-							<option value="-14400">(UTC-4) Atlantic</option>
-							<option value="-12600">(UTC-3:30) Newfoundland</option>
-							<option value="-10800">(UTC-3) Brasil</option>
-							<option value="-7200">(UTC-2) South Georgia</option>
-							<option value="-3600">(UTC-1) Azores</option>
-							<option value="0">(UTC) London</option>
-							<option value="3600">(UTC+1) Berlin</option>
-							<option value="7200">(UTC+2) Cairo</option>
-							<option value="10800">(UTC+3) Baghdad</option>
-							<option value="12600">(UTC+3:30) Tehran</option>
-							<option value="14400">(UTC+4) Moscow</option>
-							<option value="16200">(UTC+4:30) Kabul</option>
-							<option value="18000">(UTC+5) Karachi</option>
-							<option value="19800">(UTC+5:30) Delhi</option>
-							<option value="20700">(UTC+5:45) Nepal</option>
-							<option value="21600">(UTC+6) Bangladesh</option>
-							<option value="23400">(UTC+6:30) Cocos Islands</option>
-							<option value="25200">(UTC+7) Jakarta</option>
-							<option value="28800">(UTC+8) Perth</option>
-							<option value="31500">(UTC+8:45) Eucla</option>
-							<option value="32400">(UTC+9) Tokyo</option>
-							<option value="34200">(UTC+9:30) Adelaide</option>
-							<option value="36000">(UTC+10) Canberra</option>
-							<option value="37800">(UTC+10:30) Australian Central</option>
-							<option value="39600">(UTC+11) Magadan</option>
-							<option value="41400">(UTC+11:30)</option>
-							<option value="43200">(UTC+12) Auckland</option>
-							<option value="45900">(UTC+12:45) Chatham</option>
-							<option value="46800">(UTC+13) New Zealand</option>
-							<option value="50400">(UTC+14) Line Islands</option>
+							<option value="-36000">(GMT-10:00) Hawaii</option>
+							<option value="-32400">(GMT-09:00) Alaska</option>
+							<option value="-28800">(GMT-08:00) Pacific Time</option>
+							<option value="-25200">(GMT-07:00) Mountain Time</option>
+							<option value="-21600">(GMT-06:00) Central Time</option>
+							<option value="-18000">(GMT-05:00) Eastern Time</option>
+							<option value="-14400">(GMT-04:00) Atlantic Time</option>
 						</select>
 						<br>
 						<input type="checkbox" id="DSTime"> Daylight Savings Time
@@ -1854,7 +1707,7 @@ function setDateTime() {
 			</div>
 		</div>
 		<br>
-		<p><li><strong>Temperature Settings</strong></p>	
+		<h3>Temperature Settings</h3>
 		<div class="row" style="margin: 10px 10px;">
 			<div class="card">		
 				<div class="card-body">
