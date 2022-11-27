@@ -1,4 +1,4 @@
-const url = "http://shelfclock/";
+const url = "http://shelfclock";
 document.addEventListener('DOMContentLoaded', function () {
     
     // toggle nav 
@@ -11,26 +11,73 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-
     getpastelColors();
-
-    
+    setpastelColors();
+    getColorChangeFrequency()
+    setColorChangeFrequency()
+    getrangeBrightness()
+    setrangeBrightness();
 });
 
-async function getpastelColors() {
-    console.log(url + "getpastelColors")
-    let response = await fetch(url + "getpastelColors");
+/* Brightness */
+async function getrangeBrightness() {
+    let response = await fetch(url + "/getrangeBrightness");
     if (response.ok) {
-        document.querySelector("input[name='colorPalette']").value = await response.text();
+        document.querySelector("input[name='rangeBrightness']").value = await response.text();
     }
 }
-   /* var xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-        if (this.responseText == 0) {document.getElementById("colorPalette1").checked = true;}
-        if (this.responseText == 1) {document.getElementById("colorPalette2").checked = true;}
-        }
-    };
-    xhttp.open("GET", "getpastelColors", true);
-    xhttp.send();*/
 
+async function setrangeBrightness() {
+    document.querySelector("input[name='rangeBrightness']").addEventListener("change", async function (event) {
+        let formData = new FormData();
+        formData.append("rangeBrightness", event.target.value);
+        await fetch(url + "/updaterangeBrightness", {
+            method: 'POST',
+            body: formData
+        });
+    });
+}
+
+/* Color Change Frequency */
+async function getColorChangeFrequency() {
+    let response = await fetch(url + "/getColorChangeFrequency");
+    if (response.ok) {
+        document.querySelector("select[name='colorChangeFrequency']").selectedIndex = parseInt(await response.text()) + 1;
+    }
+}
+
+async function setColorChangeFrequency() {
+    document.querySelector("select[name='colorChangeFrequency']").addEventListener("change", async function (event) {
+        let formData = new FormData();
+        formData.append("ColorChangeFrequency", event.target.value);
+        await fetch(url + "/updateColorChangeFrequency", {
+            method: 'POST',
+            body: formData
+        });
+    });
+}
+
+/* Pastel Colors */
+async function getpastelColors() {
+    let response = await fetch(url + "/getpastelColors");
+    if (response.ok) {
+        let value = await response.text();
+        document.querySelectorAll("input[name='colorPalette']").forEach((element) => {
+            if (element.value === value) {
+                element.checked = true;
+            }
+        });
+    }
+}
+async function setpastelColors() {
+    document.querySelectorAll("input[name='colorPalette']").forEach((element) => {
+        element.addEventListener('click', async function(event) {
+            let formData = new FormData();
+            formData.append("ColorPalette", event.target.value);
+            await fetch(url + "/updatePastelColors", {
+                method: 'POST',
+                body: formData
+            });
+        });
+    });
+}

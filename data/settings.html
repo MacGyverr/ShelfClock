@@ -11,16 +11,7 @@
 <script type="text/javascript">	
 
 /*
-function getrangeBrightness() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("rangeBrightness").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getrangeBrightness", true);
-  xhttp.send();
-}
+
 
 function getsuspendType() {
   var xhttp = new XMLHttpRequest();
@@ -202,22 +193,6 @@ function gettemperatureCorrection() {
     }
   };
   xhttp.open("GET", "gettemperatureCorrection", true);
-  xhttp.send();
-}
-
-function getColorChangeFrequency() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-	 if (this.responseText == 0) {document.getElementById("colorChangeFrequency").selectedIndex = 1;}
-     if (this.responseText == 1) {document.getElementById("colorChangeFrequency").selectedIndex = 2;}
-     if (this.responseText == 2) {document.getElementById("colorChangeFrequency").selectedIndex = 3;}
-     if (this.responseText == 3) {document.getElementById("colorChangeFrequency").selectedIndex = 4;}
-     if (this.responseText == 4) {document.getElementById("colorChangeFrequency").selectedIndex = 5;}
-     if (this.responseText == 5) {document.getElementById("colorChangeFrequency").selectedIndex = 6;}
-    }
-  };
-  xhttp.open("GET", "getColorChangeFrequency", true);
   xhttp.send();
 }
 
@@ -724,10 +699,8 @@ function getscrollColorSettings() {
 
 
 window.addEventListener("load", myInit, true); function myInit(){
-	getpastelColors()
 
 	getuseSpotlights()
-	getrangeBrightness()
 
 
 	getsuspendType()
@@ -742,7 +715,6 @@ window.addEventListener("load", myInit, true); function myInit(){
 	gethumiDisplayType()
 	gettemperatureCorrection()
 	getcolonType()
-	getColorChangeFrequency()
 	getgmtOffset_sec()
 	getDSTime()
 	getClockDisplayType()
@@ -856,9 +828,7 @@ function startup() {
   colorPalette1.addEventListener("input", updateColorPalette, false);
   colorPalette2 = document.querySelector("#colorPalette2");
   colorPalette2.addEventListener("input", updateColorPalette, false);
-  
-  colorChangeFrequency = document.querySelector("#colorChangeFrequency");
-  colorChangeFrequency.addEventListener("input", updateColorChangeFrequency, false); 
+
     
 
   suspendOff = document.querySelector("#suspendOff");
@@ -1121,10 +1091,7 @@ function startup() {
   spotlightsColor.value = defaultspotlightsColor;
   spotlightsColor.addEventListener("input", updatespotlightsColor, false);
   spotlightsColor.addEventListener("change", updatespotlightsColor, false);
-  
 
-  rangeBrightness = document.querySelector("#rangeBrightness");
-  rangeBrightness.addEventListener("input", updaterangeBrightness, false); 
   
   spotlightsColorSettings1 = document.querySelector("#spotlightsColorSettings1");
   spotlightsColorSettings1.addEventListener("input", updatespotlightsColorSettings, false);
@@ -1185,12 +1152,7 @@ function startup() {
   
 }
 
-function updateColorPalette(event) {
-ColorPalette = event.target.value; console.log(ColorPalette); $.post("/updatePastelColors", { ColorPalette: ColorPalette });
-}
-function updateColorChangeFrequency(event) {
-ColorChangeFrequency = event.target.value; console.log(ColorChangeFrequency); $.post("/updateColorChangeFrequency", { ColorChangeFrequency: ColorChangeFrequency });
-}
+
 
 function updatesuspendType(event) {
 suspendType = event.target.value; console.log(suspendType); $.post("/updatesuspendType", { suspendType: suspendType });
@@ -1341,10 +1303,6 @@ function updatespectrumColorSettings(event) {
 spectrumColorSettings = event.target.value; console.log(spectrumColorSettings); $.post("/updatespectrumColorSettings", { spectrumColorSettings: spectrumColorSettings });
 }
 
-function updaterangeBrightness(event) {
-rangeBrightness = event.target.value; console.log(rangeBrightness); $.post("/updaterangeBrightness", { rangeBrightness: rangeBrightness });
-}
-
 
 function updatespotlightsColor(event) {
 spotlightsColor = event.target.value; console.log(spotlightsColor); $.post("/updatespotlightsColor", hexToRgb(spotlightsColor));
@@ -1473,7 +1431,7 @@ function setDateTime() {
       </ul>
     </div>   
   </nav>
-  <form>
+  <form name="shelfclock">
     <section>
       <h2>Global Settings:</h2>
       <div>
@@ -1481,57 +1439,44 @@ function setDateTime() {
           <h3>Random Color Palette:</h3>
           <label><input type="radio" name="colorPalette" value="0"> Major Color Palette</label>
           <label><input type="radio" name="colorPalette" value="1"> Pastel Color Palette</label>
-        </div>		
+        </div>
+        <div>
+          <h3>Color Change Frequency:</h3>
+          <select name="colorChangeFrequency">
+            <option value="" disabled hidden selected>--Choose an option--</option>
+            <option value="0">Every Second</option>
+            <option value="1">Every Minute</option>
+            <option value="2">Every Hour</option>
+            <option value="3">Every Day</option>
+            <option value="4">Every Week</option>
+            <option value="5">Every Month </option>
+          </select>
+        </div>
+        <div>
+          <h3>Overall Brightness:</h3>
+          <div class="range">
+            <label for="rangeBrightness">Auto-Dim</label>
+            <label for="rangeBrightness">Max</label>
+          </div>   
+          <input type="range" name="rangeBrightness" min="10" max="255">
+        </div>
+        <div>
+          <h3>Suspend Display on Silence:</h3>
+          <label><input type="radio" name="suspendType" value="0"> Suspend Disabled</label>
+          <label><input type="radio" name="suspendType" value="1"> Suspend Just Digits</label>
+          <label><input type="radio" name="suspendType" value="2"> Suspend All Lights</label>
+        </div>
       </div>
     </section>
   </form>
 
 <div class="row" style="margin: 10px 10px;" "width: 380px;">
 	<div class="col-12">
-		<p><li><strong>Global Settings</strong></p>
 		<div class="row" style="margin: 10px 10px;" "width: 380px;">
 			<div class="card">		
 				<div class="card-body" style="width: 380px;">
 					<form>
 						<div class="w3-col s4" style="margin: 10px 10px;" "width: 380px;">
-							<strong>Random Color Palette:</strong>
-							<br>	
-							<input type="radio" id="colorPalette1" name="colorPalette" value="0"> Major Color Palette
-							<br>
-							<input type="radio" id="colorPalette2" name="colorPalette" value="1"> Pastel Color Palette
-							<br>
-							<br>
-							<strong>Color Change Frequency:</strong>
-							<br>
-							<select name="colorChangeFrequency" id="colorChangeFrequency">
-								<option value="" disabled hidden selected>--Choose an option--</option>
-								<option value="0">Every Second</option>
-								<option value="1">Every Minute</option>
-								<option value="2">Every Hour</option>
-								<option value="3">Every Day</option>
-								<option value="4">Every Week</option>
-								<option value="5">Every Month </option>
-							</select>
-							<br>
-							<br>
-							<strong>Overall Brightness:</strong>
-							<br>	
-							<div class="slider-wrapper">
-								<label for="rangeBrightness" class="float-left">Auto-Dim</label>
-								<label for="rangeBrightness" class="float-right">Max</label>
-								<input type="range" class="form-control-range" id="rangeBrightness" min="10" max="255">
-							</div>
-							<br>
-							<br>
-							<strong>Suspend Display on Silence:</strong>
-							<br>
-							<input type="radio" id="suspendOff" name="suspendType" value="0"> Suspend Disabled
-							<br>
-							<input type="radio" id="digitOff" name="suspendType" value="1"> Suspend Just Digits
-							<br>
-							<input type="radio" id="shelfOff" name="suspendType" value="2"> Suspend All Lights
-							<br>
-							<br>
 							<strong>Suspend after x Minutes of Silence:</strong>
 							<br>		
 							<select name="suspendFrequency" id="suspendFrequency">

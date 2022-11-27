@@ -117,8 +117,29 @@ section > div {
     padding: 1rem 1.9rem;
 }
 
-section div label {
+section > div > div {
+    margin-bottom: 25px;  
+}
+
+section > div > div label {
     display: block;
+}
+
+section > div > div label input {
+    margin: 0;
+}
+
+section > div > div select {
+    font-size: inherit;
+}
+
+section > div > div .range {
+    display: flex;
+    justify-content: space-between;
+}
+
+section > div > div input[type='range'] {
+    width: 100%;
 }
 
 @media screen and (min-width: 767px) {
