@@ -7,42 +7,10 @@
     <script type="text/javascript" src="js/jquery-3.5.1.min.js"></script>
     <script type="text/javascript" src="js/moment-with-locales.js"></script>
     <link rel="stylesheet" href="css/main.css">
-    <script type="text/javascript" src="js/main.js"></script>
+    <script type="text/javascript" src="js/settings.js"></script>
 <script type="text/javascript">	
 
 /*
-
-
-function getsuspendType() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("suspendOff").checked = true;}
-     if (this.responseText == 1) {document.getElementById("digitOff").checked = true;}
-     if (this.responseText == 2) {document.getElementById("shelfOff").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getsuspendType", true);
-  xhttp.send();
-}
-
-function getsuspendFrequency() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-	 if (this.responseText == 0) {document.getElementById("suspendFrequency").selectedIndex = 0;}
-     if (this.responseText == 1) {document.getElementById("suspendFrequency").selectedIndex = 1;}
-     if (this.responseText == 5) {document.getElementById("suspendFrequency").selectedIndex = 2;}
-     if (this.responseText == 10) {document.getElementById("suspendFrequency").selectedIndex = 3;}
-     if (this.responseText == 15) {document.getElementById("suspendFrequency").selectedIndex = 4;}
-     if (this.responseText == 30) {document.getElementById("suspendFrequency").selectedIndex = 5;}
-     if (this.responseText == 45) {document.getElementById("suspendFrequency").selectedIndex = 6;}
-     if (this.responseText == 60) {document.getElementById("suspendFrequency").selectedIndex = 7;}
-    }
-  };
-  xhttp.open("GET", "getsuspendFrequency", true);
-  xhttp.send();
-}
 
 
 function getuseSpotlights() {
@@ -703,9 +671,6 @@ window.addEventListener("load", myInit, true); function myInit(){
 	getuseSpotlights()
 
 
-	getsuspendType()
-	getsuspendFrequency()  
-
 	gettemperatureSymbol()
 	getClockColorSettings()
 	getDateColorSettings()
@@ -829,17 +794,6 @@ function startup() {
   colorPalette2 = document.querySelector("#colorPalette2");
   colorPalette2.addEventListener("input", updateColorPalette, false);
 
-    
-
-  suspendOff = document.querySelector("#suspendOff");
-  suspendOff.addEventListener("input", updatesuspendType, false);
-  digitOff = document.querySelector("#digitOff");
-  digitOff.addEventListener("input", updatesuspendType, false);
-  shelfOff = document.querySelector("#shelfOff");
-  shelfOff.addEventListener("input", updatesuspendType, false);
-  
-  suspendFrequency = document.querySelector("#suspendFrequency");
-  suspendFrequency.addEventListener("input", updatesuspendFrequency, false)	
 	
   
   centerTime = document.querySelector("#centerTime");
@@ -1153,15 +1107,6 @@ function startup() {
 }
 
 
-
-function updatesuspendType(event) {
-suspendType = event.target.value; console.log(suspendType); $.post("/updatesuspendType", { suspendType: suspendType });
-}
-
-function updatesuspendFrequency(event) {
-suspendFrequency = event.target.value; console.log(suspendFrequency); $.post("/updatesuspendFrequency", { suspendFrequency: suspendFrequency });
-}
-
 function updateuseSpotlights(event) {
 useSpotlights = event.target.checked; console.log(useSpotlights); $.post("/updateuseSpotlights", { useSpotlights: useSpotlights });
 }
@@ -1466,35 +1411,34 @@ function setDateTime() {
           <label><input type="radio" name="suspendType" value="1"> Suspend Just Digits</label>
           <label><input type="radio" name="suspendType" value="2"> Suspend All Lights</label>
         </div>
+        <div>
+          <h3>Suspend after x Minutes of Silence:</h3>
+          <select name="suspendFrequency">
+            <option value="1" disabled hidden selected>--Choose an option--</option>
+            <option value="1">1 Minute</option>
+            <option value="5">5 Minutes</option>
+            <option value="10">10 Minutes</option>
+            <option value="15">15 Minutes</option>
+            <option value="30">30 Minutes</option>
+            <option value="45">45 Minutes</option>
+            <option value="60">60 Minutes</option>
+          </select>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Shelf Spotlight Settings</h2>
+      <div>
+        <div>
+          <h3>Shelf Spotlights:</h3>
+          <label><input type="checkbox" name="useSpotlights">Use Shelf Spotlights</label>
+        </div>
       </div>
     </section>
   </form>
 
 <div class="row" style="margin: 10px 10px;" "width: 380px;">
 	<div class="col-12">
-		<div class="row" style="margin: 10px 10px;" "width: 380px;">
-			<div class="card">		
-				<div class="card-body" style="width: 380px;">
-					<form>
-						<div class="w3-col s4" style="margin: 10px 10px;" "width: 380px;">
-							<strong>Suspend after x Minutes of Silence:</strong>
-							<br>		
-							<select name="suspendFrequency" id="suspendFrequency">
-								<option value="1" disabled hidden selected>--Choose an option--</option>
-								<option value="1">1 Minute</option>
-								<option value="5">5 Minutes</option>
-								<option value="10">10 Minutes</option>
-								<option value="15">15 Minutes</option>
-								<option value="30">30 Minutes</option>
-								<option value="45">45 Minutes</option>
-								<option value="60">60 Minutes</option>
-							</select>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-		<br>
 		<p><li><strong>Shelf Spotlight Settings</strong></p>
 		<div class="row" style="margin: 10px 10px;">
 			<div class="card">		

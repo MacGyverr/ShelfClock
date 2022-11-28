@@ -13,11 +13,68 @@ document.addEventListener('DOMContentLoaded', function () {
 
     getpastelColors();
     setpastelColors();
-    getColorChangeFrequency()
-    setColorChangeFrequency()
-    getrangeBrightness()
+    getColorChangeFrequency();
+    setColorChangeFrequency();
+    getrangeBrightness();
     setrangeBrightness();
+    getsuspendType();
+    setsuspendType();
+    getsuspendFrequency();
+    setsuspendFrequency();
 });
+
+/* suspend frequency */
+async function getsuspendFrequency() {
+    let response = await fetch(url + "/getsuspendFrequency");
+    let value = await response.text();
+    if (response.ok) {
+        // document.querySelector("select[name='suspendFrequency']").selectedIndex = parseInt(await response.text()) + 1;
+        let select = document.querySelector("select[name='suspendFrequency']");
+        [...select.options].forEach((option, index) => {
+            if(value === option.value) {
+                select.selectedIndex = index;
+            }
+        });
+    }
+}
+
+async function setsuspendFrequency() {
+    document.querySelector("select[name='suspendFrequency']").addEventListener("change", async function (event) {
+        let formData = new FormData();
+        formData.append("suspendFrequency", event.target.value);
+        await fetch(url + "/updatesuspendFrequency", {
+            method: 'POST',
+            body: formData
+        });
+    });
+}
+
+
+/* suspend type */
+async function getsuspendType() {
+    let response = await fetch(url + "/getsuspendType");
+    if (response.ok) {
+        let value = await response.text();
+        document.querySelectorAll("input[name='suspendType']").forEach((element) => {
+            if (element.value === value) {
+                element.checked = true;
+            }
+        });
+    }
+}
+
+async function setsuspendType() {
+    document.querySelectorAll("input[name='suspendType']").forEach((element) => {
+        element.addEventListener('click', async function(event) {
+            let formData = new FormData();
+            formData.append("suspendType", event.target.value);
+            await fetch(url + "/updatesuspendType", {
+                method: 'POST',
+                body: formData
+            });
+        });
+    });
+}
 
 /* Brightness */
 async function getrangeBrightness() {
