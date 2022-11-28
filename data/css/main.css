@@ -13,11 +13,11 @@ nav {
     overflow: hidden;
     background-color: #343a40;
     padding: .5rem 1rem;
-    margin-bottom: 40px;
+    margin-bottom: 2.5rem;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
-    height: 40px;
+    height: 2.5rem;
     transition: all .5s ease-in-out;
 }
 
@@ -69,7 +69,7 @@ nav button span {
 
 /* nav links */
 nav.show {
-    height: 240px;
+    height: 15rem;
 }
 
 nav div {
@@ -115,10 +115,11 @@ section > div {
     border: 1px solid rgba(0,0,0,.125);
     border-radius: .25rem;
     padding: 1rem 1.9rem;
+    margin-bottom: 3rem;
 }
 
 section > div > div {
-    margin-bottom: 25px;  
+    margin-bottom: 1.7rem;  
 }
 
 section > div > div label {
@@ -140,6 +141,10 @@ section > div > div .range {
 
 section > div > div input[type='range'] {
     width: 100%;
+}
+
+section > div > div input[type='checkbox'] {
+    margin-right: 0.3rem;
 }
 
 @media screen and (min-width: 767px) {

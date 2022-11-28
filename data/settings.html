@@ -13,17 +13,7 @@
 /*
 
 
-function getuseSpotlights() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("useSpotlights").checked = false;}
-     if (this.responseText == 1) {document.getElementById("useSpotlights").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getuseSpotlights", true);
-  xhttp.send();
-}
+
 
 
 function getClockDisplayType() {
@@ -668,8 +658,6 @@ function getscrollColorSettings() {
 
 window.addEventListener("load", myInit, true); function myInit(){
 
-	getuseSpotlights()
-
 
 	gettemperatureSymbol()
 	getClockColorSettings()
@@ -784,9 +772,6 @@ var scrollColor;
 window.addEventListener("load", startup, false);
 
 function startup() {
-  
-  useSpotlights = document.querySelector("#useSpotlights");
-  useSpotlights.addEventListener("input", updateuseSpotlights, false);
 
   
   colorPalette1 = document.querySelector("#colorPalette1");
@@ -1106,10 +1091,6 @@ function startup() {
   
 }
 
-
-function updateuseSpotlights(event) {
-useSpotlights = event.target.checked; console.log(useSpotlights); $.post("/updateuseSpotlights", { useSpotlights: useSpotlights });
-}
 
 function updateClockDisplayType(event) {
 ClockDisplayType = event.target.value; console.log(ClockDisplayType); $.post("/updateClockDisplayType", { ClockDisplayType: ClockDisplayType });
@@ -1445,11 +1426,6 @@ function setDateTime() {
 				<div class="card-body" style="width: 380px;">
 					<form>
 						<div class="w3-col s4">
-							<strong>Shelf Spotlights:</strong>
-							<br>
-							<input type="checkbox" id="useSpotlights"> Use Shelf Spotlights
-							<br>
-							<br>
 							<strong>Color Selection:</strong>
 							<br>	
 							<div>

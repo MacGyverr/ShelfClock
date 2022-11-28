@@ -21,7 +21,26 @@ document.addEventListener('DOMContentLoaded', function () {
     setsuspendType();
     getsuspendFrequency();
     setsuspendFrequency();
+    getuseSpotlights();
+    setuseSpotlights();
 });
+
+/* use spotlights */
+async function getuseSpotlights() {
+    let response = await fetch(url + "/getuseSpotlights");
+    document.querySelector("input[name='useSpotlights']").checked = (await response.text() === "1") ? true : false;
+}
+
+async function setuseSpotlights() {
+    document.querySelector("input[name='useSpotlights']").addEventListener("change", async function (event) {
+        let formData = new FormData();
+        formData.append("useSpotlights", (event.target.checked === true) ? "true" : "false");
+        await fetch(url + "/updateuseSpotlights", {
+            method: 'POST',
+            body: formData
+        });
+    });
+}
 
 /* suspend frequency */
 async function getsuspendFrequency() {
