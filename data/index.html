@@ -3,17 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <script type="text/javascript" src="js/jquery-3.5.1.min.js"></script>
-    <script type="text/javascript" src="js/bootstrap.min.js"></script>
-    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/main.css">
+    <script type="text/javascript" src="js/settings.js"></script>	
     <title>Shelf Clock</title>
 	
 <script type="text/javascript">	
-window.addEventListener("load", startup, false);
-
-function startup() {
-	}
-function msg() {alert("Sorry, not ready yet!");}
+/*function msg() {alert("Sorry, not ready yet!");}
 
 function showClock() {$.post("/goClockMode");}
 function startCountdown() {
@@ -157,13 +152,13 @@ function getscoreboardColorRight() {
 window.addEventListener("load", myInit, true); function myInit(){
   getscoreboardColorLeft()
   getscoreboardColorRight()
-  }
+  }*/
 </script>	
 
 <style type="text/css">
 
 		
-.styled {
+/*.styled {
             width:125px;
     border: 0;
     line-height: 2.5;
@@ -359,123 +354,84 @@ window.addEventListener("load", myInit, true); function myInit(){
 	display: inline;
 }
 
-
+*/
 </style>	
 	
 </head>
 <body>
+    <nav>
+        <a href="./index.html">Shelf Clock</a>
+        <button title="Expand Navigation">
+            <span></span>
+        </button>
+        <div>
+            <ul>
+            <li><a href="./index.html" class="active">Home</a></li>
+            <li><a href="./settings.html">Settings</a></li>
+            </ul>
+        </div>   
+    </nav>
 
-<nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4">
-    <a class="navbar-brand" href="./index.html">Shelf Clock</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
-        aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarCollapse">
-        <ul class="navbar-nav mr-auto">
-            <li class="nav-item">
-                <a class="nav-link active" href="./index.html">Home  <span class="sr-only">(current)</span></a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="./settings.html">Settings</a>
-            </li>
-    </div>
-</nav>
-
-<div class="row" style="margin: 10px 10px;">
-	<div class="col-12">
-		<div class="row" style="margin: 10px 10px;">
-			<div class="card">		
-				<div class="card-body">
-					<form>
-						<div style="text-align: center;">
-							<strong>Select Display Mode</strong>
-						</div>
-						<br>
-						<div class="w3-col s4">
-							<form>
-								<input type="button" class="favorite styled" value="Clock" id="clock" onclick="showClock()">
-								<input type="button" class="favorite styled" value="Date" id="date" onclick="showDate()">
-							</form>
-							<br>
-							<br>
-							<form>
-								<input type="button" class="favorite styled" value="Temperature" onclick="showTemperature()">
-								<input type="button" class="favorite styled" value="Humidity" onclick="showHumidity()">
-							</form>
-							<br>
-							<form>
-								<input type="button" class="favorite styled" value="Scrolling" onclick="scrollingMode()">
-								<input type="button" class="favorite styled" value="Display Off" onclick="displayOff()">
-							</form>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-		<div class="row" style="margin: 10px 10px;">
-			<div class="card">		
-				<div class="card-body">
-					<form>
-						<div style="text-align: center;">
-							<strong>Load Saved Preset</strong>
-						</div>
-						<br>
-						<div class="w3-col s4">
-							<form>
-								<input type="button" class="favorite yellow-styled" value="Preset 1" onclick="getpreset1()">
-								<input type="button" class="favorite yellow-styled" value="Preset B" onclick="getpreset2()">
-							</form>
-							<br>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-		<div class="row" style="margin: 10px 10px;">
-            <div class="card">
-                <div class="card-body">
-                    <form>
-						<div style="text-align: center;">
-							<strong>Select Timer Mode</strong>
-						</div>
-                        <div class="form-row" style="text-align: center;">
-                            <div style="width:75px; text-align: center; margin: 0px 5px;">
-								<label>Hours</label>
-                            </div>
-                            <div style="width:75px; text-align: center; margin: 0px 2px;">
-								<label>Minutes</label>
-                            </div>
-                            <div style="width:75px; text-align: center; margin: 0px 12px;">
-								<label>Seconds</label>
-                            </div>
-                        </div>
-                        <div class="form-row" style="text-align: center;">
-                            <div style="width:75px; margin: 0px 5px;">
-                                <input type="text" class="form-control" value="00" id="hoursCD">
-                            </div>
-                            <div style="width:75px; margin: 0px 5px;">
-                                <input type="text" class="form-control" value="00" id="minutesCD">
-                            </div>
-                            <div style="width:75px; margin: 0px 5px;">
-                                <input type="text" class="form-control" value="00" id="secondsCD">
-                            </div>
-                        </div>
-						<br>
-						<form>
-							<input type="button" class="favorite red-styled" value="Start Countdown" onclick="startCountdown()">
-							<input type="button" class="favorite red-styled" value="Start Stopwatch" onclick="startTimer()">
-						</form>
-						<div id="validNrs" style="display: none;">
-							<br />
-							<div class="alert alert-danger" role="alert">
-								Please enter valid values!
-							</div>
-						</div>
-                    </form>
+    <form>
+        <section>
+            <div class="button-wrapper blue">
+                <h3>Select Display Mode</h3>
+                <div>
+                    <input type="button" value="Clock" onclick="showClock()">
+                    <input type="button" value="Date" onclick="showDate()">
+                    <input type="button" value="Temperature" onclick="showTemperature()">
+                    <input type="button" value="Humidity" onclick="showHumidity()">
+                    <input type="button" value="Scrolling" onclick="scrollingMode()">
+                    <input type="button" value="Display Off" onclick="displayOff()">
                 </div>
             </div>
-        </div>	
+        </section>
+        <section>
+            <div class="button-wrapper yellow">
+                <h3>Load Saved Preset</h3>
+                <div>
+                    <input type="button" value="Preset 1" onclick="getpreset1()">
+					<input type="button" value="Preset 2" onclick="getpreset2()">
+                </div>
+            </div>
+        </section>
+        <section>
+            <div class="button-wrapper red">
+                <h3>Select Timer Mode</h3>
+                <div class="grid-3">
+                    <label>Hours</label>
+                    <label>Minutes</label>
+                    <label>Seconds</label>
+                    <input type="number" step="1" pattern="\d+" min="0" max="24">
+                    <input type="number" step="1" pattern="\d+" min="0" max="59">
+                    <input type="number" step="1" pattern="\d+" min="0" max="59">
+                </div>
+                <div>
+                    <input type="button" value="Start Countdown" onclick="startCountdown()">
+                    <input type="button" value="Start Stopwatch" onclick="startTimer()">
+                </div>
+            </div>
+        </section>
+        <section>
+            <div class="button-wrapper">
+                <h3>Scoreboard Mode</h3>
+                <div>
+                    <label>Left</label>
+                    <label>Right</label>
+                    <input type="button" value="Up" onclick="upleft()">
+                    <input type="button" value="Up" onclick="upright()">
+                    <input type="number" value="0">
+                    <input type="number" value="0">
+                    <input type="button" value="Down" onclick="downleft()">
+                    <input type="button" value="Down" onclick="downright()">
+
+                </div>
+            </div>
+        </section>
+    </form>
+
+
+<div class="row" style="margin: 10px 10px;">	
 		<div class="row" style="margin: 10px 10px;">
             <div class="card">
                 <div class="card-body">
