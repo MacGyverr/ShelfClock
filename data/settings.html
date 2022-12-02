@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link rel="stylesheet" href="css/main.css">
-  <script type="text/javascript" src="js/settings.js"></script>	
+  <script type="text/javascript" src="js/main.js"></script>	
   <title>Shelf Clock</title>
 </head>
 <body>
@@ -23,7 +23,7 @@
       </ul>
     </div>   
   </nav>
-  <form name="shelfclock">
+  <form name="shelfclock-settings">
     <section>
       <h2>Global Settings:</h2>
       <div>
@@ -337,8 +337,8 @@
       <div class="button-wrapper yellow">
         <h3>Save Current Values to Preset</h3>
         <div>
-          <input type="button" name="setpreset1" value="Preset 1">
-				  <input type="button" name="setpreset2" value="Preset 2">
+          <input type="button" data-url="setpreset1" value="Preset 1">
+				  <input type="button" data-url="setpreset2" value="Preset 2">
         </div>
       </div>
     </section>

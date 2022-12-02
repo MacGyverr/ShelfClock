@@ -166,6 +166,7 @@ section > div > div input[type='checkbox'] {
     row-gap: 1rem;
     column-gap: .25rem;
     justify-content: space-between;
+    justify-items: center;
 }
 
 .button-wrapper div.grid-3 {
@@ -193,7 +194,7 @@ section > div > div input[type='checkbox'] {
 }
 
 .datetime-wrapper div {
-    margin: 1.3rem 1rem;
+    margin: 1.3rem 0;
     color: #004085;
     background-color: #cce5ff;
     border-color: #b8daff;
@@ -218,20 +219,49 @@ section > div > div input[type='checkbox'] {
     box-shadow: inset 2px 2px 3px rgb(255 255 255 / 60%), inset -2px -2px 3px rgb(0 0 0 / 60%);
 }
 
-.yellow input[type='button'] {
+.datetime-wrapper input[type='button']:active, .button-wrapper input[type='button']:active {
+    box-shadow: inset -2px -2px 3px rgba(255, 255, 255, .6), inset 2px 2px 3px rgba(0, 0, 0, .6);
+}
+
+.button-wrapper .small-top-margin {
+    margin-top: 0.5rem;
+}
+
+.yellow input[type='button'], input.yellow {
     background-color: rgba(255, 255, 0, 1);
 }
 
-.grey input[type='button'] {
+.grey input[type='button'], input.grey {
     background-color: rgba(128,128,128, 1);
 }
 
-.blue input[type='button'] {
+.blue input[type='button'], input.blue {
     background-color: rgba(0, 0, 220, 1);
 }
 
-.red input[type='button'] {
+.red input[type='button'], input.red {
     background-color: rgba(220, 0, 0, 1);
+}
+
+.dark-purple input[type='button'], input.dark-purple {
+    background-color: rgb(81, 62, 132);
+}
+
+.purple input[type='button'], input.purple {
+    background-color: rgba(128, 0, 255, 1);
+}
+
+.green input[type='button'], input.green {
+    background-color: rgb(106, 163, 36);
+}
+
+.orange input[type='button'], input.orange {
+    background-color: rgba(255, 128, 0, 1);
+}
+
+.button-wrapper .scoreboard {
+    margin-top: 0;
+    row-gap: 0.1rem;
 }
 
 @media screen and (min-width: 767px) {
