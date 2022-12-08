@@ -1,4 +1,4 @@
-const url = "";
+const url = "http://10.0.0.185";
 document.addEventListener('DOMContentLoaded', function () {
     
     /* GLOBAL */
@@ -21,6 +21,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* HOME STUFF */
     if (document.querySelectorAll("form[name='shelfclock-home']").length > 0) {
+
+        /* load home */
+        loadHome();
         
         document.querySelectorAll("[data-showspectrum]").forEach(element => {
             element.addEventListener('click', async event => {
@@ -67,11 +70,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.querySelectorAll("input[name='left'], input[name='right']").forEach(element => {
             element.addEventListener('change', async event => {
-                if (event.target.name === 'left'){
-                    console.log('left scoreboard', event.target.value);
-                } else {
-                    console.log('right scoreboard', event.target.value);
-                }         
+                let left = document.querySelector("input[name='left']").value;
+                let right = document.querySelector("input[name='right']").value;
+                let formData = new FormData();
+                formData.append('left', left);
+                formData.append('right', right)
+                await fetch(`${url}/goScoreboardMode`, {
+                    method: 'POST',
+                    body: formData
+                });           
             })
         });
 
@@ -97,188 +104,136 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* SETTINGS STUFF */
     if (document.querySelectorAll("form[name='shelfclock-settings']").length > 0) {
+
+        /* get all */
+        loadSettings();
+
         /* color palette */
-        getRadioButtonsByUrl("colorPalette", `${url}/getpastelColors`);
         updateElementByUrl("colorPalette", "ColorPalette", `${url}/updatePastelColors`, "click");
 
         /* color change frequency */
-        getDropDownByUrl("colorChangeFrequency", url + "/getColorChangeFrequency");
         updateElementByUrl("colorChangeFrequency", "ColorChangeFrequency", url + "/updateColorChangeFrequency", "change");
 
         /* overall brightness */
-        getDirectValueByUrl("rangeBrightness", url + "/getrangeBrightness");
         updateElementByUrl("rangeBrightness", "rangeBrightness", url + "/updaterangeBrightness", "change");
 
         /* suspend display */
-        getRadioButtonsByUrl("suspendType", url + "/getsuspendType");
         updateElementByUrl("suspendType", "suspendType", url + "/updatesuspendType", "click");
 
         /* suspend frequency */
-        getDropDownByUrl("suspendFrequency", url + "/getsuspendFrequency");
         updateElementByUrl("suspendFrequency", "suspendFrequency", url + "/updatesuspendFrequency", "change");
 
         /* shelf spotlights */
-        getCheckboxValueByUrl("useSpotlights", url + "/getuseSpotlights");
         updateCheckboxValueByUrl("useSpotlights", "useSpotlights", url + "/updateuseSpotlights");
         
         /* shelf spotlight color */
-        getDirectValueByUrl("spotlightsColor", url + "/getspotlightsColor");
         updateColorByUrl("spotlightsColor", url + "/updatespotlightsColor");
         
         /* shelf spotlight settings */
-        getRadioButtonsByUrl("spotlightsColorSettings", url + "/getspotlightsColorSettings");
         updateElementByUrl("spotlightsColorSettings", "spotlightsColorSettings", url + "/updatespotlightsColorSettings", "click");
         
         /* clock display type */
-        getRadioButtonsByUrl("ClockDisplayType", url + "/getClockDisplayType");
         updateElementByUrl("ClockDisplayType", "ClockDisplayType", url + "/updateClockDisplayType", "click");
         
         /* blicking center type */
-        getRadioButtonsByUrl("colonType", url + "/getcolonType");
         updateElementByUrl("colonType", "ColonType", url + "/updateColonType", "click");
         
         /* timezone */
-        getDropDownByUrl("timezoneSelect", url + "/getgmtOffset_sec");
         updateElementByUrl("timezoneSelect", "TimezoneSetting", url + "/updateTimezoneSettings", "change");
 
         /* DSTtime */
-        getCheckboxValueByUrl("DSTime", url + "/getDSTime");
         updateCheckboxValueByUrl("DSTime", "DSTime", url + "/updateDSTime");
 
         /* color clock selection */
-        getRadioButtonsByUrl("clockColorSettings", url + "/getClockColorSettings");
         updateElementByUrl("clockColorSettings", "ClockColorSettings", url + "/updateClockColorSettings", "click");
 
         /* color clock selection colors */
-        getDirectValueByUrl("colorHour", url + "/getcolorHour");
         updateColorByUrl("colorHour", url + "/updateHourColor");
-        getDirectValueByUrl("colorColon", url + "/getcolorColon");
         updateColorByUrl("colorColon", url + "/updateColonColor");
-        getDirectValueByUrl("colorMins", url + "/getcolorMins");
         updateColorByUrl("colorMins", url + "/updateMinsColor");
 
         /* date display type */
-        getRadioButtonsByUrl("dateSettings", url + "/getDateDisplayType");
         updateElementByUrl("dateSettings", "DateDisplayType", url + "/updateDateDisplayType", "click");
 
         /* color date selection */
-        getRadioButtonsByUrl("dateColorSettings", url + "/getDateColorSettings");
         updateElementByUrl("dateColorSettings", "DateColorSettings", url + "/updateDateColorSettings", "click");
         
         /* color date settings colors */
-        getDirectValueByUrl("dayColor", url + "/getdayColor");
         updateColorByUrl("dayColor", url + "/updatedayColor");
-        getDirectValueByUrl("separatorColor", url + "/getseparatorColor");
         updateColorByUrl("separatorColor", url + "/updateseparatorColor");
-        getDirectValueByUrl("monthColor", url + "/getmonthColor");
         updateColorByUrl("monthColor", url + "/updatemonthColor");
 
         /* temperature type */
-        getRadioButtonsByUrl("tempType", url + "/gettemperatureSymbol");
         updateElementByUrl("tempType", "TempType", url + "/updateTempType", "click");
 
         /* temperature offset */
-        getDropDownByUrl("correctionSelect", url + "/gettemperatureCorrection");
         updateElementByUrl("correctionSelect", "CorrectionSelect", url + "/updateCorrectionSelect", "change");
 
         /* temperature display type */
-        getRadioButtonsByUrl("tempSettings", url + "/gettempDisplayType");
         updateElementByUrl("tempSettings", "TempDisplayType", url + "/updateTempDisplayType", "click");
 
         /* color temperature selection */
-        getRadioButtonsByUrl("tempColorSettings", url + "/gettempColorSettings");
         updateElementByUrl("tempColorSettings", "TempColorSettings", url + "/updateTempColorSettings", "click");
 
         /* color temperature settings colors */
-        getDirectValueByUrl("tempColor", url + "/gettempColor");
         updateColorByUrl("tempColor", url + "/updateTempColor");
-        getDirectValueByUrl("degreeColor", url + "/getdegreeColor");
         updateColorByUrl("degreeColor", url + "/updateDegreeColor");
-        getDirectValueByUrl("typeColor", url + "/gettypeColor");
         updateColorByUrl("typeColor", url + "/updateTypeColor");
 
         /* humidity settings */
-        getRadioButtonsByUrl("humiSettings", url + "/gethumiDisplayType");
         updateElementByUrl("humiSettings", "HumiDisplayType", url + "/updateHumiDisplayType", "click");
 
         /* color humidity settings */
-        getRadioButtonsByUrl("humiColorSettings", url + "/gethumiColorSettings");
         updateElementByUrl("humiColorSettings", "HumiColorSettings", url + "/updateHumiColorSettings", "click");
 
         /* color humidity settings colors */
-        getDirectValueByUrl("humiColor", url + "/gethumiColor");
         updateColorByUrl("humiColor", url + "/updateHumiColor");
-        getDirectValueByUrl("humiDecimalColor", url + "/gethumiDecimalColor");
         updateColorByUrl("humiDecimalColor", url + "/updateHumiDecimalColor");
-        getDirectValueByUrl("symbolColor", url + "/getsymbolColor");
         updateColorByUrl("symbolColor", url + "/updateSymbolColor");
 
         /* timer options */
-        getCheckboxValueByUrl("alarmCD", url + "/getalarmCD");
         updateCheckboxValueByUrl("alarmCD", "alarmCD", url + "/updatealarmCD");
-        getCheckboxValueByUrl("colorchangeCD", url + "/getcolorchangeCD");
         updateCheckboxValueByUrl("colorchangeCD", "colorchangeCD", url + "/updatecolorchangeCD");
 
         /* timer color section */
-        getDirectValueByUrl("colorCD", url + "/getcolorCD");
         updateColorByUrl("colorCD", url + "/updatecolorCD");
 
         /* scoreboard colors */
-        getDirectValueByUrl("newscoreboardColorLeft", url + "/getscoreboardColorLeft");
         updateColorByUrl("newscoreboardColorLeft", url + "/updatescoreboardColorLeft");
-        getDirectValueByUrl("newscoreboardColorRight", url + "/getscoreboardColorRight");
         updateColorByUrl("newscoreboardColorRight", url + "/updatescoreboardColorRight");
 
         /* spectrum analyzer options */
-        getCheckboxValueByUrl("randomSpectrumMode", url + "/getrandomSpectrumMode");
         updateCheckboxValueByUrl("randomSpectrumMode", "randomSpectrumMode", url + "/updaterandomSpectrumMode");
 
         /* spectrum analyzer color selection */
-        getDirectValueByUrl("spectrumBackground", url + "/getspectrumBackground");
         updateColorByUrl("spectrumBackground", url + "/updatespectrumBackground");
-        getDirectValueByUrl("spectrumColor", url + "/getspectrumColor");
         updateColorByUrl("spectrumColor",  url + "/updatespectrumColor");
 
         /* spectrum analyzer background selection */
-        getRadioButtonsByUrl("spectrumBackgroundSettings", url + "/getspectrumBackgroundSettings");
         updateElementByUrl("spectrumBackgroundSettings", "spectrumBackgroundSettings", url + "/updatespectrumBackgroundSettings", "click");
 
         /* spectrum analyzer segment selection */
-        getRadioButtonsByUrl("spectrumColorSettings", url + "/getspectrumColorSettings");
         updateElementByUrl("spectrumColorSettings", "spectrumColorSettings", url + "/updatespectrumColorSettings", "click");
 
         /* scroll display frequency */
-        getDropDownByUrl("scrollFrequency", url + "/getscrollFrequency");
         updateElementByUrl("scrollFrequency", "scrollFrequency", url + "/updatescrollFrequency", "change");
 
         /* scroll information */
-        getCheckboxValueByUrl("scrollOptions1", url + "/getscrollOptions1");
         updateCheckboxValueByUrl("scrollOptions1", "scrollOptions1", url + "/updatescrollOptions1");
-        getCheckboxValueByUrl("scrollOptions2", url + "/getscrollOptions2");
         updateCheckboxValueByUrl("scrollOptions2", "scrollOptions2", url + "/updatescrollOptions2");
-        getCheckboxValueByUrl("scrollOptions3", url + "/getscrollOptions3");
         updateCheckboxValueByUrl("scrollOptions3", "scrollOptions3", url + "/updatescrollOptions3");
-        getCheckboxValueByUrl("scrollOptions4", url + "/getscrollOptions4");
         updateCheckboxValueByUrl("scrollOptions4", "scrollOptions4", url + "/updatescrollOptions4");
-        getCheckboxValueByUrl("scrollOptions5", url + "/getscrollOptions5");
         updateCheckboxValueByUrl("scrollOptions5", "scrollOptions5", url + "/updatescrollOptions5");
-        getCheckboxValueByUrl("scrollOptions6", url + "/getscrollOptions6");
         updateCheckboxValueByUrl("scrollOptions6", "scrollOptions6", url + "/updatescrollOptions6");
-        getCheckboxValueByUrl("scrollOptions7", url + "/getscrollOptions7");
         updateCheckboxValueByUrl("scrollOptions7", "scrollOptions7", url + "/updatescrollOptions7");
-        getCheckboxValueByUrl("scrollOptions8", url + "/getscrollOptions8");
         updateCheckboxValueByUrl("scrollOptions8", "scrollOptions8", url + "/updatescrollOptions8");
-        getDirectValueByUrl("scrollText", url + "/getscrollText");
         updateTextFieldByUrl("scrollText", "scrollText", url + "/updatescrollText");
 
         /* scroll options */
-        getCheckboxValueByUrl("scrollOverride", url + "/getscrollOverride");
-        updateCheckboxValueByUrl("scrollOverride", "scrollText", url + "/updatescrollOverride");
+        updateCheckboxValueByUrl("scrollOverride", "scrollOverride", url + "/updatescrollOverride");
 
         /* scroll color options */
-        getDirectValueByUrl("scrollColor", url + "/getscrollColor");
         updateColorByUrl("scrollColor", url + "/updatescrollColor");
-        getRadioButtonsByUrl("scrollColorSettings", url + "/getscrollColorSettings");
         updateElementByUrl("scrollColorSettings", "scrollColorSettings", url + "/updatescrollColorSettings", "click");
 
         document.querySelector("[name='setdatetime']").addEventListener('click', async (event) => {
@@ -316,9 +271,129 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 });
+/* load home */
+async function loadHome() {
+    let response = await fetch(`${url}/gethome`);
+    if (response.ok) {
+        let data = await response.json();
+        document.querySelector("[name='left']").value = data.scoreboardLeft;
+        document.querySelector("[name='right']").value = data.scoreboardRight;
+    }
+}
 
+/* load settings */
+async function loadSettings() {
+    const radioButtons = {
+        'ColorPalette': 'colorPalette',
+        'suspendType': 'suspendType',
+        'spotlightsColorSettings': 'spotlightsColorSettings',
+        'ClockDisplayType': 'ClockDisplayType',
+        'ColonType': 'colonType',
+        'ClockColorSettings': 'clockColorSettings',
+        'DateDisplayType': 'dateSettings',
+        'DateColorSettings': 'dateColorSettings', 
+        'TempType': 'tempType',
+        'TempDisplayType': 'tempSettings',
+        'TempColorSettings': 'tempColorSettings',
+        'HumiDisplayType': 'humiSettings',
+        'HumiColorSettings': 'humiColorSettings',
+        'spectrumBackgroundSettings': 'spectrumBackgroundSettings',
+        'spectrumColorSettings': 'spectrumColorSettings',
+        'scrollColorSettings': 'scrollColorSettings'
+    };
+    const dropDownSelectors = {
+        'ColorChangeFrequency': 'colorChangeFrequency',
+        'suspendFrequency': 'suspendFrequency',
+        'TimezoneSetting': 'timezoneSelect',
+        'CorrectionSelect': 'correctionSelect',
+        'scrollFrequency': 'scrollFrequency'
+    }
+    const directValueSelectors = {
+        'rangeBrightness': 'rangeBrightness',
+        'spotlightcolor': 'spotlightsColor',
+        'colorHour': 'colorHour',
+        'colorMin': 'colorMins',
+        'colorColon': 'colorColon',
+        'dayColor': 'dayColor',
+        'separatorColor': 'separatorColor',
+        'monthColor': 'monthColor',
+        'TempColor': 'tempColor',
+        'DegreeColor': 'degreeColor',
+        'TypeColor': 'typeColor',
+        'HumiColor': 'humiColor',
+        'HumiDecimalColor': 'humiDecimalColor',
+        'HumiSymbolColor': 'symbolColor',
+        'colorCD': 'colorCD',
+        'scoreboardColorLeft': 'newscoreboardColorLeft',
+        'scoreboardColorRight': 'newscoreboardColorRight',
+        'spectrumBackgroundColor': 'spectrumBackground',
+        'spectrumColor': 'spectrumColor',
+        'scrollText': 'scrollText',
+        'scrollColor': 'scrollColor',
+    }
+    const checkboxSelectors = {
+        'useSpotlights': 'useSpotlights',
+        'DSTime': 'DSTime',
+        'useAudibleAlarm': 'alarmCD',
+        'colorchangeCD': 'colorchangeCD',
+        'randomSpectrumMode': 'randomSpectrumMode',
+        'scrollOptions1': 'scrollOptions1',
+        'scrollOptions2': 'scrollOptions2',
+        'scrollOptions3': 'scrollOptions3',
+        'scrollOptions4': 'scrollOptions4',
+        'scrollOptions5': 'scrollOptions5',
+        'scrollOptions6': 'scrollOptions6',
+        'scrollOptions7': 'scrollOptions7',
+        'scrollOptions8': 'scrollOptions8',
+        'scrollOverride': 'scrollOverride'
+    }
 
-/* get set form elements */
+    let response = await fetch(`${url}/getsettings`);
+    if (response.ok) {
+        let settings = await response.json();
+        for (let [key, value] of Object.entries(settings)) {
+            if (key in radioButtons) {
+                setRadioButton(radioButtons[key], value);
+            } else if (key in dropDownSelectors) {
+                setDropDown(dropDownSelectors[key], value);
+            } else if (key in directValueSelectors) {
+                setValue(directValueSelectors[key], value);
+            } else if (key in checkboxSelectors) {
+                setCheckbox(checkboxSelectors[key], value)
+            } else {
+                console.log(`key is not found ${key}`);
+            }
+        }
+    }
+}
+
+/* set form elements */
+async function setCheckbox(selectorName, value) {
+   document.querySelector(`[name='${selectorName}']`).checked = value;
+}
+
+async function setValue(selectorName, value) {
+    document.querySelector(`[name='${selectorName}']`).value = value;
+}
+
+async function setDropDown(selectorName, value) {
+    let select = document.querySelector(`select[name='${selectorName}']`);
+    [...select.options].forEach((option, index) => {
+        if(value.toString() === option.value) {
+            select.selectedIndex = index;
+        }
+    });
+}
+
+async function setRadioButton(selectorName, value) {
+    document.querySelectorAll(`input[name='${selectorName}']`).forEach((element) => {
+        if (element.value === value.toString()) {
+            element.checked = true;
+        }
+    });
+}
+
+/* update form elements */
 async function updateTextFieldByUrl(selectorName, formDataName, updateUrl) {
     const debounced = debounce(async function (event) {
         let formData = new FormData();
@@ -379,38 +454,6 @@ async function getCheckboxValueByUrl(electorName, getURL) {
     }
 }
 
-async function getDirectValueByUrl(selectorName, getURL) {
-    let response = await fetch(getURL);
-    if (response.ok) {
-        document.querySelector(`[name='${selectorName}']`).value = await response.text();
-    }
-}
-
-async function getDropDownByUrl(selectorName, getURL) {
-    let response = await fetch(getURL);
-    let value = await response.text();
-    if (response.ok) {
-        let select = document.querySelector(`select[name='${selectorName}']`);
-        [...select.options].forEach((option, index) => {
-            if(value === option.value) {
-                select.selectedIndex = index;
-            }
-        });
-    }
-}
-
-async function getRadioButtonsByUrl(selectorName, getURL) {
-    let response = await fetch(getURL);
-    let value = await response.text();
-    if (response.ok) {
-        document.querySelectorAll(`input[name='${selectorName}']`).forEach((element) => {
-            if (element.value === value) {
-                element.checked = true;
-            }
-        });
-    }
-}
-
 /* utility function */
 function hexToRgb(hex) {
     // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
@@ -445,4 +488,3 @@ function debounce(func, wait, immediate) {
 function pad(number) {
     return ( number < 10 ? '0' : '' ) + number
 }
-

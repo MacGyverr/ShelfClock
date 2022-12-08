@@ -442,6 +442,10 @@ void setup() {
   Serial.println(F("Inizializing FS..."));
   if (SPIFFS.begin()){
       Serial.println(F("SPIFFS mounted correctly."));
+      Serial.println("Total Bytes");
+      Serial.println(SPIFFS.totalBytes());
+      Serial.println("Used Bytes");
+      Serial.println(SPIFFS.usedBytes());
   }else{
       Serial.println(F("!An error occurred during SPIFFS mounting"));
   }
@@ -540,6 +544,8 @@ void setup() {
   
   allBlank();   //clear everything off the leds
   
+  server.enableCrossOrigin(true);
+
   //Webpage Handlers for SPIFFS access to flash
   server.serveStatic("/", SPIFFS, "/index.html");  //send default webpage from root request
   server.serveStatic("/", SPIFFS, "/", "max-age=86400");
@@ -547,11 +553,13 @@ void setup() {
   //OTA firmware Upgrade Webpage Handlers
   Serial.println("OTA Available");
   server.on("/update", HTTP_POST, []() {
-  server.sendHeader("Connection", "close");
-  server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
-  ESP.restart();
-   }, []() {
+    server.sendHeader("Connection", "close");
+    server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+    ESP.restart();
+  }, []() {
       HTTPUpload& upload = server.upload();
+      Serial.println("Update..");
+      Serial.println(upload.status);
       if (upload.status == UPLOAD_FILE_START) {
         Serial.printf("Update: %s\n", upload.filename.c_str());
         if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { //start with max available size
@@ -2890,16 +2898,9 @@ void loadWebPageHandlers() {
     server.send(200, "text/json", "{\"result\":\"ok\"}");
   });
 
-
-
 // Settings.html Webpage Handlers
 
 // Global Settings 
-  server.on("/getpastelColors", []() { server.send(200, "text/plain", String(pastelColors)); });
-  server.on("/getColorChangeFrequency", []() { server.send(200, "text/plain", String(ColorChangeFrequency));});
-  server.on("/getsuspendType", []() { server.send(200, "text/plain", String(suspendType)); });
-  server.on("/getsuspendFrequency", []() { server.send(200, "text/plain", String(suspendFrequency));});
-
   server.on("/updatePastelColors", HTTP_POST, []() {   
     pastelColors = server.arg("ColorPalette").toInt();
     preferences.putInt("pastelColors", pastelColors);
@@ -2927,14 +2928,7 @@ void loadWebPageHandlers() {
   });
 
 
-
-
 // Spotlight Settings
-  server.on("/getspotlightsColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r0_val, g0_val, b0_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getspotlightsColorSettings", []() { server.send(200, "text/plain", String(spotlightsColorSettings)); });
-  server.on("/getuseSpotlights", []() { server.send(200, "text/plain", String(useSpotlights)); });
-  server.on("/getrangeBrightness", []() { server.send(200, "text/plain", String(brightness)); });
-
   server.on("/updatespotlightsColor", HTTP_POST, []() {  
     r0_val = server.arg("r").toInt();
     g0_val = server.arg("g").toInt();
@@ -2971,16 +2965,7 @@ void loadWebPageHandlers() {
 
 
 
-// Clock Mode Settings
-  server.on("/getClockDisplayType", []() { server.send(200, "text/plain", String(clockDisplayType)); });
-  server.on("/getcolonType", []() { server.send(200, "text/plain", String(colonType)); });
-  server.on("/getgmtOffset_sec", []() { server.send(200, "text/plain", String(gmtOffset_sec));});
-  server.on("/getDSTime", []() { server.send(200, "text/plain", String(DSTime)); });
-  server.on("/getcolorHour", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r1_val, g1_val, b1_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getcolorMins", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r2_val, g2_val, b2_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getcolorColon", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r3_val, g3_val, b3_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getClockColorSettings", []() { server.send(200, "text/plain", String(ClockColorSettings)); });
-  
+// Clock Mode Settings  
   server.on("/updateClockDisplayType", HTTP_POST, []() {    
     clockDisplayType = server.arg("ClockDisplayType").toInt();
     preferences.putInt("clockDispType", clockDisplayType);
@@ -3066,13 +3051,6 @@ void loadWebPageHandlers() {
 
 
 // Date Mode Settings
-
-  server.on("/getDateDisplayType", []() { server.send(200, "text/plain", String(dateDisplayType)); });
-  server.on("/getdayColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r4_val, g4_val, b4_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getmonthColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r5_val, g5_val, b5_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getseparatorColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r6_val, g6_val, b6_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getDateColorSettings", []() { server.send(200, "text/plain", String(DateColorSettings)); });
-
  server.on("/updateDateDisplayType", HTTP_POST, []() {    
     dateDisplayType = server.arg("DateDisplayType").toInt();
     preferences.putInt("dateDisplayType", dateDisplayType);
@@ -3123,16 +3101,6 @@ void loadWebPageHandlers() {
 
 
 // Temperature Mode Settings
-   
-  server.on("/gettemperatureSymbol", []() { server.send(200, "text/plain", String(temperatureSymbol)); });
-  server.on("/gettemperatureCorrection", []() { server.send(200, "text/plain", String(temperatureCorrection));});
-  server.on("/gettempDisplayType", []() { server.send(200, "text/plain", String(tempDisplayType)); });
-  server.on("/gettempColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r7_val, g7_val, b7_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/gettypeColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r8_val, g8_val, b8_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getdegreeColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r9_val, g9_val, b9_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/gettempColorSettings", []() { server.send(200, "text/plain", String(tempColorSettings)); });
-
-  
   server.on("/updateTempType", HTTP_POST, []() {    
     temperatureSymbol = server.arg("TempType").toInt();
     preferences.putInt("temperatureSym", temperatureSymbol);
@@ -3198,13 +3166,6 @@ void loadWebPageHandlers() {
 
 
 // Humidity Mode Settings
-  
-  server.on("/gethumiDisplayType", []() { server.send(200, "text/plain", String(humiDisplayType)); });
-  server.on("/gethumiColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r10_val, g10_val, b10_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getsymbolColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r11_val, g11_val, b11_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/gethumiDecimalColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r12_val, g12_val, b12_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/gethumiColorSettings", []() { server.send(200, "text/plain", String(humiColorSettings)); });
-  
   server.on("/updateHumiDisplayType", HTTP_POST, []() {    
     humiDisplayType = server.arg("HumiDisplayType").toInt();
     preferences.putInt("humiDisplayType", humiDisplayType);
@@ -3255,12 +3216,7 @@ void loadWebPageHandlers() {
 
 
 
-// Countdown/Stopwatch Mode Settings
-
-  server.on("/getcolorchangeCD", []() { server.send(200, "text/plain", String(colorchangeCD)); });
-  server.on("/getalarmCD", []() { server.send(200, "text/plain", String(useAudibleAlarm)); });
-  server.on("/getcolorCD", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", cd_r_val, cd_g_val, cd_b_val); server.send(200, "text/plain", tempcolor); });
-
+// Countdown/Stopwatch Mode Settings 
   server.on("/updatecolorchangeCD", HTTP_POST, []() {   
     if ( server.arg("colorchangeCD") == "true") {colorchangeCD = 1;}
     if ( server.arg("colorchangeCD") == "false") {colorchangeCD = 0;}
@@ -3292,12 +3248,6 @@ void loadWebPageHandlers() {
 
 
 //Scoreboard Mode Settings
-
-  server.on("/getscoreboardColorLeft", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r13_val, g13_val, b13_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getscoreboardColorRight", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r14_val, g14_val, b14_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getscoreboardColorLeftRGB", []() { char tempcolor[25]; sprintf(tempcolor, "rgba(%d, %d, %d, 1)", r13_val, g13_val, b13_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getscoreboardColorRightRGB", []() { char tempcolor[25]; sprintf(tempcolor, "rgba(%d, %d, %d, 1)", r14_val, g14_val, b14_val); server.send(200, "text/plain", tempcolor); });
-
   server.on("/updatescoreboardColorLeft", HTTP_POST, []() {  
     r13_val = server.arg("r").toInt();
     g13_val = server.arg("g").toInt();
@@ -3324,13 +3274,6 @@ void loadWebPageHandlers() {
 
 
 //Spectrum Mode Settings
-  
-  server.on("/getrandomSpectrumMode", []() { server.send(200, "text/plain", String(randomSpectrumMode)); });
-  server.on("/getspectrumColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r15_val, g15_val, b15_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getspectrumBackground", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r17_val, g17_val, b17_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getspectrumColorSettings", []() { server.send(200, "text/plain", String(spectrumColorSettings)); });
-  server.on("/getspectrumBackgroundSettings", []() { server.send(200, "text/plain", String(spectrumBackgroundSettings)); });
-
   server.on("/updaterandomSpectrumMode", HTTP_POST, []() {   
     if ( server.arg("randomSpectrumMode") == "true") {randomSpectrumMode = 1;}
     if ( server.arg("randomSpectrumMode") == "false") {randomSpectrumMode = 0;}
@@ -3379,21 +3322,6 @@ void loadWebPageHandlers() {
 
 
 // Scrolling-text Mode settings
-
-  server.on("/getscrollFrequency", []() { server.send(200, "text/plain", String(scrollFrequency)); });
-  server.on("/getscrollOverride", []() { server.send(200, "text/plain", String(scrollOverride)); });
-  server.on("/getscrollColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r16_val, g16_val, b16_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getscrollColorSettings", []() { server.send(200, "text/plain", String(scrollColorSettings)); });
-  server.on("/getscrollOptions1", []() { server.send(200, "text/plain", String(scrollOptions1)); });
-  server.on("/getscrollOptions2", []() { server.send(200, "text/plain", String(scrollOptions2)); });
-  server.on("/getscrollOptions3", []() { server.send(200, "text/plain", String(scrollOptions3)); });
-  server.on("/getscrollOptions4", []() { server.send(200, "text/plain", String(scrollOptions4)); });
-  server.on("/getscrollOptions5", []() { server.send(200, "text/plain", String(scrollOptions5)); });
-  server.on("/getscrollOptions6", []() { server.send(200, "text/plain", String(scrollOptions6)); });
-  server.on("/getscrollOptions7", []() { server.send(200, "text/plain", String(scrollOptions7)); });
-  server.on("/getscrollOptions8", []() { server.send(200, "text/plain", String(scrollOptions8)); });
-  server.on("/getscrollText", []() { server.send(200, "text/plain", String(scrollText)); });
- 
   server.on("/updatescrollFrequency", HTTP_POST, []() {    
     scrollFrequency = server.arg("scrollFrequency").toInt();
     preferences.putInt("scrollFreq", scrollFrequency);
@@ -3500,10 +3428,7 @@ void loadWebPageHandlers() {
   });
 
 
-
-
 // Save Preset Handles
-
   server.on("/setpreset1", HTTP_POST, []() {   
     setpreset1();   
     server.send(200, "text/json", "{\"result\":\"ok\"}");
@@ -3514,11 +3439,132 @@ void loadWebPageHandlers() {
     server.send(200, "text/json", "{\"result\":\"ok\"}");
   });
 
+  server.on("/gethome", []() {
+    DynamicJsonDocument json(500);
+    String output;
+
+    json["scoreboardLeft"] = scoreboardLeft;
+    json["scoreboardRight"] = scoreboardRight;
+
+    serializeJson(json, output);
+    server.send(200, "application/json", output);
+  });
+
+  server.on("/getsettings", []() {
+    DynamicJsonDocument json(1500);
+    String output;
+    char spotlightcolor[8];
+    char colorHour[8], colorMin[8], colorColon[8];
+    char dayColor[8], monthColor[8], separatorColor[8];
+    char tempColor[8], typeColor[8], degreeColor[8];
+    char humiColor[8], humiDecimalColor[8], humiSymbolColor[8];
+    char colorCD[8], scoreboardColorLeft[8], scoreboardColorRight[8];
+    char spectrumColor[8], spectrumBackgroundColor[8], scrollingColor[8];
+
+    json["ColorPalette"] = pastelColors;
+    json["ColorChangeFrequency"] = ColorChangeFrequency;
+    json["rangeBrightness"] = brightness;
+    json["suspendType"] = suspendType;
+    json["suspendFrequency"] = suspendFrequency;
+    json["useSpotlights"] = useSpotlights;
+    
+    sprintf(spotlightcolor, "#%02X%02X%02X", r0_val, g0_val, b0_val);
+    json["spotlightcolor"] = spotlightcolor;
+
+    json["spotlightsColorSettings"] = spotlightsColorSettings;
+    json["ClockDisplayType"] = clockDisplayType;
+    json["ColonType"] = colonType;
+    json["TimezoneSetting"] = gmtOffset_sec;
+    json["DSTime"] = DSTime;
+    json["ClockColorSettings"] = ClockColorSettings;
+
+    sprintf(colorHour, "#%02X%02X%02X", r1_val, g1_val, b1_val);
+    json["colorHour"] = colorHour;
+    sprintf(colorMin, "#%02X%02X%02X", r2_val, g2_val, b2_val);
+    json["colorMin"] = colorMin;
+    sprintf(colorColon, "#%02X%02X%02X", r3_val, g3_val, b3_val);
+    json["colorColon"] = colorColon;
+
+    json["DateDisplayType"] = dateDisplayType;
+    json["DateColorSettings"] = DateColorSettings;
+
+    sprintf(dayColor, "#%02X%02X%02X", r4_val, g4_val, b4_val);
+    json["dayColor"] = dayColor;
+    sprintf(monthColor, "#%02X%02X%02X", r5_val, g5_val, b5_val);
+    json["monthColor"] = monthColor;
+    sprintf(separatorColor, "#%02X%02X%02X", r3_val, g3_val, b3_val);
+    json["separatorColor"] = separatorColor;
+
+    json["TempType"] = temperatureSymbol;
+    json["CorrectionSelect"] = temperatureCorrection;
+    json["TempDisplayType"] = tempDisplayType;
+    json["TempColorSettings"] = tempColorSettings;
+
+    sprintf(tempColor, "#%02X%02X%02X", r7_val, g7_val, b7_val);
+    json["TempColor"] = tempColor;
+    sprintf(typeColor, "#%02X%02X%02X", r8_val, g8_val, b8_val);
+    json["TypeColor"] = typeColor;
+    sprintf(degreeColor, "#%02X%02X%02X", r9_val, g9_val, b9_val);
+    json["DegreeColor"] = degreeColor;
+
+    json["HumiDisplayType"] = humiDisplayType;
+    json["HumiColorSettings"] = humiColorSettings;
+
+    sprintf(humiColor, "#%02X%02X%02X", r10_val, g10_val, b10_val);
+    json["HumiColor"] = humiColor;
+    sprintf(humiDecimalColor, "#%02X%02X%02X", r11_val, g11_val, b11_val);
+    json["HumiDecimalColor"] = humiDecimalColor;
+    sprintf(humiSymbolColor, "#%02X%02X%02X", r12_val, g12_val, b12_val);
+    json["HumiSymbolColor"] = humiSymbolColor;
+    json["useAudibleAlarm"] = useAudibleAlarm;
+    json["colorchangeCD"] = colorchangeCD;
+
+    sprintf(colorCD, "#%02X%02X%02X", cd_r_val, cd_g_val, cd_b_val);
+    json["colorCD"] = colorCD;
+    sprintf(scoreboardColorLeft, "#%02X%02X%02X", r13_val, g13_val, b13_val);
+    json["scoreboardColorLeft"] = scoreboardColorLeft;
+    sprintf(scoreboardColorRight, "#%02X%02X%02X", r14_val, g14_val, b14_val);
+    json["scoreboardColorRight"] = scoreboardColorRight;
+
+    json["randomSpectrumMode"] = randomSpectrumMode;
+    sprintf(spectrumColor, "#%02X%02X%02X", r15_val, g15_val, b15_val);
+    json["spectrumColor"] = spectrumColor;
+    sprintf(spectrumBackgroundColor, "#%02X%02X%02X", r17_val, g17_val, b17_val);
+    json["spectrumBackgroundColor"] = spectrumBackgroundColor;
+
+    json["spectrumBackgroundSettings"] = spectrumBackgroundSettings;
+    json["spectrumColorSettings"] = spectrumColorSettings;
+    json["scrollFrequency"] = scrollFrequency;
+    json["scrollOptions1"] = scrollOptions1;
+    json["scrollOptions2"] = scrollOptions2;
+    json["scrollOptions3"] = scrollOptions3;
+    json["scrollOptions4"] = scrollOptions4;
+    json["scrollOptions5"] = scrollOptions5;
+    json["scrollOptions6"] = scrollOptions6;
+    json["scrollOptions7"] = scrollOptions7;
+    json["scrollOptions8"] = scrollOptions8;
+    json["scrollText"] = scrollText;
+    json["scrollOverride"] = scrollOverride;
+
+    sprintf(scrollingColor, "#%02X%02X%02X", r16_val, g16_val, b16_val);
+    json["scrollColor"] = scrollingColor;
+
+    json["scrollColorSettings"] = scrollColorSettings;
+     
+    serializeJson(json, output);
+    server.send(200, "application/json", output);
+
+  });
+
   server.on("/updateanything", HTTP_POST, []() {
     StaticJsonDocument<250> jsonDocument;
     if(server.args() > 0) {
       String body = server.arg(0);
       deserializeJson(jsonDocument, server.arg(0));
+
+
+
+
       if (!jsonDocument["temperature"].isNull()) {
         preferences.getBytes("temperature", &tempConfig, preferences.getBytesLength("temperature"));
         Serial.println("---get bytes--------");
@@ -3541,12 +3587,8 @@ void loadWebPageHandlers() {
         Serial.println(tempConfig.outdoor_long);
         Serial.println(tempConfig.outdoor_apikey);
         Serial.println("-----------");
-        
-
 
       }
-      
-
       server.send(200, "text/json", "{\"result\":\"ok\"}");
     } 
     server.send(401);
