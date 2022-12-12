@@ -1,4 +1,69 @@
 const url = "http://10.0.0.185";
+const radioButtons = {
+    'ColorPalette': 'colorPalette',
+    'suspendType': 'suspendType',
+    'spotlightsColorSettings': 'spotlightsColorSettings',
+    'ClockDisplayType': 'ClockDisplayType',
+    'ColonType': 'colonType',
+    'ClockColorSettings': 'clockColorSettings',
+    'DateDisplayType': 'dateSettings',
+    'DateColorSettings': 'dateColorSettings', 
+    'TempType': 'tempType',
+    'TempDisplayType': 'tempSettings',
+    'TempColorSettings': 'tempColorSettings',
+    'HumiDisplayType': 'humiSettings',
+    'HumiColorSettings': 'humiColorSettings',
+    'spectrumBackgroundSettings': 'spectrumBackgroundSettings',
+    'spectrumColorSettings': 'spectrumColorSettings',
+    'scrollColorSettings': 'scrollColorSettings'
+};
+const dropDownSelectors = {
+    'ColorChangeFrequency': 'colorChangeFrequency',
+    'suspendFrequency': 'suspendFrequency',
+    'TimezoneSetting': 'timezoneSelect',
+    'CorrectionSelect': 'correctionSelect',
+    'scrollFrequency': 'scrollFrequency'
+}
+const directValueSelectors = {
+    'rangeBrightness': 'rangeBrightness',
+    'spotlightcolor': 'spotlightsColor',
+    'colorHour': 'colorHour',
+    'colorMin': 'colorMins',
+    'colorColon': 'colorColon',
+    'dayColor': 'dayColor',
+    'separatorColor': 'separatorColor',
+    'monthColor': 'monthColor',
+    'TempColor': 'tempColor',
+    'DegreeColor': 'degreeColor',
+    'TypeColor': 'typeColor',
+    'HumiColor': 'humiColor',
+    'HumiDecimalColor': 'humiDecimalColor',
+    'HumiSymbolColor': 'symbolColor',
+    'colorCD': 'colorCD',
+    'scoreboardColorLeft': 'newscoreboardColorLeft',
+    'scoreboardColorRight': 'newscoreboardColorRight',
+    'spectrumBackgroundColor': 'spectrumBackground',
+    'spectrumColor': 'spectrumColor',
+    'scrollText': 'scrollText',
+    'scrollColor': 'scrollColor',
+}
+const checkboxSelectors = {
+    'useSpotlights': 'useSpotlights',
+    'DSTime': 'DSTime',
+    'useAudibleAlarm': 'alarmCD',
+    'colorchangeCD': 'colorchangeCD',
+    'randomSpectrumMode': 'randomSpectrumMode',
+    'scrollOptions1': 'scrollOptions1',
+    'scrollOptions2': 'scrollOptions2',
+    'scrollOptions3': 'scrollOptions3',
+    'scrollOptions4': 'scrollOptions4',
+    'scrollOptions5': 'scrollOptions5',
+    'scrollOptions6': 'scrollOptions6',
+    'scrollOptions7': 'scrollOptions7',
+    'scrollOptions8': 'scrollOptions8',
+    'scrollOverride': 'scrollOverride'
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     
     /* GLOBAL */
@@ -108,115 +173,53 @@ document.addEventListener('DOMContentLoaded', function () {
         /* get all */
         loadSettings();
 
-        /* color palette */
-        updateElementByUrl("colorPalette", "ColorPalette", `${url}/updatePastelColors`, "click");
+        for (let [key, value] of Object.entries({...radioButtons, ...dropDownSelectors, ...{'rangeBrightness': 'rangeBrightness'}})) {
+            document.querySelectorAll(`[name='${value}`).forEach((element) => {
+                element.addEventListener("change", async function(event) {
+                    let body = {};
+                    body[key] = event.target.value;
+                    await fetch(`${url}/updateanything`, {
+                        method: 'POST',
+                        body: JSON.stringify(body)
+                    });
+                });
+            });
+        }
 
-        /* color change frequency */
-        updateElementByUrl("colorChangeFrequency", "ColorChangeFrequency", url + "/updateColorChangeFrequency", "change");
-
-        /* overall brightness */
-        updateElementByUrl("rangeBrightness", "rangeBrightness", url + "/updaterangeBrightness", "change");
-
-        /* suspend display */
-        updateElementByUrl("suspendType", "suspendType", url + "/updatesuspendType", "click");
-
-        /* suspend frequency */
-        updateElementByUrl("suspendFrequency", "suspendFrequency", url + "/updatesuspendFrequency", "change");
+        for (let [key, value] of Object.entries({...directValueSelectors})) {
+            if (key === 'rangeBrightness') continue;
+            const debounced = debounce(async function (event) {
+                let body = {};
+                if (key === 'scrollText') {
+                    body[key] = event.target.value;
+                } else {
+                    let rbg = hexToRgb(event.target.value);
+                    body[key] = {
+                        r: rbg['r'],
+                        b: rbg['b'],
+                        g: rbg['g']
+                    }
+                }
+                await fetch(`${url}/updateanything`, {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+            }, 500); // half a second debounce so we don't flood the server with requests. 
+            document.querySelector(`[name='${value}']`).addEventListener("input", debounced);
+        }
 
         /* shelf spotlights */
         updateCheckboxValueByUrl("useSpotlights", "useSpotlights", url + "/updateuseSpotlights");
-        
-        /* shelf spotlight color */
-        updateColorByUrl("spotlightsColor", url + "/updatespotlightsColor");
-        
-        /* shelf spotlight settings */
-        updateElementByUrl("spotlightsColorSettings", "spotlightsColorSettings", url + "/updatespotlightsColorSettings", "click");
-        
-        /* clock display type */
-        updateElementByUrl("ClockDisplayType", "ClockDisplayType", url + "/updateClockDisplayType", "click");
-        
-        /* blicking center type */
-        updateElementByUrl("colonType", "ColonType", url + "/updateColonType", "click");
-        
-        /* timezone */
-        updateElementByUrl("timezoneSelect", "TimezoneSetting", url + "/updateTimezoneSettings", "change");
 
         /* DSTtime */
         updateCheckboxValueByUrl("DSTime", "DSTime", url + "/updateDSTime");
-
-        /* color clock selection */
-        updateElementByUrl("clockColorSettings", "ClockColorSettings", url + "/updateClockColorSettings", "click");
-
-        /* color clock selection colors */
-        updateColorByUrl("colorHour", url + "/updateHourColor");
-        updateColorByUrl("colorColon", url + "/updateColonColor");
-        updateColorByUrl("colorMins", url + "/updateMinsColor");
-
-        /* date display type */
-        updateElementByUrl("dateSettings", "DateDisplayType", url + "/updateDateDisplayType", "click");
-
-        /* color date selection */
-        updateElementByUrl("dateColorSettings", "DateColorSettings", url + "/updateDateColorSettings", "click");
-        
-        /* color date settings colors */
-        updateColorByUrl("dayColor", url + "/updatedayColor");
-        updateColorByUrl("separatorColor", url + "/updateseparatorColor");
-        updateColorByUrl("monthColor", url + "/updatemonthColor");
-
-        /* temperature type */
-        updateElementByUrl("tempType", "TempType", url + "/updateTempType", "click");
-
-        /* temperature offset */
-        updateElementByUrl("correctionSelect", "CorrectionSelect", url + "/updateCorrectionSelect", "change");
-
-        /* temperature display type */
-        updateElementByUrl("tempSettings", "TempDisplayType", url + "/updateTempDisplayType", "click");
-
-        /* color temperature selection */
-        updateElementByUrl("tempColorSettings", "TempColorSettings", url + "/updateTempColorSettings", "click");
-
-        /* color temperature settings colors */
-        updateColorByUrl("tempColor", url + "/updateTempColor");
-        updateColorByUrl("degreeColor", url + "/updateDegreeColor");
-        updateColorByUrl("typeColor", url + "/updateTypeColor");
-
-        /* humidity settings */
-        updateElementByUrl("humiSettings", "HumiDisplayType", url + "/updateHumiDisplayType", "click");
-
-        /* color humidity settings */
-        updateElementByUrl("humiColorSettings", "HumiColorSettings", url + "/updateHumiColorSettings", "click");
-
-        /* color humidity settings colors */
-        updateColorByUrl("humiColor", url + "/updateHumiColor");
-        updateColorByUrl("humiDecimalColor", url + "/updateHumiDecimalColor");
-        updateColorByUrl("symbolColor", url + "/updateSymbolColor");
 
         /* timer options */
         updateCheckboxValueByUrl("alarmCD", "alarmCD", url + "/updatealarmCD");
         updateCheckboxValueByUrl("colorchangeCD", "colorchangeCD", url + "/updatecolorchangeCD");
 
-        /* timer color section */
-        updateColorByUrl("colorCD", url + "/updatecolorCD");
-
-        /* scoreboard colors */
-        updateColorByUrl("newscoreboardColorLeft", url + "/updatescoreboardColorLeft");
-        updateColorByUrl("newscoreboardColorRight", url + "/updatescoreboardColorRight");
-
         /* spectrum analyzer options */
         updateCheckboxValueByUrl("randomSpectrumMode", "randomSpectrumMode", url + "/updaterandomSpectrumMode");
-
-        /* spectrum analyzer color selection */
-        updateColorByUrl("spectrumBackground", url + "/updatespectrumBackground");
-        updateColorByUrl("spectrumColor",  url + "/updatespectrumColor");
-
-        /* spectrum analyzer background selection */
-        updateElementByUrl("spectrumBackgroundSettings", "spectrumBackgroundSettings", url + "/updatespectrumBackgroundSettings", "click");
-
-        /* spectrum analyzer segment selection */
-        updateElementByUrl("spectrumColorSettings", "spectrumColorSettings", url + "/updatespectrumColorSettings", "click");
-
-        /* scroll display frequency */
-        updateElementByUrl("scrollFrequency", "scrollFrequency", url + "/updatescrollFrequency", "change");
 
         /* scroll information */
         updateCheckboxValueByUrl("scrollOptions1", "scrollOptions1", url + "/updatescrollOptions1");
@@ -227,14 +230,9 @@ document.addEventListener('DOMContentLoaded', function () {
         updateCheckboxValueByUrl("scrollOptions6", "scrollOptions6", url + "/updatescrollOptions6");
         updateCheckboxValueByUrl("scrollOptions7", "scrollOptions7", url + "/updatescrollOptions7");
         updateCheckboxValueByUrl("scrollOptions8", "scrollOptions8", url + "/updatescrollOptions8");
-        updateTextFieldByUrl("scrollText", "scrollText", url + "/updatescrollText");
 
         /* scroll options */
         updateCheckboxValueByUrl("scrollOverride", "scrollOverride", url + "/updatescrollOverride");
-
-        /* scroll color options */
-        updateColorByUrl("scrollColor", url + "/updatescrollColor");
-        updateElementByUrl("scrollColorSettings", "scrollColorSettings", url + "/updatescrollColorSettings", "click");
 
         document.querySelector("[name='setdatetime']").addEventListener('click', async (event) => {
             let date = new Date();
@@ -283,71 +281,6 @@ async function loadHome() {
 
 /* load settings */
 async function loadSettings() {
-    const radioButtons = {
-        'ColorPalette': 'colorPalette',
-        'suspendType': 'suspendType',
-        'spotlightsColorSettings': 'spotlightsColorSettings',
-        'ClockDisplayType': 'ClockDisplayType',
-        'ColonType': 'colonType',
-        'ClockColorSettings': 'clockColorSettings',
-        'DateDisplayType': 'dateSettings',
-        'DateColorSettings': 'dateColorSettings', 
-        'TempType': 'tempType',
-        'TempDisplayType': 'tempSettings',
-        'TempColorSettings': 'tempColorSettings',
-        'HumiDisplayType': 'humiSettings',
-        'HumiColorSettings': 'humiColorSettings',
-        'spectrumBackgroundSettings': 'spectrumBackgroundSettings',
-        'spectrumColorSettings': 'spectrumColorSettings',
-        'scrollColorSettings': 'scrollColorSettings'
-    };
-    const dropDownSelectors = {
-        'ColorChangeFrequency': 'colorChangeFrequency',
-        'suspendFrequency': 'suspendFrequency',
-        'TimezoneSetting': 'timezoneSelect',
-        'CorrectionSelect': 'correctionSelect',
-        'scrollFrequency': 'scrollFrequency'
-    }
-    const directValueSelectors = {
-        'rangeBrightness': 'rangeBrightness',
-        'spotlightcolor': 'spotlightsColor',
-        'colorHour': 'colorHour',
-        'colorMin': 'colorMins',
-        'colorColon': 'colorColon',
-        'dayColor': 'dayColor',
-        'separatorColor': 'separatorColor',
-        'monthColor': 'monthColor',
-        'TempColor': 'tempColor',
-        'DegreeColor': 'degreeColor',
-        'TypeColor': 'typeColor',
-        'HumiColor': 'humiColor',
-        'HumiDecimalColor': 'humiDecimalColor',
-        'HumiSymbolColor': 'symbolColor',
-        'colorCD': 'colorCD',
-        'scoreboardColorLeft': 'newscoreboardColorLeft',
-        'scoreboardColorRight': 'newscoreboardColorRight',
-        'spectrumBackgroundColor': 'spectrumBackground',
-        'spectrumColor': 'spectrumColor',
-        'scrollText': 'scrollText',
-        'scrollColor': 'scrollColor',
-    }
-    const checkboxSelectors = {
-        'useSpotlights': 'useSpotlights',
-        'DSTime': 'DSTime',
-        'useAudibleAlarm': 'alarmCD',
-        'colorchangeCD': 'colorchangeCD',
-        'randomSpectrumMode': 'randomSpectrumMode',
-        'scrollOptions1': 'scrollOptions1',
-        'scrollOptions2': 'scrollOptions2',
-        'scrollOptions3': 'scrollOptions3',
-        'scrollOptions4': 'scrollOptions4',
-        'scrollOptions5': 'scrollOptions5',
-        'scrollOptions6': 'scrollOptions6',
-        'scrollOptions7': 'scrollOptions7',
-        'scrollOptions8': 'scrollOptions8',
-        'scrollOverride': 'scrollOverride'
-    }
-
     let response = await fetch(`${url}/getsettings`);
     if (response.ok) {
         let settings = await response.json();
@@ -454,7 +387,11 @@ async function getCheckboxValueByUrl(electorName, getURL) {
     }
 }
 
-/* utility function */
+/* utility functions */
+function getKeyByValue (obj, value) {
+    return Object.keys(obj).find(key => obj[key] === value);
+}
+
 function hexToRgb(hex) {
     // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
     var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;

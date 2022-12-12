@@ -545,6 +545,7 @@ void setup() {
   allBlank();   //clear everything off the leds
   
   server.enableCrossOrigin(true);
+  server.enableCORS(true);
 
   //Webpage Handlers for SPIFFS access to flash
   server.serveStatic("/", SPIFFS, "/index.html");  //send default webpage from root request
@@ -647,7 +648,6 @@ void loop(){
   unsigned long currentMillis = millis();  
   //run everything inside here every second
   if ((unsigned long)(currentMillis - prevTime) >= 1000) {
-    Serial.println(currentMillis);
     prevTime = currentMillis;
     //struct tm timeinfo; 
     if(!getLocalTime(&timeinfo)){ 
@@ -2900,52 +2900,8 @@ void loadWebPageHandlers() {
 
 // Settings.html Webpage Handlers
 
-// Global Settings 
-  server.on("/updatePastelColors", HTTP_POST, []() {   
-    pastelColors = server.arg("ColorPalette").toInt();
-    preferences.putInt("pastelColors", pastelColors);
-    allBlank(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-  server.on("/updateColorChangeFrequency", HTTP_POST, []() {    
-    ColorChangeFrequency = server.arg("ColorChangeFrequency").toInt();
-    preferences.putInt("ColorChangeFreq", ColorChangeFrequency);
-    allBlank(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
- server.on("/updatesuspendType", HTTP_POST, []() {    
-    suspendType = server.arg("suspendType").toInt();
-    preferences.putInt("suspendType", suspendType);
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-  server.on("/updatesuspendFrequency", HTTP_POST, []() {    
-    suspendFrequency = server.arg("suspendFrequency").toInt();
-    preferences.putInt("suspendFreq", suspendFrequency);
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
 // Spotlight Settings
-  server.on("/updatespotlightsColor", HTTP_POST, []() {  
-    r0_val = server.arg("r").toInt();
-    g0_val = server.arg("g").toInt();
-    b0_val = server.arg("b").toInt();  
-    preferences.putInt("r0_val", r0_val);
-    preferences.putInt("g0_val", g0_val);
-    preferences.putInt("b0_val", b0_val);
-    ShelfDownLights(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatespotlightsColorSettings", HTTP_POST, []() {    
-    spotlightsColorSettings = server.arg("spotlightsColorSettings").toInt();
-    preferences.putInt("spotlightsCoSe", spotlightsColorSettings);
-    ShelfDownLights(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
+ 
   
   server.on("/updateuseSpotlights", HTTP_POST, []() {   
     if ( server.arg("useSpotlights") == "true") {useSpotlights = 1;}
@@ -2955,44 +2911,7 @@ void loadWebPageHandlers() {
     server.send(200, "text/json", "{\"result\":\"ok\"}");
   });
 
-  server.on("/updaterangeBrightness", HTTP_POST, []() {    
-    brightness = server.arg("rangeBrightness").toInt();
-    preferences.putInt("brightness", brightness);
-    ShelfDownLights(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Clock Mode Settings  
-  server.on("/updateClockDisplayType", HTTP_POST, []() {    
-    clockDisplayType = server.arg("ClockDisplayType").toInt();
-    preferences.putInt("clockDispType", clockDisplayType);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
- 
-  server.on("/updateColonType", HTTP_POST, []() {    
-    colonType = server.arg("ColonType").toInt();
-    preferences.putInt("colonType", colonType);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateTimezoneSettings", HTTP_POST, []() {    
-    gmtOffset_sec = server.arg("TimezoneSetting").toInt();
-    configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
-    if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
-    int tempyear = (timeinfo.tm_year +1900);
-    int tempmonth = (timeinfo.tm_mon + 1);
-    rtc.adjust(DateTime(tempyear, tempmonth, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
-    preferences.putLong("gmtOffset_sec", gmtOffset_sec);
-    if (clockMode == 0) { allBlank(); } 
-    printLocalTime(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
+// Clock Mode Settings    
   server.on("/updateDSTime", HTTP_POST, []() {   
     if ( server.arg("DSTime") == "true") {DSTime = 1;}
     if ( server.arg("DSTime") == "false") {DSTime = 0;}
@@ -3007,214 +2926,6 @@ void loadWebPageHandlers() {
     server.send(200, "text/json", "{\"result\":\"ok\"}");
   });
   
-  server.on("/updateHourColor", HTTP_POST, []() {  
-    r1_val = server.arg("r").toInt();
-    g1_val = server.arg("g").toInt();
-    b1_val = server.arg("b").toInt();  
-    preferences.putInt("r1_val", r1_val);
-    preferences.putInt("g1_val", g1_val);
-    preferences.putInt("b1_val", b1_val);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateMinsColor", HTTP_POST, []() {  
-    r2_val = server.arg("r").toInt();
-    g2_val = server.arg("g").toInt();
-    b2_val = server.arg("b").toInt();  
-    preferences.putInt("r2_val", r2_val);
-    preferences.putInt("g2_val", g2_val);
-    preferences.putInt("b2_val", b2_val);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateColonColor", HTTP_POST, []() {  
-    r3_val = server.arg("r").toInt();
-    g3_val = server.arg("g").toInt();
-    b3_val = server.arg("b").toInt();  
-    preferences.putInt("r3_val", r3_val);
-    preferences.putInt("g3_val", g3_val);
-    preferences.putInt("b3_val", b3_val);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateClockColorSettings", HTTP_POST, []() {    
-    ClockColorSettings = server.arg("ClockColorSettings").toInt();
-    preferences.putInt("ClockColorSet", ClockColorSettings);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Date Mode Settings
- server.on("/updateDateDisplayType", HTTP_POST, []() {    
-    dateDisplayType = server.arg("DateDisplayType").toInt();
-    preferences.putInt("dateDisplayType", dateDisplayType);
-    if (clockMode == 7) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-  server.on("/updatedayColor", HTTP_POST, []() {  
-    r4_val = server.arg("r").toInt();
-    g4_val = server.arg("g").toInt();
-    b4_val = server.arg("b").toInt();  
-    preferences.putInt("r4_val", r4_val);
-    preferences.putInt("g4_val", g4_val);
-    preferences.putInt("b4_val", b4_val);
-    if (clockMode == 7) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  server.on("/updatemonthColor", HTTP_POST, []() {  
-    r5_val = server.arg("r").toInt();
-    g5_val = server.arg("g").toInt();
-    b5_val = server.arg("b").toInt();  
-    preferences.putInt("r5_val", r5_val);
-    preferences.putInt("g5_val", g5_val);
-    preferences.putInt("b5_val", b5_val);
-    if (clockMode == 7) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateseparatorColor", HTTP_POST, []() {  
-    r6_val = server.arg("r").toInt();
-    g6_val = server.arg("g").toInt();
-    b6_val = server.arg("b").toInt(); 
-    preferences.putInt("r6_val", r6_val);
-    preferences.putInt("g6_val", g6_val);
-    preferences.putInt("b6_val", b6_val);
-    if (clockMode == 7) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateDateColorSettings", HTTP_POST, []() {    
-    DateColorSettings = server.arg("DateColorSettings").toInt();
-    preferences.putInt("DateColorSet", DateColorSettings);
-    if (clockMode == 7) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Temperature Mode Settings
-  server.on("/updateTempType", HTTP_POST, []() {    
-    temperatureSymbol = server.arg("TempType").toInt();
-    preferences.putInt("temperatureSym", temperatureSymbol);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateCorrectionSelect", HTTP_POST, []() {    
-    temperatureCorrection = server.arg("CorrectionSelect").toInt();
-    preferences.putInt("tempCorrection", temperatureCorrection);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
-  
-  server.on("/updateTempDisplayType", HTTP_POST, []() {    
-    tempDisplayType = server.arg("TempDisplayType").toInt();
-    preferences.putInt("tempDisplayType", tempDisplayType);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-   server.on("/updateTempColor", HTTP_POST, []() {  
-    r7_val = server.arg("r").toInt();
-    g7_val = server.arg("g").toInt();
-    b7_val = server.arg("b").toInt();  
-    preferences.putInt("r7_val", r7_val);
-    preferences.putInt("g7_val", g7_val);
-    preferences.putInt("b7_val", b7_val);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateTypeColor", HTTP_POST, []() {  
-    r8_val = server.arg("r").toInt();
-    g8_val = server.arg("g").toInt();
-    b8_val = server.arg("b").toInt(); 
-    preferences.putInt("r8_val", r8_val);
-    preferences.putInt("g8_val", g8_val);
-    preferences.putInt("b8_val", b8_val); 
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateDegreeColor", HTTP_POST, []() {  
-    r9_val = server.arg("r").toInt();
-    g9_val = server.arg("g").toInt();
-    b9_val = server.arg("b").toInt();  
-    preferences.putInt("r9_val", r9_val);
-    preferences.putInt("g9_val", g9_val);
-    preferences.putInt("b9_val", b9_val);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateTempColorSettings", HTTP_POST, []() {    
-    tempColorSettings = server.arg("TempColorSettings").toInt();
-    preferences.putInt("tempColorSet", tempColorSettings);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Humidity Mode Settings
-  server.on("/updateHumiDisplayType", HTTP_POST, []() {    
-    humiDisplayType = server.arg("HumiDisplayType").toInt();
-    preferences.putInt("humiDisplayType", humiDisplayType);
-    if (clockMode == 8) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-   server.on("/updateHumiColor", HTTP_POST, []() {  
-    r10_val = server.arg("r").toInt();
-    g10_val = server.arg("g").toInt();
-    b10_val = server.arg("b").toInt();  
-    preferences.putInt("r10_val", r10_val);
-    preferences.putInt("g10_val", g10_val);
-    preferences.putInt("b10_val", b10_val);
-    if (clockMode == 8) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateSymbolColor", HTTP_POST, []() {  
-    r11_val = server.arg("r").toInt();
-    g11_val = server.arg("g").toInt();
-    b11_val = server.arg("b").toInt();  
-    preferences.putInt("r11_val", r11_val);
-    preferences.putInt("g11_val", g11_val);
-    preferences.putInt("b11_val", b11_val);
-    if (clockMode == 8) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateHumiDecimalColor", HTTP_POST, []() {  
-    r12_val = server.arg("r").toInt();
-    g12_val = server.arg("g").toInt();
-    b12_val = server.arg("b").toInt();  
-    preferences.putInt("r12_val", r12_val);
-    preferences.putInt("g12_val", g12_val);
-    preferences.putInt("b12_val", b12_val);
-    if (clockMode == 8) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateHumiColorSettings", HTTP_POST, []() {    
-    humiColorSettings = server.arg("HumiColorSettings").toInt();
-    preferences.putInt("humiColorSet", humiColorSettings);
-    if (clockMode == 8) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
 
 // Countdown/Stopwatch Mode Settings 
   server.on("/updatecolorchangeCD", HTTP_POST, []() {   
@@ -3232,46 +2943,7 @@ void loadWebPageHandlers() {
     if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
     server.send(200, "text/json", "{\"result\":\"ok\"}");
   });
-  
-  server.on("/updatecolorCD", HTTP_POST, []() {  
-    cd_r_val = server.arg("r").toInt();
-    cd_g_val = server.arg("g").toInt();
-    cd_b_val = server.arg("b").toInt();  
-    preferences.putInt("cd_r_val", cd_r_val);
-    preferences.putInt("cd_g_val", cd_g_val);
-    preferences.putInt("cd_b_val", cd_b_val);
-    if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-//Scoreboard Mode Settings
-  server.on("/updatescoreboardColorLeft", HTTP_POST, []() {  
-    r13_val = server.arg("r").toInt();
-    g13_val = server.arg("g").toInt();
-    b13_val = server.arg("b").toInt();  
-    preferences.putInt("r13_val", r13_val);
-    preferences.putInt("g13_val", g13_val);
-    preferences.putInt("b13_val", b13_val);
-    if (clockMode == 3) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescoreboardColorRight", HTTP_POST, []() {  
-    r14_val = server.arg("r").toInt();
-    g14_val = server.arg("g").toInt();
-    b14_val = server.arg("b").toInt();  
-    preferences.putInt("r14_val", r14_val);
-    preferences.putInt("g14_val", g14_val);
-    preferences.putInt("b14_val", b14_val);
-    if (clockMode == 3) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
+ 
 
 //Spectrum Mode Settings
   server.on("/updaterandomSpectrumMode", HTTP_POST, []() {   
@@ -3282,75 +2954,13 @@ void loadWebPageHandlers() {
     server.send(200, "text/json", "{\"result\":\"ok\"}");
   });
   
-  server.on("/updatespectrumBackground", HTTP_POST, []() {  
-    r17_val = server.arg("r").toInt();
-    g17_val = server.arg("g").toInt();
-    b17_val = server.arg("b").toInt();  
-    preferences.putInt("r17_val", r17_val);
-    preferences.putInt("g17_val", g17_val);
-    preferences.putInt("b17_val", b17_val);
-    if (clockMode == 9) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
+
   
-  server.on("/updatespectrumColor", HTTP_POST, []() {  
-    r15_val = server.arg("r").toInt();
-    g15_val = server.arg("g").toInt();
-    b15_val = server.arg("b").toInt();  
-    preferences.putInt("r15_val", r15_val);
-    preferences.putInt("g15_val", g15_val);
-    preferences.putInt("b15_val", b15_val);
-    if (clockMode == 9) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatespectrumBackgroundSettings", HTTP_POST, []() {    
-    spectrumBackgroundSettings = server.arg("spectrumBackgroundSettings").toInt();
-    preferences.putInt("spectrumBkgd", spectrumBackgroundSettings);
-    if (clockMode == 9) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatespectrumColorSettings", HTTP_POST, []() {    
-    spectrumColorSettings = server.arg("spectrumColorSettings").toInt();
-    preferences.putInt("spectrumColor", spectrumColorSettings);
-    if (clockMode == 9) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
 // Scrolling-text Mode settings
-  server.on("/updatescrollFrequency", HTTP_POST, []() {    
-    scrollFrequency = server.arg("scrollFrequency").toInt();
-    preferences.putInt("scrollFreq", scrollFrequency);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
   server.on("/updatescrollOverride", HTTP_POST, []() {   
     if ( server.arg("scrollOverride") == "true") {scrollOverride = 1;}
     if ( server.arg("scrollOverride") == "false") {scrollOverride = 0;}
     preferences.putBool("scrollOverride", scrollOverride);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollColor", HTTP_POST, []() {  
-    r16_val = server.arg("r").toInt();
-    g16_val = server.arg("g").toInt();
-    b16_val = server.arg("b").toInt();  
-    preferences.putInt("r16_val", r16_val);
-    preferences.putInt("g16_val", g16_val);
-    preferences.putInt("b16_val", b16_val);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollColorSettings", HTTP_POST, []() {    
-    scrollColorSettings = server.arg("scrollColorSettings").toInt();
-    preferences.putInt("scrollColorSet", scrollColorSettings);
     if (clockMode == 11) { allBlank(); } 
     server.send(200, "text/json", "{\"result\":\"ok\"}");
   });
@@ -3492,7 +3102,7 @@ void loadWebPageHandlers() {
     json["dayColor"] = dayColor;
     sprintf(monthColor, "#%02X%02X%02X", r5_val, g5_val, b5_val);
     json["monthColor"] = monthColor;
-    sprintf(separatorColor, "#%02X%02X%02X", r3_val, g3_val, b3_val);
+    sprintf(separatorColor, "#%02X%02X%02X", r6_val, g6_val, b6_val);
     json["separatorColor"] = separatorColor;
 
     json["TempType"] = temperatureSymbol;
@@ -3557,37 +3167,388 @@ void loadWebPageHandlers() {
   });
 
   server.on("/updateanything", HTTP_POST, []() {
-    StaticJsonDocument<250> jsonDocument;
+    DynamicJsonDocument json(1500);
     if(server.args() > 0) {
       String body = server.arg(0);
-      deserializeJson(jsonDocument, server.arg(0));
+      Serial.println("----");
+      Serial.println(body);
+      Serial.println("----");
+      deserializeJson(json, server.arg(0));
 
+      // ColorPalette
+      if (!json["ColorPalette"].isNull()){
+        pastelColors = (int)json["ColorPalette"];
+        preferences.putInt("pastelColors", pastelColors);
+        allBlank();
+      }
 
+      // SuspendType
+      if (!json["suspendType"].isNull()) {
+        suspendType = (int)json["suspendType"];
+        preferences.putInt("suspendType", suspendType);
+      }
 
+      // spotlightsColorSettings
+      if (!json["spotlightsColorSettings"].isNull()) {
+        spotlightsColorSettings = (int)json["spotlightsColorSettings"];
+        preferences.putInt("spotlightsCoSe", spotlightsColorSettings);
+        ShelfDownLights(); 
+      }
 
-      if (!jsonDocument["temperature"].isNull()) {
-        preferences.getBytes("temperature", &tempConfig, preferences.getBytesLength("temperature"));
-        Serial.println("---get bytes--------");
-        Serial.println(tempConfig.outdoor_enable);
-        Serial.println(tempConfig.outdoor_lat);
-        Serial.println(tempConfig.outdoor_long);
-        Serial.println(tempConfig.outdoor_apikey);
-        Serial.println("-----------");
-        
-        
-        tempConfig.outdoor_enable = jsonDocument["temperature"]["outdoor_enable"].isNull() ? tempConfig.outdoor_enable : jsonDocument["temperature"]["outdoor_enable"];
-        if (!jsonDocument["temperature"]["outdoor_lat"].isNull()) strncpy(tempConfig.outdoor_lat, jsonDocument["temperature"]["outdoor_lat"], sizeof(tempConfig.outdoor_lat));
-        if (!jsonDocument["temperature"]["outdoor_long"].isNull()) strncpy(tempConfig.outdoor_long, jsonDocument["temperature"]["outdoor_long"], sizeof(tempConfig.outdoor_long));
-        if (!jsonDocument["temperature"]["outdoor_apikey"].isNull()) strncpy(tempConfig.outdoor_apikey, jsonDocument["temperature"]["outdoor_apikey"], sizeof(tempConfig.outdoor_apikey));
-        
-        
-        Serial.println("-----------");
-        Serial.println(tempConfig.outdoor_enable);
-        Serial.println(tempConfig.outdoor_lat);
-        Serial.println(tempConfig.outdoor_long);
-        Serial.println(tempConfig.outdoor_apikey);
-        Serial.println("-----------");
+      // ClockDisplayType
+      if (!json["ClockDisplayType"].isNull()) {
+        clockDisplayType = (int)json["ClockDisplayType"];
+        preferences.putInt("clockDispType", clockDisplayType);
+        if (clockMode == 0) { allBlank(); }  
+      }
 
+      // ColonType
+      if (!json["ColonType"].isNull()) {
+        colonType = (int)json["ColonType"];
+        preferences.putInt("colonType", colonType);
+        if (clockMode == 0) { allBlank(); } 
+      }
+
+      // ClockColorSettings
+      if (!json["ClockColorSettings"].isNull()) {
+        ClockColorSettings = (int)json["ClockColorSettings"];
+        preferences.putInt("ClockColorSet", ClockColorSettings);
+        if (clockMode == 0) { allBlank(); } 
+      }
+
+      // DateDisplayType
+      if (!json["DateDisplayType"].isNull()) {
+        ClockColorSettings = (int)json["DateDisplayType"];
+        preferences.putInt("dateDisplayType", dateDisplayType);
+        if (clockMode == 7) { allBlank(); }
+      }
+
+      // DateColorSettings
+      if (!json["DateColorSettings"].isNull()) {
+        DateColorSettings = (int)json["DateColorSettings"];
+        preferences.putInt("DateColorSet", DateColorSettings);
+        if (clockMode == 7) { allBlank(); } 
+      }
+
+      // TempType
+      if (!json["TempType"].isNull()) {
+        temperatureSymbol = (int)json["TempType"];
+        preferences.putInt("temperatureSym", temperatureSymbol);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // TempDisplayType
+      if (!json["TempDisplayType"].isNull()) {
+        tempDisplayType = (int)json["TempDisplayType"];
+        preferences.putInt("tempDisplayType", tempDisplayType);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // TempColorSettings
+      if (!json["TempColorSettings"].isNull()) {
+        tempColorSettings = (int)json["TempColorSettings"];
+        preferences.putInt("tempColorSet", tempColorSettings);
+        if (clockMode == 2) { allBlank(); }
+      }
+
+      // HumiDisplayType
+      if (!json["HumiDisplayType"].isNull()) {
+        humiDisplayType = (int)json["HumiDisplayType"];
+        preferences.putInt("humiDisplayType", humiDisplayType);
+        if (clockMode == 8) { allBlank(); } 
+      }
+
+      // HumiColorSettings
+      if (!json["HumiColorSettings"].isNull()) {
+        humiColorSettings = (int)json["HumiColorSettings"];
+        preferences.putInt("humiColorSet", humiColorSettings);
+        if (clockMode == 8) { allBlank(); } 
+      }
+
+      // spectrumBackgroundSettings
+      if (!json["spectrumBackgroundSettings"].isNull()) {
+        spectrumBackgroundSettings = (int)json["spectrumBackgroundSettings"];
+        preferences.putInt("spectrumBkgd", spectrumBackgroundSettings);
+        if (clockMode == 9) { allBlank(); } 
+      }
+
+      // spectrumColorSettings
+      if (!json["spectrumColorSettings"].isNull()) {
+        spectrumColorSettings = (int)json["spectrumColorSettings"];
+        preferences.putInt("spectrumColor", spectrumColorSettings);
+        if (clockMode == 9) { allBlank(); } 
+      }
+
+      // scrollColorSettings
+      if (!json["scrollColorSettings"].isNull()) {
+        scrollColorSettings = (int)json["scrollColorSettings"];
+        preferences.putInt("scrollColorSet", scrollColorSettings);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // ColorChangeFrequency
+      if (!json["ColorChangeFrequency"].isNull()) {
+        ColorChangeFrequency = (int)json["ColorChangeFrequency"];
+        preferences.putInt("ColorChangeFreq", ColorChangeFrequency);
+        allBlank(); 
+      }
+
+      // suspendFrequency
+      if (!json["suspendFrequency"].isNull()) {
+        suspendFrequency = (int)json["suspendFrequency"];
+        preferences.putInt("suspendFreq", suspendFrequency);
+      }
+
+      // TimezoneSetting
+      if (!json["TimezoneSetting"].isNull()) {
+        gmtOffset_sec = (int)json["TimezoneSetting"];
+        configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
+        if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
+        int tempyear = (timeinfo.tm_year +1900);
+        int tempmonth = (timeinfo.tm_mon + 1);
+        rtc.adjust(DateTime(tempyear, tempmonth, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
+        preferences.putLong("gmtOffset_sec", gmtOffset_sec);
+        if (clockMode == 0) { allBlank(); } 
+        printLocalTime(); 
+      }
+
+      // CorrectionSelect
+      if (!json["CorrectionSelect"].isNull()) {
+        temperatureCorrection = (int)json["CorrectionSelect"];
+        preferences.putInt("tempCorrection", temperatureCorrection);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // scrollFrequency
+      if (!json["scrollFrequency"].isNull()) {
+        scrollFrequency = (int)json["scrollFrequency"];
+        preferences.putInt("scrollFreq", scrollFrequency);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // rangeBrightness
+      if (!json["rangeBrightness"].isNull()) {
+        brightness = (int)json["rangeBrightness"];
+        preferences.putInt("brightness", brightness);
+        ShelfDownLights();
+      }
+      
+      // spotlightcolor
+      if (!json["spotlightcolor"].isNull()) {
+        r0_val = (int)json["spotlightcolor"]["r"];
+        g0_val = (int)json["spotlightcolor"]["g"];
+        b0_val = (int)json["spotlightcolor"]["b"];
+        preferences.putInt("r0_val", r0_val);
+        preferences.putInt("g0_val", g0_val);
+        preferences.putInt("b0_val", b0_val);
+        ShelfDownLights();
+      }
+
+      // colorHour
+      if (!json["colorHour"].isNull()) {
+        r1_val = (int)json["colorHour"]["r"];
+        g1_val = (int)json["colorHour"]["g"];
+        b1_val = (int)json["colorHour"]["b"];
+        preferences.putInt("r1_val", r1_val);
+        preferences.putInt("g1_val", g1_val);
+        preferences.putInt("b1_val", b1_val);
+        if (clockMode == 0) { allBlank(); } 
+      }
+
+      // colorMin
+      if (!json["colorMin"].isNull()) {
+        r2_val = (int)json["colorMin"]["r"];
+        g2_val = (int)json["colorMin"]["g"];
+        b2_val = (int)json["colorMin"]["b"];
+        preferences.putInt("r2_val", r2_val);
+        preferences.putInt("g2_val", g2_val);
+        preferences.putInt("b2_val", b2_val);
+        if (clockMode == 0) { allBlank(); } 
+      }
+
+      // colorColon
+      if (!json["colorColon"].isNull()) {
+        r3_val = (int)json["colorColon"]["r"];
+        g3_val = (int)json["colorColon"]["g"];
+        b3_val = (int)json["colorColon"]["b"];
+        preferences.putInt("r3_val", r3_val);
+        preferences.putInt("g3_val", g3_val);
+        preferences.putInt("b3_val", b3_val);
+        if (clockMode == 0) { allBlank(); } 
+      }
+
+      // dayColor
+      if (!json["dayColor"].isNull()) {
+        r4_val = (int)json["dayColor"]["r"];
+        g4_val = (int)json["dayColor"]["g"];
+        b4_val = (int)json["dayColor"]["b"];
+        preferences.putInt("r4_val", r4_val);
+        preferences.putInt("g4_val", g4_val);
+        preferences.putInt("b4_val", b4_val);
+        if (clockMode == 7) { allBlank(); } 
+      }
+
+      // monthColor
+      if (!json["monthColor"].isNull()) {
+        r5_val = (int)json["monthColor"]["r"];
+        g5_val = (int)json["monthColor"]["g"];
+        b5_val = (int)json["monthColor"]["b"];
+        preferences.putInt("r5_val", r5_val);
+        preferences.putInt("g5_val", g5_val);
+        preferences.putInt("b5_val", b5_val);
+        if (clockMode == 7) { allBlank(); } 
+      }
+
+      // separatorColor
+      if (!json["separatorColor"].isNull()) {
+        r6_val = (int)json["separatorColor"]["r"];
+        g6_val = (int)json["separatorColor"]["g"];
+        b6_val = (int)json["separatorColor"]["b"];
+        preferences.putInt("r6_val", r6_val);
+        preferences.putInt("g6_val", g6_val);
+        preferences.putInt("b6_val", b6_val);
+        if (clockMode == 7) { allBlank(); } 
+      }
+      
+      // TempColor
+      if (!json["TempColor"].isNull()) {
+        r7_val = (int)json["TempColor"]["r"];
+        g7_val = (int)json["TempColor"]["g"];
+        b7_val = (int)json["TempColor"]["b"];
+        preferences.putInt("r7_val", r7_val);
+        preferences.putInt("g7_val", g7_val);
+        preferences.putInt("b7_val", b7_val);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // TypeColor
+      if (!json["TypeColor"].isNull()) {
+        r8_val = (int)json["TypeColor"]["r"];
+        g8_val = (int)json["TypeColor"]["g"];
+        b8_val = (int)json["TypeColor"]["b"];
+        preferences.putInt("r8_val", r8_val);
+        preferences.putInt("g8_val", g8_val);
+        preferences.putInt("b8_val", b8_val);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // DegreeColor
+      if (!json["DegreeColor"].isNull()) {
+        r9_val = (int)json["DegreeColor"]["r"];
+        g9_val = (int)json["DegreeColor"]["g"];
+        b9_val = (int)json["DegreeColor"]["b"];
+        preferences.putInt("r9_val", r9_val);
+        preferences.putInt("g9_val", g9_val);
+        preferences.putInt("b9_val", b9_val);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // HumiColor
+      if (!json["HumiColor"].isNull()) {
+        r10_val = (int)json["HumiColor"]["r"];
+        g10_val = (int)json["HumiColor"]["g"];
+        b10_val = (int)json["HumiColor"]["b"];
+        preferences.putInt("r10_val", r10_val);
+        preferences.putInt("g10_val", g10_val);
+        preferences.putInt("b10_val", b10_val);
+        if (clockMode == 8) { allBlank(); } 
+      }
+
+       // HumiDecimalColor
+      if (!json["HumiDecimalColor"].isNull()) {
+        r11_val = (int)json["HumiDecimalColor"]["r"];
+        g11_val = (int)json["HumiDecimalColor"]["g"];
+        b11_val = (int)json["HumiDecimalColor"]["b"];
+        preferences.putInt("r11_val", r11_val);
+        preferences.putInt("g11_val", g11_val);
+        preferences.putInt("b11_val", b11_val);
+        if (clockMode == 8) { allBlank(); } 
+      }
+
+      // HumiSymbolColor
+      if (!json["HumiSymbolColor"].isNull()) {
+        r12_val = (int)json["HumiSymbolColor"]["r"];
+        g12_val = (int)json["HumiSymbolColor"]["g"];
+        b12_val = (int)json["HumiSymbolColor"]["b"];
+        preferences.putInt("r12_val", r12_val);
+        preferences.putInt("g12_val", g12_val);
+        preferences.putInt("b12_val", b12_val);
+        if (clockMode == 8) { allBlank(); } 
+      }
+
+      // colorCD
+      if (!json["colorCD"].isNull()) {
+        cd_r_val = (int)json["colorCD"]["r"];
+        cd_g_val = (int)json["colorCD"]["g"];
+        cd_b_val = (int)json["colorCD"]["b"];
+        preferences.putInt("cd_r_val", cd_r_val);
+        preferences.putInt("cd_g_val", cd_g_val);
+        preferences.putInt("cd_b_val", cd_b_val);
+        if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
+      }
+
+      // scoreboardColorLeft
+      if (!json["scoreboardColorLeft"].isNull()) {
+        r13_val = (int)json["scoreboardColorLeft"]["r"];
+        g13_val = (int)json["scoreboardColorLeft"]["g"];
+        b13_val = (int)json["scoreboardColorLeft"]["b"];
+        preferences.putInt("r13_val", r13_val);
+        preferences.putInt("g13_val", g13_val);
+        preferences.putInt("b13_val", b13_val);
+        if (clockMode == 3) { allBlank(); } 
+      }
+
+      // scoreboardColorRight
+      if (!json["scoreboardColorRight"].isNull()) {
+        r14_val = (int)json["scoreboardColorRight"]["r"];
+        g14_val = (int)json["scoreboardColorRight"]["g"];
+        b14_val = (int)json["scoreboardColorRight"]["b"];
+        preferences.putInt("r14_val", r14_val);
+        preferences.putInt("g14_val", g14_val);
+        preferences.putInt("b14_val", b14_val);
+        if (clockMode == 3) { allBlank(); } 
+      }
+
+      // spectrumColor
+      if (!json["spectrumColor"].isNull()) {
+        r15_val = (int)json["spectrumColor"]["r"];
+        g15_val = (int)json["spectrumColor"]["g"];
+        b15_val = (int)json["spectrumColor"]["b"];
+        preferences.putInt("r15_val", r15_val);
+        preferences.putInt("g15_val", g15_val);
+        preferences.putInt("b15_val", b15_val);
+        if (clockMode == 9) { allBlank(); }
+      }
+
+      // scrollColor
+      if (!json["scrollColor"].isNull()) {
+        r16_val = (int)json["scrollColor"]["r"];
+        g16_val = (int)json["scrollColor"]["g"];
+        b16_val = (int)json["scrollColor"]["b"];
+        preferences.putInt("r16_val", r16_val);
+        preferences.putInt("g16_val", g16_val);
+        preferences.putInt("b16_val", b16_val);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // spectrumBackgroundColor
+      if (!json["spectrumBackgroundColor"].isNull()) {
+        r17_val = (int)json["spectrumBackgroundColor"]["r"];
+        g17_val = (int)json["spectrumBackgroundColor"]["g"];
+        b17_val = (int)json["spectrumBackgroundColor"]["b"];
+        preferences.putInt("r17_val", r17_val);
+        preferences.putInt("g17_val", g17_val);
+        preferences.putInt("b17_val", b17_val);
+        if (clockMode == 9) { allBlank(); } 
+      }
+
+      // outdoor temperature
+      if (!json["temperature"].isNull()) {
+        preferences.getBytes("temperature", &tempConfig, preferences.getBytesLength("temperature"));        
+        tempConfig.outdoor_enable = json["temperature"]["outdoor_enable"].isNull() ? tempConfig.outdoor_enable : json["temperature"]["outdoor_enable"];
+        if (!json["temperature"]["outdoor_lat"].isNull()) strncpy(tempConfig.outdoor_lat, json["temperature"]["outdoor_lat"], sizeof(tempConfig.outdoor_lat));
+        if (!json["temperature"]["outdoor_long"].isNull()) strncpy(tempConfig.outdoor_long, json["temperature"]["outdoor_long"], sizeof(tempConfig.outdoor_long));
+        if (!json["temperature"]["outdoor_apikey"].isNull()) strncpy(tempConfig.outdoor_apikey, json["temperature"]["outdoor_apikey"], sizeof(tempConfig.outdoor_apikey));
       }
       server.send(200, "text/json", "{\"result\":\"ok\"}");
     } 
