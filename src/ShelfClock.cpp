@@ -2063,8 +2063,6 @@ void updaterain() {
 
 }
 
-
-
 void Fire2021() {
 // Array of temperature readings at each simulation cell
   static byte heat[SPECTRUM_PIXELS];
@@ -2754,301 +2752,6 @@ void setpreset2(){
 
 void loadWebPageHandlers() {
  
-
-// Index.html Webpage Handlers
-
-
-  server.on("/goClockMode", HTTP_POST, []() {     
-    allBlank();  
-    clockMode = 0; 
-    preferences.putInt("clockMode", clockMode);   
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-    printLocalTime(); 
-  }); 
-
-  server.on("/goCountdownMode", HTTP_POST, []() {    
-    countdownMilliSeconds = server.arg("ms").toInt();     
-    if (countdownMilliSeconds < 1000) {countdownMilliSeconds = 1000;}
-    if (countdownMilliSeconds > 86400000) {countdownMilliSeconds = 86400000;} 
-    endCountDownMillis = millis() + countdownMilliSeconds;
-    if (currentMode == 0) {currentMode = clockMode; currentReal = realtimeMode;}
-    allBlank(); 
-    clockMode = 1;  
-    //preferences.putInt("clockMode", clockMode);  
-    realtimeMode = 0;   
-    //preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-  server.on("/goTemperatureMode", HTTP_POST, []() {   
-    allBlank();
-    clockMode = 2;    
-    preferences.putInt("clockMode", clockMode); 
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });  
-
-  server.on("/goScoreboardMode", HTTP_POST, []() {   
-    scoreboardLeft = server.arg("left").toInt();
-    if (scoreboardLeft < 0) {scoreboardLeft = 0;}
-    if (scoreboardLeft > 99) {scoreboardLeft = 99;}
-    scoreboardRight = server.arg("right").toInt();
-    if (scoreboardRight < 0) {scoreboardRight = 0;}
-    if (scoreboardRight > 99) {scoreboardRight = 99;}
-    allBlank();
-    clockMode = 3;   
-    preferences.putInt("clockMode", clockMode);  
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });  
-   
-  server.on("/goStopwatchMode", HTTP_POST, []() {    
-    CountUpMillis = millis(); // TODO: set starting condition properly
-    countdownMilliSeconds = server.arg("ms").toInt();    
-    if (countdownMilliSeconds < 1000) {countdownMilliSeconds = 1000;}
-    if (countdownMilliSeconds > 86400000) {countdownMilliSeconds = 86400000;} 
-    endCountDownMillis = millis() + countdownMilliSeconds;
-    if (currentMode == 0) {currentMode = clockMode; currentReal = realtimeMode;}
-    allBlank(); 
-    clockMode = 4;    
-    //preferences.putInt("clockMode", clockMode); 
-    realtimeMode = 0;   
-    //preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/goLightshowMode", HTTP_POST, []() {  
-    allBlank(); 
-    lightshowMode = server.arg("lightshowMode").toInt();
-    oldsnakecolor = CRGB::Green;
-    getSlower = 180;
-    clockMode = 5;    
-    preferences.putInt("lightshowMode", lightshowMode); 
-    preferences.putInt("clockMode", clockMode); 
-    realtimeMode = 1;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
-  
-  server.on("/goDateMode", HTTP_POST, []() {     
-    allBlank();   
-    clockMode = 7;     
-    preferences.putInt("clockMode", clockMode);
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
-  
-  server.on("/goHumidityMode", HTTP_POST, []() {     
-    allBlank();   
-    clockMode = 8;     
-    preferences.putInt("clockMode", clockMode);
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
-
-  server.on("/goSpectrumMode", HTTP_POST, []() {  
-    allBlank(); 
-    spectrumMode = server.arg("spectrumMode").toInt();
-    clockMode = 9;    
-    preferences.putInt("spectrumMode", spectrumMode); 
-    preferences.putInt("clockMode", clockMode); 
-    realtimeMode = 1;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
-  
-  server.on("/goDisplayOffMode", HTTP_POST, []() {     
-    allBlank();   
-    clockMode = 10;     
-    preferences.putInt("clockMode", clockMode);
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-    rtttl::stop();
-    breakOutSet = 1;   
-  }); 
-
-  server.on("/goScrollingMode", HTTP_POST, []() {     
-    allBlank();   
-    clockMode = 11;     
-    preferences.putInt("clockMode", clockMode);
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
-
-// Get/Load Presets Handlers
-  server.on("/getPreset1", HTTP_POST, []() {   
-    getpreset1();   
-    GetBrightnessLevel();        
-    allBlank(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/getPreset2", HTTP_POST, []() {   
-    getpreset2();   
-    GetBrightnessLevel();        
-    allBlank(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-// Settings.html Webpage Handlers
-
-// Spotlight Settings
- 
-  
-  server.on("/updateuseSpotlights", HTTP_POST, []() {   
-    if ( server.arg("useSpotlights") == "true") {useSpotlights = 1;}
-    if ( server.arg("useSpotlights") == "false") {useSpotlights = 0;}
-    preferences.putBool("useSpotlights", useSpotlights);
-    ShelfDownLights(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-// Clock Mode Settings    
-  server.on("/updateDSTime", HTTP_POST, []() {   
-    if ( server.arg("DSTime") == "true") {DSTime = 1;}
-    if ( server.arg("DSTime") == "false") {DSTime = 0;}
-    configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
-    if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
-    int tempyear = (timeinfo.tm_year +1900);
-    int tempmonth = (timeinfo.tm_mon + 1);
-    rtc.adjust(DateTime(tempyear, tempmonth, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
-    preferences.putBool("DSTime", DSTime);
-    if (clockMode == 0) { allBlank(); } 
-    printLocalTime(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-
-// Countdown/Stopwatch Mode Settings 
-  server.on("/updatecolorchangeCD", HTTP_POST, []() {   
-    if ( server.arg("colorchangeCD") == "true") {colorchangeCD = 1;}
-    if ( server.arg("colorchangeCD") == "false") {colorchangeCD = 0;}
-    preferences.putBool("colorchangeCD", colorchangeCD);
-    if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatealarmCD", HTTP_POST, []() {   
-    if ( server.arg("alarmCD") == "true") {useAudibleAlarm = 1;}
-    if ( server.arg("alarmCD") == "false") {useAudibleAlarm = 0;}
-    preferences.putBool("alarmCD", useAudibleAlarm);
-    if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
- 
-
-//Spectrum Mode Settings
-  server.on("/updaterandomSpectrumMode", HTTP_POST, []() {   
-    if ( server.arg("randomSpectrumMode") == "true") {randomSpectrumMode = 1;}
-    if ( server.arg("randomSpectrumMode") == "false") {randomSpectrumMode = 0;}
-    preferences.putBool("randSpecMode", randomSpectrumMode);
-    if (clockMode == 9) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-
-  
-// Scrolling-text Mode settings
-  server.on("/updatescrollOverride", HTTP_POST, []() {   
-    if ( server.arg("scrollOverride") == "true") {scrollOverride = 1;}
-    if ( server.arg("scrollOverride") == "false") {scrollOverride = 0;}
-    preferences.putBool("scrollOverride", scrollOverride);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions1", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions1") == "true") {scrollOptions1 = 1;}
-    if ( server.arg("scrollOptions1") == "false") {scrollOptions1 = 0;}
-    preferences.putBool("scrollOptions1", scrollOptions1);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions2", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions2") == "true") {scrollOptions2 = 1;}
-    if ( server.arg("scrollOptions2") == "false") {scrollOptions2 = 0;}
-    preferences.putBool("scrollOptions2", scrollOptions2);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions3", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions3") == "true") {scrollOptions3 = 1;}
-    if ( server.arg("scrollOptions3") == "false") {scrollOptions3 = 0;}
-    preferences.putBool("scrollOptions3", scrollOptions3);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions4", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions4") == "true") {scrollOptions4 = 1;}
-    if ( server.arg("scrollOptions4") == "false") {scrollOptions4 = 0;}
-    preferences.putBool("scrollOptions4", scrollOptions4);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions5", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions5") == "true") {scrollOptions5 = 1;}
-    if ( server.arg("scrollOptions5") == "false") {scrollOptions5 = 0;}
-    preferences.putBool("scrollOptions5", scrollOptions5);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions6", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions6") == "true") {scrollOptions6 = 1;}
-    if ( server.arg("scrollOptions6") == "false") {scrollOptions6 = 0;}
-    preferences.putBool("scrollOptions6", scrollOptions6);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions7", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions7") == "true") {scrollOptions7 = 1;}
-    if ( server.arg("scrollOptions7") == "false") {scrollOptions7 = 0;}
-    preferences.putBool("scrollOptions7", scrollOptions7);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions8", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions8") == "true") {scrollOptions8 = 1;}
-    if ( server.arg("scrollOptions8") == "false") {scrollOptions8 = 0;}
-    preferences.putBool("scrollOptions8", scrollOptions8);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollText", HTTP_POST, []() {   
-    scrollText = server.arg("scrollText");
-    if ( scrollText == "") {scrollText = "dAdS ArE tHE bESt";}
-    preferences.putString("scrollText", scrollText);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-// Save Preset Handles
-  server.on("/setpreset1", HTTP_POST, []() {   
-    setpreset1();   
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/setpreset2", HTTP_POST, []() {   
-    setpreset2();   
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
   server.on("/gethome", []() {
     DynamicJsonDocument json(500);
     String output;
@@ -3542,6 +3245,287 @@ void loadWebPageHandlers() {
         if (clockMode == 9) { allBlank(); } 
       }
 
+      // useSpotlights
+      if (!json["useSpotlights"].isNull()) {
+        if ( json["useSpotlights"] == true) {useSpotlights = 1;}
+        if ( json["useSpotlights"] == false) {useSpotlights = 0;}
+        preferences.putBool("useSpotlights", useSpotlights);
+        ShelfDownLights(); 
+      }
+
+      // DSTime
+      if (!json["DSTime"].isNull()) {
+        if ( json["DSTime"] == true) {DSTime = 1;}
+        if ( json["DSTime"] == false) {DSTime = 0;}
+        configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
+        if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
+        int tempyear = (timeinfo.tm_year +1900);
+        int tempmonth = (timeinfo.tm_mon + 1);
+        rtc.adjust(DateTime(tempyear, tempmonth, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
+        preferences.putBool("DSTime", DSTime);
+        if (clockMode == 0) { allBlank(); } 
+        printLocalTime(); 
+      }
+
+      // useAudibleAlarm
+      if (!json["useAudibleAlarm"].isNull()) {
+        if ( json["useAudibleAlarm"] == true) {useAudibleAlarm = 1;}
+        if ( json["useAudibleAlarm"] == false) {useAudibleAlarm = 0;}
+        preferences.putBool("alarmCD", useAudibleAlarm);
+        if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
+      }
+
+      // colorchangeCD
+      if (!json["colorchangeCD"].isNull()) {
+        if ( json["colorchangeCD"] == true) {colorchangeCD = 1;}
+        if ( json["colorchangeCD"] == false) {colorchangeCD = 0;}
+        preferences.putBool("colorchangeCD", colorchangeCD);
+        if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
+      }
+
+      // randomSpectrumMode
+      if (!json["randomSpectrumMode"].isNull()) {
+        if ( json["randomSpectrumMode"] == true) {randomSpectrumMode = 1;}
+        if ( json["randomSpectrumMode"] == false) {randomSpectrumMode = 0;}
+        preferences.putBool("randSpecMode", randomSpectrumMode);
+        if (clockMode == 9) { allBlank(); } 
+      }
+
+      // scrollOptions1
+      if (!json["scrollOptions1"].isNull()) {
+        if ( json["scrollOptions1"] == true) {scrollOptions1 = 1;}
+        if ( json["scrollOptions1"] == false) {scrollOptions1 = 0;}
+        preferences.putBool("scrollOptions1", scrollOptions1);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions2
+      if (!json["scrollOptions2"].isNull()) {
+        if ( json["scrollOptions2"] == true) {scrollOptions2 = 1;}
+        if ( json["scrollOptions2"] == false) {scrollOptions2 = 0;}
+        preferences.putBool("scrollOptions2", scrollOptions2);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions3
+      if (!json["scrollOptions3"].isNull()) {
+        if ( json["scrollOptions3"] == true) {scrollOptions3 = 1;}
+        if ( json["scrollOptions3"] == false) {scrollOptions3 = 0;}
+        preferences.putBool("scrollOptions3", scrollOptions3);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions4
+      if (!json["scrollOptions4"].isNull()) {
+        if ( json["scrollOptions4"] == true) {scrollOptions4 = 1;}
+        if ( json["scrollOptions4"] == false) {scrollOptions4 = 0;}
+        preferences.putBool("scrollOptions4", scrollOptions4);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions5
+      if (!json["scrollOptions5"].isNull()) {
+        if ( json["scrollOptions5"] == true) {scrollOptions5 = 1;}
+        if ( json["scrollOptions5"] == false) {scrollOptions5 = 0;}
+        preferences.putBool("scrollOptions5", scrollOptions5);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions6
+      if (!json["scrollOptions6"].isNull()) {
+        if ( json["scrollOptions6"] == true) {scrollOptions6 = 1;}
+        if ( json["scrollOptions6"] == false) {scrollOptions6 = 0;}
+        preferences.putBool("scrollOptions6", scrollOptions6);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions7
+      if (!json["scrollOptions7"].isNull()) {
+        if ( json["scrollOptions7"] == true) {scrollOptions7 = 1;}
+        if ( json["scrollOptions7"] == false) {scrollOptions7 = 0;}
+        preferences.putBool("scrollOptions7", scrollOptions7);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions8
+      if (!json["scrollOptions8"].isNull()) {
+        if ( json["scrollOptions8"] == true) {scrollOptions8 = 1;}
+        if ( json["scrollOptions8"] == false) {scrollOptions8 = 0;}
+        preferences.putBool("scrollOptions8", scrollOptions8);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOverride
+      if (!json["scrollOverride"].isNull()) {
+        if ( json["scrollOverride"] == true) {scrollOverride = 1;}
+        if ( json["scrollOverride"] == false) {scrollOverride = 0;}
+        preferences.putBool("scrollOverride", scrollOverride);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollText
+      if (!json["scrollText"].isNull()) {
+        scrollText = json["scrollText"].as<String>();
+        if ( scrollText == "") {scrollText = "dAdS ArE tHE bESt";}
+        preferences.putString("scrollText", scrollText);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // setpreset1
+      if (!json["setpreset1"].isNull()) {
+         setpreset1();  
+      }
+
+      // setpreset2
+      if (!json["setpreset2"].isNull()) {
+         setpreset2();  
+      }
+
+      // setdate
+      if (!json["setdate"].isNull()) {
+          int yeararg = json["setdate"]["year"].as<int>();
+          int montharg = json["setdate"]["month"].as<int>();
+          int dayarg = json["setdate"]["day"].as<int>();
+          int hourarg = json["setdate"]["hour"].as<int>();
+          int minarg = json["setdate"]["min"].as<int>();
+          int secarg = json["setdate"]["sec"].as<int>();
+          rtc.adjust(DateTime(yeararg, montharg, dayarg, hourarg, minarg, secarg));   //set time on the RTC of the DS3231
+          struct tm tm;
+          tm.tm_year = yeararg - 1900;
+          tm.tm_mon = montharg - 1;
+          tm.tm_mday = dayarg;
+          tm.tm_hour = hourarg;
+          tm.tm_min = minarg;
+          tm.tm_sec = secarg;
+          time_t t = mktime(&tm);
+          struct timeval now1 = { .tv_sec = t };
+          settimeofday(&now1, NULL);    //set time on the RTC of the ESP32
+          printLocalTime(); 
+      }
+
+      // ClockMode
+      if (!json["ClockMode"].isNull()) {
+        allBlank();  
+        clockMode = 0; 
+        preferences.putInt("clockMode", clockMode);   
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode);  
+        printLocalTime(); 
+      }
+
+      // DateMode
+      if (!json["DateMode"].isNull()) {
+        allBlank();   
+        clockMode = 7;     
+        preferences.putInt("clockMode", clockMode);
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode);
+      }
+
+      // TemperatureMode
+      if (!json["TemperatureMode"].isNull()) {
+        allBlank();
+        clockMode = 2;    
+        preferences.putInt("clockMode", clockMode); 
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode);  
+      }
+
+      // HumidityMode
+      if (!json["HumidityMode"].isNull()) {
+        allBlank();   
+        clockMode = 8;     
+        preferences.putInt("clockMode", clockMode);
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode); 
+      }
+
+      // ScrollingMode
+      if (!json["ScrollingMode"].isNull()) {  
+          allBlank();   
+          clockMode = 11;     
+          preferences.putInt("clockMode", clockMode);
+          realtimeMode = 0;   
+          preferences.putInt("realtimeMode", realtimeMode);  
+      }; 
+
+      // DisplayOffMode
+      if (!json["DisplayOffMode"].isNull()) {
+        allBlank();   
+        clockMode = 10;     
+        preferences.putInt("clockMode", clockMode);
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode);  
+        rtttl::stop();
+        breakOutSet = 1;   
+      }
+
+      // loadpreset1
+      if (!json["loadPreset1"].isNull()) {
+        getpreset1();   
+        GetBrightnessLevel();        
+        allBlank(); 
+      }
+
+      // loadpreset2
+      if (!json["loadPreset2"].isNull()) {
+        getpreset2();   
+        GetBrightnessLevel();        
+        allBlank();  
+      }
+
+      // CountdownMode
+      if (!json["CountdownMode"].isNull() || !json["StopwatchMode"].isNull()) {
+        CountUpMillis = !json["CountdownMode"].isNull() ? CountUpMillis : millis();
+        countdownMilliSeconds = !json["CountdownMode"].isNull() ? json["CountdownMode"].as<int>() : json["StopwatchMode"].as<int>();
+        if (countdownMilliSeconds < 1000) {countdownMilliSeconds = 1000;}
+        if (countdownMilliSeconds > 86400000) {countdownMilliSeconds = 86400000;} 
+        endCountDownMillis = millis() + countdownMilliSeconds;
+        if (currentMode == 0) {currentMode = clockMode; currentReal = realtimeMode;}
+        allBlank();
+        clockMode = !json["CountdownMode"].isNull() ? 1 : 4;
+        realtimeMode = 0; 
+      }
+
+      // ScoreboardMode
+      if (!json["ScoreboardMode"].isNull()) {
+        scoreboardLeft = json["ScoreboardMode"]["left"].as<int>();
+        if (scoreboardLeft < 0) {scoreboardLeft = 0;}
+        if (scoreboardLeft > 99) {scoreboardLeft = 99;}
+        scoreboardRight = json["ScoreboardMode"]["right"].as<int>();
+        if (scoreboardRight < 0) {scoreboardRight = 0;}
+        if (scoreboardRight > 99) {scoreboardRight = 99;}
+        allBlank();
+        clockMode = 3;   
+        preferences.putInt("clockMode", clockMode);  
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode);  
+      }
+
+      // lightshowMode
+      if (!json["lightshowMode"].isNull()) {
+        allBlank(); 
+        lightshowMode = json["lightshowMode"].as<int>();
+        oldsnakecolor = CRGB::Green;
+        getSlower = 180;
+        clockMode = 5;    
+        preferences.putInt("lightshowMode", lightshowMode); 
+        preferences.putInt("clockMode", clockMode); 
+        realtimeMode = 1;   
+        preferences.putInt("realtimeMode", realtimeMode);
+      }
+
+      // spectrumMode
+      if (!json["spectrumMode"].isNull()) {
+        allBlank(); 
+        spectrumMode = json["spectrumMode"].as<int>();
+        clockMode = 9;    
+        preferences.putInt("spectrumMode", spectrumMode); 
+        preferences.putInt("clockMode", clockMode); 
+        realtimeMode = 1;   
+        preferences.putInt("realtimeMode", realtimeMode);
+      }
+
       // outdoor temperature
       if (!json["temperature"].isNull()) {
         preferences.getBytes("temperature", &tempConfig, preferences.getBytesLength("temperature"));        
@@ -3554,34 +3538,6 @@ void loadWebPageHandlers() {
     } 
     server.send(401);
   });
-
-
-// Manually update time from browser
-
-  server.on("/setdate", HTTP_POST, []() { 
-    int yeararg = server.arg("year").toInt();
-    int montharg = server.arg("month").toInt();
-    int dayarg = server.arg("day").toInt();
-    int hourarg = server.arg("hour").toInt();
-    int minarg = server.arg("min").toInt();
-    int secarg = server.arg("sec").toInt();
-    rtc.adjust(DateTime(yeararg, montharg, dayarg, hourarg, minarg, secarg));   //set time on the RTC of the DS3231
-    struct tm tm;
-    tm.tm_year = yeararg - 1900;
-    tm.tm_mon = montharg - 1;
-    tm.tm_mday = dayarg;
-    tm.tm_hour = hourarg;
-    tm.tm_min = minarg;
-    tm.tm_sec = secarg;
-    time_t t = mktime(&tm);
-    struct timeval now1 = { .tv_sec = t };
-    settimeofday(&now1, NULL);    //set time on the RTC of the ESP32
-    printLocalTime(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
 
 //debug page
    server.on("/debugpage", []() {    
