@@ -256,6 +256,11 @@ document.addEventListener('DOMContentLoaded', function () {
             }, 1000);
         }
     }
+
+    /* Debug Page */
+    if (document.querySelectorAll("body.debug").length > 0) {
+        loadDebug();
+    }
 });
 
 
@@ -286,6 +291,20 @@ async function loadSettings() {
             } else {
                 console.log(`key is not found ${key}`);
             }
+        }
+    }
+}
+
+/* load debug */
+async function loadDebug() {
+    let add = document.querySelector(".debug-items")
+    let response = await fetch(`${url}/getsettings`);
+    if (response.ok) {
+        let settings = await response.json();
+        for (let [key, value] of Object.entries(settings)) {
+            let element = document.createElement("tr");
+            element.innerHTML = `<td>${key}</td><td>${value}</td>`;
+            add.appendChild(element);
         }
     }
 }
