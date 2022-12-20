@@ -1,6 +1,6 @@
-
+#define FASTLED_ESP32_FLASH_LOCK 1
 #include <NonBlockingRtttl.h>
-#include<MegunoLink.h>
+#include <MegunoLink.h>
 #include <FastLED.h>
 #include <WiFi.h>
 #include "WebServer.h"
@@ -12,6 +12,8 @@
 #include <Update.h>
 #include "RTClib.h"
 #include <AutoConnect.h>
+#include <ArduinoJson.h>
+#include "../include/ShelfClick.h"
 
 
 #define LED_TYPE  WS2812B
@@ -24,37 +26,15 @@
 #define LED_PIN 2             // led control pin
 #define PHOTORESISTER_PIN 36  // select the analog input pin for the photoresistor
 #define MILLI_AMPS 2400 
+#define NUM_LEDS  350
 #define NUMBER_OF_DIGITS 7 //4 real, 3 fake
 #define LEDS_PER_SEGMENT 7
 #define SEGMENTS_PER_NUMBER 7
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
 #define SPECTRUM_PIXELS  37  //times 7 to get all 258 leds
-#define SEGMENTS_LEDS (SPECTRUM_PIXELS * LEDS_PER_SEGMENT)  // Number leds in all segments
-#define SPOT_LEDS (NUMBER_OF_DIGITS * 2)        // Number of Spotlight leds
-#define NUM_LEDS  (SEGMENTS_LEDS + SPOT_LEDS)   // Number of all leds
-
 #define PHOTO_SAMPLES 15  //number of samples to take from the photoresister
 
-#if LEDS_PER_SEGMENT == 6
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5
-#elif LEDS_PER_SEGMENT == 7
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6
-#elif LEDS_PER_SEGMENT == 8
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7
-#elif LEDS_PER_SEGMENT == 9
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7, n*LEDS_PER_SEGMENT+8
-#else
- #error "Not supported Leds per segment. You need to add definition of seg(n) with needed number of elements according to formula above"
-#endif
-
-#define digit0 seg(0), seg(1), seg(2), seg(3), seg(4), seg(5), seg(6)
-#define fdigit1 seg(2), seg(7), seg(10), seg(15), seg(8), seg(3), seg(9)
-#define digit2 seg(10), seg(11), seg(12), seg(13), seg(14), seg(15), seg(16)
-#define fdigit3 seg(12), seg(17), seg(20), seg(25), seg(18), seg(13), seg(19)
-#define digit4 seg(20), seg(21), seg(22), seg(23), seg(24), seg(25), seg(26)
-#define fdigit5 seg(22), seg(27), seg(30), seg(35), seg(28), seg(23), seg(29)
-#define digit6 seg(30), seg(31), seg(32), seg(33), seg(34), seg(35), seg(36)
 
 const char* host = "shelfclock";
 const int   daylightOffset_sec = 3600;
@@ -102,11 +82,16 @@ byte greenMatrix[SPECTRUM_PIXELS];
 int lightshowSpeed = 1;
 int snakeLastDirection = 0;  //snake's last dirction
 int snakePosition = 0;  //snake's position
-int foodSpot = random(SPECTRUM_PIXELS-1);  //food spot
+int foodSpot = random(36);  //food spot
 int snakeWaiting = 0;  //waiting
 int getSlower = 180;
 int daysUptime = 0;
 int averageAudioInput = 0;
+float outdoorTemp = -500;
+float outdoorHumidity = -1;
+struct Temperature temperature;
+struct Humidity humidity;
+struct WeatherAPI weatherapi;
 
 struct tm timeinfo; 
 CRGB LEDs[NUM_LEDS];
@@ -241,40 +226,46 @@ CRGB minColor = CRGB(r2_val, g2_val, b2_val);
 CRGB tinyhourColor = CRGB(r3_val, g3_val, b3_val);
 CRGB lightchaseColorOne = CRGB::Blue;
 CRGB lightchaseColorTwo = CRGB::Red;
+CRGB oldsnakecolor = CRGB::Green;
+CRGB spotcolor = CHSV(random(0, 255), 255, 255);
 
-  CRGB oldsnakecolor = CRGB::Green;
-  CRGB spotcolor = CHSV(random(0, 255), 255, 255);
-  const uint16_t FAKE_LEDs[FAKE_NUM_LEDS] = {digit0, fdigit1, digit2, fdigit3, digit4, fdigit5, digit6};
+const uint16_t FAKE_LEDs[FAKE_NUM_LEDS] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,  //real digit #0
+                                      20,19,18,17,16,15,14,49,50,51,52,53,54,55,76,75,74,73,72,71,70,111,110,109,108,107,106,105,56,57,58,59,60,61,62,27,26,25,24,23,22,21,63,64,65,66,67,68,69,  //fake digit #1
+                                      70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,  //real digit #2
+                                      90,89,88,87,86,85,84,119,120,121,122,123,124,125,146,145,144,143,142,141,140,181,180,179,178,177,176,175,126,127,128,129,130,131,132,97,96,95,94,93,92,91,133,134,135,136,137,138,139,  //fake digit #3
+                                      140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,  //real digit #4
+                                      160,159,158,157,156,155,154,189,190,191,192,193,194,195,216,215,214,213,212,211,210,251,250,249,248,247,246,245,196,197,198,199,200,201,202,167,166,165,164,163,162,161,203,204,205,206,207,208,209,  //fake digit #5
+                                      210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,256,257,258};  //real digit #6
 
 //fake LED layout for spectrum (from the middle out)
-const uint16_t FAKE_LEDs_C_BMUP[SEGMENTS_LEDS] = {seg(17), seg(11), seg(21), seg(12), seg(20), seg(19), seg(27), seg(7), seg(22), seg(10), seg(26), seg(16), seg(25), seg(13), seg(18), seg(1), seg(31), seg(2), seg(30), seg(9), seg(29), seg(15), seg(23), seg(14), seg(24), seg(0), seg(32), seg(6), seg(36), seg(3), seg(35), seg(8), seg(28), seg(5), seg(33), seg(4), seg(34)};
+const uint16_t FAKE_LEDs_C_BMUP[259] = {119,120,121,122,123,124,125,77,78,79,80,81,82,83,147,148,149,150,151,152,153,84,85,86,87,88,89,90,140,141,142,143,144,145,146,133,134,135,136,137,138,139,189,190,191,192,193,194,195,49,50,51,52,53,54,55,154,155,156,157,158,159,160,70,71,72,73,74,75,76,182,183,184,185,186,187,188,112,113,114,115,116,117,118,175,176,177,178,179,180,181,91,92,93,94,95,96,97,126,127,128,129,130,131,132,7,8,9,10,11,12,13,217,218,219,220,221,222,223,14,15,16,17,18,19,20,210,211,212,213,214,215,216,63,64,65,66,67,68,69,203,204,205,206,207,208,209,105,106,107,108,109,110,111,161,162,163,164,165,166,167,98,99,100,101,102,103,104,168,169,170,171,172,173,174,0,1,2,3,4,5,6,224,225,226,227,228,229,230,42,43,44,45,46,47,48,252,253,254,255,256,257,258,21,22,23,24,25,26,27,245,246,247,248,249,250,251,56,57,58,59,60,61,62,196,197,198,199,200,201,202,35,36,37,38,39,40,41,231,232,233,234,235,236,237,28,29,30,31,32,33,34,238,239,240,241,242,243,244};
 //fake LED layout for spectrum (bfrom the outside in)
-const uint16_t FAKE_LEDs_C_CMOT[SEGMENTS_LEDS] = {seg(19), seg(26), seg(16), seg(20), seg(13), seg(25), seg(12), seg(17), seg(18), seg(21), seg(14), seg(24), seg(11), seg(29), seg(9), seg(22), seg(15), seg(23), seg(10), seg(28), seg(7), seg(27), seg(8), seg(36), seg(6), seg(30), seg(3), seg(35), seg(2), seg(34), seg(1), seg(31), seg(4), seg(32), seg(5), seg(33), seg(0)};
+const uint16_t FAKE_LEDs_C_CMOT[259] = {133,134,135,136,137,138,139,182,183,184,185,186,187,188,112,113,114,115,116,117,118,140,141,142,143,144,145,146,91,92,93,94,95,96,97,175,176,177,178,179,180,181,84,85,86,87,88,89,90,119,120,121,122,123,124,125,126,127,128,129,130,131,132,147,148,149,150,151,152,153,98,99,100,101,102,103,104,168,169,170,171,172,173,174,77,78,79,80,81,82,83,203,204,205,206,207,208,209,63,64,65,66,67,68,69,154,155,156,157,158,159,160,105,106,107,108,109,110,111,161,162,163,164,165,166,167,70,71,72,73,74,75,76,196,197,198,199,200,201,202,49,50,51,52,53,54,55,189,190,191,192,193,194,195,56,57,58,59,60,61,62,252,253,254,255,256,257,258,42,43,44,45,46,47,48,210,211,212,213,214,215,216,21,22,23,24,25,26,27,245,246,247,248,249,250,251,14,15,16,17,18,19,20,238,239,240,241,242,243,244,7,8,9,10,11,12,13,217,218,219,220,221,222,223,28,29,30,31,32,33,34,224,225,226,227,228,229,230,35,36,37,38,39,40,41,231,232,233,234,235,236,237,0,1,2,3,4,5,6};
 //fake LED layout for spectrum (bottom-left to right-top)
-const uint16_t FAKE_LEDs_C_BLTR[SEGMENTS_LEDS] = {seg(32), seg(31), seg(27), seg(30), seg(36), seg(33), seg(34), seg(35), seg(29), seg(22), seg(21), seg(17), seg(20), seg(26), seg(23), seg(28), seg(24), seg(25), seg(19), seg(12), seg(11), seg(7), seg(10), seg(16), seg(13), seg(18), seg(14), seg(15), seg(9), seg(2), seg(1), seg(0), seg(6), seg(3), seg(8), seg(4), seg(5)};
+const uint16_t FAKE_LEDs_C_BLTR[259] = {224,225,226,227,228,229,230,217,218,219,220,221,222,223,189,190,191,192,193,194,195,210,211,212,213,214,215,216,252,253,254,255,256,257,258,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,203,204,205,206,207,208,209,154,155,156,157,158,159,160,147,148,149,150,151,152,153,119,120,121,122,123,124,125,140,141,142,143,144,145,146,182,183,184,185,186,187,188,161,162,163,164,165,166,167,196,197,198,199,200,201,202,168,169,170,171,172,173,174,175,176,177,178,179,180,181,133,134,135,136,137,138,139,84,85,86,87,88,89,90,77,78,79,80,81,82,83,49,50,51,52,53,54,55,70,71,72,73,74,75,76,112,113,114,115,116,117,118,91,92,93,94,95,96,97,126,127,128,129,130,131,132,98,99,100,101,102,103,104,105,106,107,108,109,110,111,63,64,65,66,67,68,69,14,15,16,17,18,19,20,7,8,9,10,11,12,13,0,1,2,3,4,5,6,42,43,44,45,46,47,48,21,22,23,24,25,26,27,56,57,58,59,60,61,62,28,29,30,31,32,33,34,35,36,37,38,39,40,41};
 //fake LED layout for spectrum (top-left to bottom-right) 
-const uint16_t FAKE_LEDs_C_TLBR[SEGMENTS_LEDS] = {seg(34), seg(33), seg(32), seg(36), seg(35), seg(28), seg(24), seg(23), seg(29), seg(30), seg(31), seg(27), seg(22), seg(26), seg(25), seg(18), seg(14), seg(13), seg(19), seg(20), seg(21), seg(17), seg(12), seg(16), seg(15), seg(8), seg(4), seg(3), seg(9), seg(10), seg(11), seg(7), seg(2), seg(6), seg(5), seg(0), seg(1)};
+const uint16_t FAKE_LEDs_C_TLBR[259] = {238,239,240,241,242,243,244,231,232,233,234,235,236,237,224,225,226,227,228,229,230,252,253,254,255,256,257,258,245,246,247,248,249,250,251,196,197,198,199,200,201,202,168,169,170,171,172,173,174,161,162,163,164,165,166,167,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,189,190,191,192,193,194,195,154,155,156,157,158,159,160,182,183,184,185,186,187,188,175,176,177,178,179,180,181,126,127,128,129,130,131,132,98,99,100,101,102,103,104,91,92,93,94,95,96,97,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,119,120,121,122,123,124,125,84,85,86,87,88,89,90,112,113,114,115,116,117,118,105,106,107,108,109,110,111,56,57,58,59,60,61,62,28,29,30,31,32,33,34,21,22,23,24,25,26,27,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,49,50,51,52,53,54,55,14,15,16,17,18,19,20,42,43,44,45,46,47,48,35,36,37,38,39,40,41,0,1,2,3,4,5,6,7,8,9,10,11,12,13};
 //fake LED layout for spectrum (top-middle down)  
-const uint16_t FAKE_LEDs_C_TMDN[SEGMENTS_LEDS] = {seg(18), seg(14), seg(24), seg(13), seg(25), seg(19), seg(8), seg(28), seg(15), seg(23), seg(16), seg(26), seg(12), seg(20), seg(17), seg(4), seg(34), seg(3), seg(35), seg(9), seg(29), seg(10), seg(22), seg(11), seg(21), seg(5), seg(33), seg(6), seg(36), seg(2), seg(30), seg(7), seg(27), seg(0), seg(32), seg(1), seg(31)};
+const uint16_t FAKE_LEDs_C_TMDN[259] = {126,127,128,129,130,131,132,98,99,100,101,102,103,104,168,169,170,171,172,173,174,91,92,93,94,95,96,97,175,176,177,178,179,180,181,133,134,135,136,137,138,139,56,57,58,59,60,61,62,196,197,198,199,200,201,202,105,106,107,108,109,110,111,161,162,163,164,165,166,167,112,113,114,115,116,117,118,182,183,184,185,186,187,188,84,85,86,87,88,89,90,140,141,142,143,144,145,146,119,120,121,122,123,124,125,28,29,30,31,32,33,34,238,239,240,241,242,243,244,21,22,23,24,25,26,27,245,246,247,248,249,250,251,63,64,65,66,67,68,69,203,204,205,206,207,208,209,70,71,72,73,74,75,76,154,155,156,157,158,159,160,77,78,79,80,81,82,83,147,148,149,150,151,152,153,35,36,37,38,39,40,41,231,232,233,234,235,236,237,42,43,44,45,46,47,48,252,253,254,255,256,257,258,14,15,16,17,18,19,20,210,211,212,213,214,215,216,49,50,51,52,53,54,55,189,190,191,192,193,194,195,0,1,2,3,4,5,6,224,225,226,227,228,229,230,7,8,9,10,11,12,13,217,218,219,220,221,222,223};
 //fake LED layout for spectrum (center-sides in)  
-const uint16_t FAKE_LEDs_C_CSIN[SEGMENTS_LEDS] = {seg(5), seg(32), seg(0), seg(33), seg(6), seg(36), seg(4), seg(31), seg(1), seg(34), seg(3), seg(30), seg(2), seg(35), seg(9), seg(29), seg(8), seg(27), seg(7), seg(28), seg(15), seg(22), seg(10), seg(23), seg(16), seg(26), seg(14), seg(21), seg(11), seg(24), seg(13), seg(20), seg(12), seg(25), seg(19), seg(18), seg(17)};
+const uint16_t FAKE_LEDs_C_CSIN[259] = {35,36,37,38,39,40,41,224,225,226,227,228,229,230,0,1,2,3,4,5,6,231,232,233,234,235,236,237,42,43,44,45,46,47,48,252,253,254,255,256,257,258,28,29,30,31,32,33,34,217,218,219,220,221,222,223,7,8,9,10,11,12,13,238,239,240,241,242,243,244,21,22,23,24,25,26,27,210,211,212,213,214,215,216,14,15,16,17,18,19,20,245,246,247,248,249,250,251,63,64,65,66,67,68,69,203,204,205,206,207,208,209,56,57,58,59,60,61,62,189,190,191,192,193,194,195,49,50,51,52,53,54,55,196,197,198,199,200,201,202,105,106,107,108,109,110,111,154,155,156,157,158,159,160,70,71,72,73,74,75,76,161,162,163,164,165,166,167,112,113,114,115,116,117,118,182,183,184,185,186,187,188,98,99,100,101,102,103,104,147,148,149,150,151,152,153,77,78,79,80,81,82,83,168,169,170,171,172,173,174,91,92,93,94,95,96,97,140,141,142,143,144,145,146,84,85,86,87,88,89,90,175,176,177,178,179,180,181,133,134,135,136,137,138,139,126,127,128,129,130,131,132,119,120,121,122,123,124,125};
 //fake LED layout for spectrum (bottom-right to left-top)
-const uint16_t FAKE_LEDs_C_BRTL[SEGMENTS_LEDS] = {seg(0), seg(1), seg(7), seg(2), seg(6), seg(5), seg(4), seg(3), seg(9), seg(10), seg(11), seg(17), seg(12), seg(16), seg(15), seg(8), seg(14), seg(13), seg(19), seg(20), seg(21), seg(27), seg(22), seg(26), seg(25), seg(18), seg(24), seg(23), seg(29), seg(30), seg(31), seg(32), seg(36), seg(35), seg(28), seg(34), seg(33)};
+const uint16_t FAKE_LEDs_C_BRTL[259] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,49,50,51,52,53,54,55,14,15,16,17,18,19,20,48,47,46,45,44,43,42,35,36,37,38,39,40,41,28,29,30,31,32,33,34,21,22,23,24,25,26,27,69,68,67,66,65,64,63,70,71,72,73,74,75,76,77,78,79,80,81,82,83,125,124,123,122,121,120,119,84,85,86,87,88,89,90,118,117,116,115,114,113,112,105,106,107,108,109,110,111,56,57,58,59,60,61,62,98,99,100,101,102,103,104,91,92,93,94,95,96,97,139,138,137,136,135,134,133,146,145,144,143,142,141,140,153,152,151,150,149,148,147,195,194,193,192,191,190,189,160,159,158,157,156,155,154,182,183,184,185,186,187,188,181,180,179,178,177,176,175,132,131,130,129,128,127,126,174,173,172,171,170,169,168,167,166,165,164,163,162,161,203,204,205,206,207,208,209,216,215,214,213,212,211,210,223,222,221,220,219,218,217,230,229,228,227,226,225,224,252,253,254,255,256,257,258,251,250,249,248,247,246,245,202,201,200,199,198,197,196,244,243,242,241,240,239,238,237,236,235,234,233,232,231};
 //fake LED layout for spectrum (top-right to bottom-left)
-const uint16_t FAKE_LEDs_C_TRBL[SEGMENTS_LEDS] = {seg(4), seg(5), seg(0), seg(6), seg(3), seg(8), seg(14), seg(15), seg(9), seg(2), seg(1), seg(7), seg(10), seg(16), seg(13), seg(18), seg(24), seg(25), seg(19), seg(12), seg(11), seg(17), seg(20), seg(26), seg(23), seg(28), seg(34), seg(35), seg(29), seg(22), seg(21), seg(27), seg(30), seg(36), seg(33), seg(32), seg(31)};
+const uint16_t FAKE_LEDs_C_TRBL[259] = {28,29,30,31,32,33,34,35,36,37,38,39,40,41,0,1,2,3,4,5,6,42,43,44,45,46,47,48,21,22,23,24,25,26,27,56,57,58,59,60,61,62,98,99,100,101,102,103,104,105,106,107,108,109,110,111,63,64,65,66,67,68,69,14,15,16,17,18,19,20,7,8,9,10,11,12,13,49,50,51,52,53,54,55,70,71,72,73,74,75,76,112,113,114,115,116,117,118,91,92,93,94,95,96,97,126,127,128,129,130,131,132,168,169,170,171,172,173,174,175,176,177,178,179,180,181,133,134,135,136,137,138,139,84,85,86,87,88,89,90,77,78,79,80,81,82,83,119,120,121,122,123,124,125,140,141,142,143,144,145,146,182,183,184,185,186,187,188,161,162,163,164,165,166,167,196,197,198,199,200,201,202,238,239,240,241,242,243,244,245,246,247,248,249,250,251,203,204,205,206,207,208,209,154,155,156,157,158,159,160,147,148,149,150,151,152,153,189,190,191,192,193,194,195,210,211,212,213,214,215,216,252,253,254,255,256,257,258,231,232,233,234,235,236,237,224,225,226,227,228,229,230,217,218,219,220,221,222,223};
 //fake LED layout for spectrum (horizontal parts)   
-const uint16_t FAKE_LEDs_C_OUTS[SEGMENTS_LEDS] = {seg(31), seg(39), seg(36), seg(39), seg(34), seg(39), seg(27), seg(39), seg(29), seg(39), seg(28), seg(39), seg(21), seg(39), seg(26), seg(39), seg(24), seg(39), seg(17), seg(39), seg(19), seg(39), seg(18), seg(39), seg(11), seg(39), seg(16), seg(39), seg(14), seg(39), seg(7), seg(39),seg(9), seg(8), seg(1), seg(6), seg(4)};
-const uint16_t FAKE_LEDs_C_OUTS2[SEGMENTS_LEDS] = {seg(1), seg(39), seg(6), seg(39), seg(4), seg(39), seg(7), seg(39), seg(9), seg(39), seg(8), seg(39), seg(11), seg(39), seg(16), seg(39), seg(14), seg(39), seg(17), seg(39), seg(19), seg(39), seg(18), seg(39), seg(21), seg(39), seg(26), seg(39), seg(24), seg(39), seg(27), seg(39),seg(29), seg(28), seg(31), seg(36), seg(34)};
+const uint16_t FAKE_LEDs_C_OUTS[259] = {217,218,219,220,221,222,223,252,253,254,255,256,257,258,238,239,240,241,242,243,244,189,190,191,192,193,194,195,203,204,205,206,207,208,209,196,197,198,199,200,201,202,147,148,149,150,151,152,153,182,183,184,185,186,187,188,168,169,170,171,172,173,174,119,120,121,122,123,124,125,133,134,135,136,137,138,139,126,127,128,129,130,131,132,77,78,79,80,81,82,83,112,113,114,115,116,117,118,98,99,100,101,102,103,104,49,50,51,52,53,54,55,63,64,65,66,67,68,69,56,57,58,59,60,61,62,7,8,9,10,11,12,13,42,43,44,45,46,47,48,28,29,30,31,32,33,34,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281};
+const uint16_t FAKE_LEDs_C_OUTS2[259] = {7,8,9,10,11,12,13,42,43,44,45,46,47,48,28,29,30,31,32,33,34,49,50,51,52,53,54,55,63,64,65,66,67,68,69,56,57,58,59,60,61,62,77,78,79,80,81,82,83,112,113,114,115,116,117,118,98,99,100,101,102,103,104,119,120,121,122,123,124,125,133,134,135,136,137,138,139,126,127,128,129,130,131,132,147,148,149,150,151,152,153,182,183,184,185,186,187,188,168,169,170,171,172,173,174,189,190,191,192,193,194,195,203,204,205,206,207,208,209,196,197,198,199,200,201,202,217,218,219,220,221,222,223,252,253,254,255,256,257,258,238,239,240,241,242,243,244,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281};
 //fake LED layout for spectrum (vertical parts)  
-const uint16_t FAKE_LEDs_C_VERT[SEGMENTS_LEDS] = {seg(32), seg(39), seg(33), seg(39), seg(30), seg(39), seg(35), seg(39), seg(39), seg(22), seg(39), seg(23), seg(39), seg(39), seg(20), seg(39), seg(25), seg(39), seg(39), seg(12), seg(39), seg(13), seg(39), seg(39), seg(10), seg(39), seg(15), seg(39), seg(39), seg(2), seg(39), seg(3), seg(39), seg(0), seg(39), seg(5), seg(39)};
-const uint16_t FAKE_LEDs_C_VERT2[SEGMENTS_LEDS] = {seg(0), seg(39), seg(5), seg(39), seg(39), seg(2), seg(39), seg(3), seg(39), seg(39), seg(10), seg(39), seg(15), seg(39), seg(39), seg(12), seg(39), seg(13), seg(39), seg(39), seg(20), seg(39), seg(25), seg(39), seg(39), seg(22), seg(39), seg(23), seg(39), seg(30), seg(39), seg(35), seg(39), seg(32), seg(39), seg(33), seg(39)};
+const uint16_t FAKE_LEDs_C_VERT[259] = {224,225,226,227,228,229,230,231,232,233,234,235,236,237,210,211,212,213,214,215,216,245,246,247,248,249,250,251,154,155,156,157,158,159,160,161,162,163,164,165,166,167,140,141,142,143,144,145,146,175,176,177,178,179,180,181,84,85,86,87,88,89,90,91,92,93,94,95,96,97,70,71,72,73,74,75,76,105,106,107,108,109,110,111,14,15,16,17,18,19,20,21,22,23,24,25,26,27,0,1,2,3,4,5,6,35,36,37,38,39,40,41,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281};
+const uint16_t FAKE_LEDs_C_VERT2[259] = {0,1,2,3,4,5,6,35,36,37,38,39,40,41,14,15,16,17,18,19,20,21,22,23,24,25,26,27,70,71,72,73,74,75,76,105,106,107,108,109,110,111,84,85,86,87,88,89,90,91,92,93,94,95,96,97,140,141,142,143,144,145,146,175,176,177,178,179,180,181,154,155,156,157,158,159,160,161,162,163,164,165,166,167,210,211,212,213,214,215,216,245,246,247,248,249,250,251,224,225,226,227,228,229,230,231,232,233,234,235,236,237,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281,275,276,277,278,279,280,281};
 
 //fake LED layout for fire display  
-const uint16_t FAKE_LEDs_C_FIRE[SEGMENTS_LEDS] = {seg(17), seg(11), seg(21), seg(12), seg(20), seg(19), seg(27), seg(7), seg(22), seg(10), seg(26), seg(16), seg(25), seg(13), seg(18), seg(1), seg(31), seg(2), seg(30), seg(9), seg(29), seg(15), seg(23), seg(14), seg(24), seg(0), seg(32), seg(6), seg(36), seg(3), seg(35), seg(8), seg(28), seg(5), seg(33), seg(4), seg(34)};
+const uint16_t FAKE_LEDs_C_FIRE[259] = {119,120,121,122,123,124,125,77,78,79,80,81,82,83,147,148,149,150,151,152,153,84,85,86,87,88,89,90,140,141,142,143,144,145,146,133,134,135,136,137,138,139,189,190,191,192,193,194,195,49,50,51,52,53,54,55,154,155,156,157,158,159,160,70,71,72,73,74,75,76,182,183,184,185,186,187,188,112,113,114,115,116,117,118,175,176,177,178,179,180,181,91,92,93,94,95,96,97,126,127,128,129,130,131,132,7,8,9,10,11,12,13,217,218,219,220,221,222,223,14,15,16,17,18,19,20,210,211,212,213,214,215,216,63,64,65,66,67,68,69,203,204,205,206,207,208,209,105,106,107,108,109,110,111,161,162,163,164,165,166,167,98,99,100,101,102,103,104,168,169,170,171,172,173,174,0,1,2,3,4,5,6,224,225,226,227,228,229,230,42,43,44,45,46,47,48,252,253,254,255,256,257,258,21,22,23,24,25,26,27,245,246,247,248,249,250,251,56,57,58,59,60,61,62,196,197,198,199,200,201,202,35,36,37,38,39,40,41,231,232,233,234,235,236,237,28,29,30,31,32,33,34,238,239,240,241,242,243,244};
 //fake LED layout for Rain display  
-const uint16_t FAKE_LEDs_C_RAIN[SEGMENTS_LEDS] = {seg(30), seg(35), seg(1), seg(6), seg(4), seg(22), seg(23), seg(31), seg(36), seg(34), seg(12), seg(13), seg(7), seg(9), seg(8), seg(0), seg(5), seg(17), seg(19), seg(18), seg(10), seg(15), seg(21), seg(26), seg(24), seg(2), seg(3), seg(27), seg(29), seg(28), seg(20), seg(25), seg(11), seg(16), seg(14), seg(32), seg(33)};
+const uint16_t FAKE_LEDs_C_RAIN[259] = {210,211,212,213,214,215,216,245,246,247,248,249,250,251,7,8,9,10,11,12,13,42,43,44,45,46,47,48,28,29,30,31,32,33,34,154,155,156,157,158,159,160,161,162,163,164,165,166,167,217,218,219,220,221,222,223,252,253,254,255,256,257,258,238,239,240,241,242,243,244,84,85,86,87,88,89,90,91,92,93,94,95,96,97,49,50,51,52,53,54,55,63,64,65,66,67,68,69,56,57,58,59,60,61,62,0,1,2,3,4,5,6,35,36,37,38,39,40,41,119,120,121,122,123,124,125,133,134,135,136,137,138,139,126,127,128,129,130,131,132,70,71,72,73,74,75,76,105,106,107,108,109,110,111,147,148,149,150,151,152,153,182,183,184,185,186,187,188,168,169,170,171,172,173,174,14,15,16,17,18,19,20,21,22,23,24,25,26,27,189,190,191,192,193,194,195,203,204,205,206,207,208,209,196,197,198,199,200,201,202,140,141,142,143,144,145,146,175,176,177,178,179,180,181,77,78,79,80,81,82,83,112,113,114,115,116,117,118,98,99,100,101,102,103,104,224,225,226,227,228,229,230,231,232,233,234,235,236,237};
 //fake LED layout for Snake display 
-const uint16_t FAKE_LEDs_SNAKE[SEGMENTS_LEDS] = {seg(0), seg(1), seg(7), seg(2), seg(6), seg(5), seg(4), seg(3), seg(9), seg(10), seg(11), seg(17), seg(12), seg(16), seg(15), seg(8), seg(14), seg(13), seg(19), seg(20), seg(21), seg(27), seg(22), seg(26), seg(25), seg(18), seg(24), seg(23), seg(29), seg(30), seg(31), seg(32), seg(36), seg(35), seg(28), seg(34), seg(33)};
+const uint16_t FAKE_LEDs_SNAKE[259] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,49,50,51,52,53,54,55,14,15,16,17,18,19,20,42,43,44,45,46,47,48,35,36,37,38,39,40,41,28,29,30,31,32,33,34,21,22,23,24,25,26,27,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,119,120,121,122,123,124,125,84,85,86,87,88,89,90,112,113,114,115,116,117,118,105,106,107,108,109,110,111,56,57,58,59,60,61,62,98,99,100,101,102,103,104,91,92,93,94,95,96,97,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,189,190,191,192,193,194,195,154,155,156,157,158,159,160,182,183,184,185,186,187,188,175,176,177,178,179,180,181,126,127,128,129,130,131,132,168,169,170,171,172,173,174,161,162,163,164,165,166,167,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,252,253,254,255,256,257,258,245,246,247,248,249,250,251,196,197,198,199,200,201,202,238,239,240,241,242,243,244,231,232,233,234,235,236,237};
 
 
 const char * rickroll2 = "Together:d=8,o=5,b=225:4d#,f.,c#.,c.6,4a#.,4g.,f.,d#.,c.,4a#,2g#,4d#,f.,c#.,c.6,2a#,g.,f.,1d#.,d#.,4f,c#.,c.6,2a#,4g.,4f,d#.,f.,g.,4g#.,g#.,4a#,c.6,4c#6,4c6,4a#,4g.,4g#,4a#,2g#";
@@ -443,6 +434,7 @@ byte numbers[] = {
    0b1010010    //  [96] 3-lines (special pad)
    };
 
+TaskHandle_t Task1;
 
 void setup() {
   Serial.begin(115200);
@@ -453,6 +445,10 @@ void setup() {
   Serial.println(F("Inizializing FS..."));
   if (SPIFFS.begin()){
       Serial.println(F("SPIFFS mounted correctly."));
+      Serial.println("Total Bytes");
+      Serial.println(SPIFFS.totalBytes());
+      Serial.println("Used Bytes");
+      Serial.println(SPIFFS.usedBytes());
   }else{
       Serial.println(F("!An error occurred during SPIFFS mounting"));
   }
@@ -551,6 +547,9 @@ void setup() {
   
   allBlank();   //clear everything off the leds
   
+  server.enableCrossOrigin(true);
+  server.enableCORS(true);
+
   //Webpage Handlers for SPIFFS access to flash
   server.serveStatic("/", SPIFFS, "/index.html");  //send default webpage from root request
   server.serveStatic("/", SPIFFS, "/", "max-age=86400");
@@ -558,11 +557,13 @@ void setup() {
   //OTA firmware Upgrade Webpage Handlers
   Serial.println("OTA Available");
   server.on("/update", HTTP_POST, []() {
-  server.sendHeader("Connection", "close");
-  server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
-  ESP.restart();
-   }, []() {
+    server.sendHeader("Connection", "close");
+    server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+    ESP.restart();
+  }, []() {
       HTTPUpload& upload = server.upload();
+      Serial.println("Update..");
+      Serial.println(upload.status);
       if (upload.status == UPLOAD_FILE_START) {
         Serial.printf("Update: %s\n", upload.filename.c_str());
         if (!Update.begin(UPDATE_SIZE_UNKNOWN)) { //start with max available size
@@ -586,12 +587,58 @@ void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
   rtttl::begin(BUZZER_PIN, smb_under);  //play mario sound and set initial brightness level
   while( !rtttl::done() ){GetBrightnessLevel(); rtttl::play();}
-  
+
+
+  xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 0, &Task1, 0);
 }    //end of Setup()
 
+void Task1code(void * parameter) {
+  unsigned long lastTime = 0;
+  unsigned long timerDelay = 300000;  //5 seconds  600000 10 min
 
+  getRemoteWeather();
 
+  while(true) {
+    if ((millis() - lastTime) > timerDelay) {
+      Serial.print("loop() running on core ");
+      Serial.println(xPortGetCoreID());
 
+      getRemoteWeather();
+
+      lastTime = millis();
+    }  
+  }
+}
+
+void getRemoteWeather() {
+  if (WiFi.status() == WL_CONNECTED && weatherapi.apikey && weatherapi.latitude && weatherapi.longitude) {
+    HTTPClient http;
+    String serverPath = String("http://api.openweathermap.org/data/2.5/weather?lat=") + weatherapi.latitude + String("&lon=") + weatherapi.longitude + String("&APPID=") + weatherapi.apikey + String("&units=imperial");
+    Serial.println(serverPath);
+
+    http.begin(serverPath.c_str());
+    int httpResponseCode = http.GET();
+  
+    if (httpResponseCode > 0) {
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+
+      DynamicJsonDocument payload(2048);
+      deserializeJson(payload, http.getStream());
+
+      JsonObject main = payload["main"].as<JsonObject>();
+      outdoorTemp = main["temp"].as<String>().toFloat();
+      outdoorHumidity = main["humidity"].as<String>().toFloat();
+
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+    }
+
+    // Free resources
+    http.end();
+  }
+}
 
 void loop(){
   server.handleClient(); 
@@ -608,7 +655,7 @@ void loop(){
     prevTime = currentMillis;
     //struct tm timeinfo; 
     if(!getLocalTime(&timeinfo)){ 
-    Serial.println("Failed to obtain time");
+      Serial.println("Failed to obtain time");
     }
 
     //setup time-passage trackers
@@ -754,12 +801,12 @@ void displayTimeMode() {  //main clock function
       tinyhourColor = hourColor;
       if (ClockColorSettings == 4 && pastelColors == 0){ tinyhourColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ tinyhourColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-        for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhourColor;}
+        for (int i=224; i<231; i++) { LEDs[i] = tinyhourColor;}
       if (ClockColorSettings == 4 && pastelColors == 0){ tinyhourColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ tinyhourColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-        for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhourColor;}
+        for (int i=231; i<238; i++) { LEDs[i] = tinyhourColor;}
   	} else {
-  	    for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black;}
+  	    for (int i=224; i<238; i++) { LEDs[i] = CRGB::Black;}
   	  }
       displayNumber(h2,5,hourColor);
       displayNumber(m1,2,minColor);
@@ -779,11 +826,11 @@ void displayTimeMode() {  //main clock function
     tinyhourColor = hourColor;
     if (ClockColorSettings == 4 && pastelColors == 0){ tinyhourColor = CHSV(random(0, 255), 255, 255); }
     if (ClockColorSettings == 4 && pastelColors == 1){ tinyhourColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhourColor;}
+      for (int i=224; i<231; i++) { LEDs[i] = tinyhourColor;}
     if (ClockColorSettings == 4 && pastelColors == 0){ tinyhourColor = CHSV(random(0, 255), 255, 255); }
     if (ClockColorSettings == 4 && pastelColors == 1){ tinyhourColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhourColor;}
-  } else {for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black;}
+      for (int i=231; i<238; i++) { LEDs[i] = tinyhourColor;}
+  } else {for (int i=224; i<238; i++) { LEDs[i] = CRGB::Black;}
    }
     	displayNumber(h2,5,hourColor);
     	displayNumber(m1,3,minColor);
@@ -854,8 +901,6 @@ void displayTimeMode() {  //main clock function
 } // end of update clock
 
 
-
-
 void displayDateMode() {  //main date function
   currentMode = 0;
   if(!getLocalTime(&timeinfo)){ 
@@ -882,18 +927,18 @@ void displayDateMode() {  //main date function
     tinymonthColor = monthColor;
     if (DateColorSettings == 4 && pastelColors == 0){ tinymonthColor = CHSV(random(0, 255), 255, 255); }
     if (DateColorSettings == 4 && pastelColors == 1){ tinymonthColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinymonthColor;}
+      for (int i=224; i<231; i++) { LEDs[i] = tinymonthColor;}
     if (DateColorSettings == 4 && pastelColors == 0){ tinymonthColor = CHSV(random(0, 255), 255, 255); }
     if (DateColorSettings == 4 && pastelColors == 1){ tinymonthColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinymonthColor;}
-  } else {for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black;}
+      for (int i=231; i<238; i++) { LEDs[i] = tinymonthColor;}
+  } else {for (int i=224; i<238; i++) { LEDs[i] = CRGB::Black;}
    }
     displayNumber(m2,5,monthColor);
     displayNumber(d1,2,dayColor);
     displayNumber(d2,0,dayColor); 
     if ((DateColorSettings == 4 ) && pastelColors == 0){ separatorColor = CHSV(random(0, 255), 255, 255); }
     if ((DateColorSettings == 4 ) && pastelColors == 1){ separatorColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=(20*LEDS_PER_SEGMENT); i<(21*LEDS_PER_SEGMENT); i++) { LEDs[i] = separatorColor;}  //separator
+      for (int i=140; i<147; i++) { LEDs[i] = separatorColor;}  //separator
   }
   
   if (dateDisplayType == 1) {    //Space-Padded (MMDD)
@@ -909,11 +954,11 @@ void displayDateMode() {  //main date function
     tinymonthColor = monthColor;
     if (DateColorSettings == 4 && pastelColors == 0){ tinymonthColor = CHSV(random(0, 255), 255, 255); }
     if (DateColorSettings == 4 && pastelColors == 1){ tinymonthColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinymonthColor;}
+      for (int i=224; i<231; i++) { LEDs[i] = tinymonthColor;}
     if (DateColorSettings == 4 && pastelColors == 0){ tinymonthColor = CHSV(random(0, 255), 255, 255); }
     if (DateColorSettings == 4 && pastelColors == 1){ tinymonthColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinymonthColor;}
-  } else {for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black;}
+      for (int i=231; i<238; i++) { LEDs[i] = tinymonthColor;}
+  } else {for (int i=224; i<238; i++) { LEDs[i] = CRGB::Black;}
    }
       displayNumber(m2,5,monthColor);
       displayNumber(d1,3,dayColor);
@@ -956,10 +1001,8 @@ void displayDateMode() {  //main date function
   } 
 } // end of update date
 
-
-
-
 void displayTemperatureMode() {   //miain temp function
+  static int countFlip = 1;
   currentMode = 0;
   float h = dht.readHumidity();        // read humidity
   float sensorTemp = dht.readTemperature();     // read temperature
@@ -972,6 +1015,17 @@ void displayTemperatureMode() {   //miain temp function
   if (temperatureSymbol == 39) {  correctedTemp = ((sensorTemp * 1.8000) + 32) + temperatureCorrection; }
   byte t1 = 0;
   byte t2 = 0;
+
+  if (temperature.outdoor_enable == true) {
+    if (countFlip > 5) {
+      correctedTemp = outdoorTemp;
+    }
+    if (countFlip > 9) {
+      countFlip = 0;
+    }
+    countFlip++;
+  }
+
   int tempDecimal = correctedTemp * 10;
   if (correctedTemp >= 100) {
     int tempHundred = correctedTemp / 10;
@@ -1033,13 +1087,13 @@ void displayTemperatureMode() {   //miain temp function
     tinytempColor = tempColor;
     if (tempColorSettings == 4 && pastelColors == 0){ tinytempColor = CHSV(random(0, 255), 255, 255); }
     if (tempColorSettings == 4 && pastelColors == 1){ tinytempColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinytempColor;}  //1xx split across 2 for color reasons
+    for (int i=224; i<231; i++) { LEDs[i] = tinytempColor;}  //1xx split across 2 for color reasons
     if (tempColorSettings == 4 && pastelColors == 0){ tinytempColor = CHSV(random(0, 255), 255, 255); }
     if (tempColorSettings == 4 && pastelColors == 1){ tinytempColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinytempColor;}  //1xx split across 2 for color reasons
+    for (int i=231; i<238; i++) { LEDs[i] = tinytempColor;}  //1xx split across 2 for color reasons
     if (tempColorSettings == 4 && pastelColors == 0){ degreeColor = CHSV(random(0, 255), 255, 255); }
     if (tempColorSettings == 4 && pastelColors == 1){ degreeColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=(10*LEDS_PER_SEGMENT); i<(11*LEDS_PER_SEGMENT); i++) { LEDs[i] = degreeColor;}  //period goes here
+    for (int i=70; i<77; i++) { LEDs[i] = degreeColor;}  //period goes here
   }
   if ((tempDisplayType == 4) && (correctedTemp < 100)) {  //4-Just Temperature (79) under 100
     displayNumber(t2,4,tempColor);
@@ -1053,9 +1107,8 @@ void displayTemperatureMode() {   //miain temp function
 }//end of temp settings
 
 
-
-
 void displayHumidityMode() {   //main humidity function
+  static int countFlip = 1;
   currentMode = 0;
   float sensorHumi = dht.readHumidity();        // read humidity
   float t = dht.readTemperature();     // read temperature
@@ -1066,6 +1119,17 @@ void displayHumidityMode() {   //main humidity function
   }
   byte t1 = 0;
   byte t2 = 0;
+
+  if (humidity.outdoor_enable == true) {
+    if (countFlip > 5) {
+      sensorHumi = outdoorHumidity;
+    }
+    if (countFlip > 9) {
+      countFlip = 0;
+    }
+    countFlip++;
+  }
+
   int humiDecimal = sensorHumi * 10;
   if (sensorHumi >= 100) {
     int humiHundred = sensorHumi / 10;
@@ -1099,7 +1163,7 @@ void displayHumidityMode() {   //main humidity function
     displayNumber(t4,1,symbolColor);
     if (humiColorSettings == 4 && pastelColors == 0){ humiDecimalColor = CHSV(random(0, 255), 255, 255); }
     if (humiColorSettings == 4 && pastelColors == 1){ humiDecimalColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=(12*LEDS_PER_SEGMENT); i<(13*LEDS_PER_SEGMENT); i++) { LEDs[i] = humiDecimalColor;}  //period goes here
+    for (int i=84; i<91; i++) { LEDs[i] = humiDecimalColor;}  //period goes here
   }
   if ((humiDisplayType == 1) && (sensorHumi >= 100)) {   //1-Humidity with Decimal (34.9) over 100
     displayNumber(t2,5,humiColor);
@@ -1108,13 +1172,13 @@ void displayHumidityMode() {   //main humidity function
     tinyhumiColor = humiColor;
     if (humiColorSettings == 4 && pastelColors == 0){ tinyhumiColor = CHSV(random(0, 255), 255, 255); }
     if (humiColorSettings == 4 && pastelColors == 1){ tinyhumiColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=(32*LEDS_PER_SEGMENT); i<(33*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhumiColor;}  //1xx split across 2 for color reasons
+    for (int i=224; i<231; i++) { LEDs[i] = tinyhumiColor;}  //1xx split across 2 for color reasons
     if (humiColorSettings == 4 && pastelColors == 0){ tinyhumiColor = CHSV(random(0, 255), 255, 255); }
     if (humiColorSettings == 4 && pastelColors == 1){ tinyhumiColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=(33*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = tinyhumiColor;} //1xx
+    for (int i=231; i<238; i++) { LEDs[i] = tinyhumiColor;} //1xx
     if (humiColorSettings == 4 && pastelColors == 0){ humiDecimalColor = CHSV(random(0, 255), 255, 255); }
     if (humiColorSettings == 4 && pastelColors == 1){ humiDecimalColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=(10*LEDS_PER_SEGMENT); i<(11*LEDS_PER_SEGMENT); i++) { LEDs[i] = humiDecimalColor;}   //period goes here
+    for (int i=70; i<77; i++) { LEDs[i] = humiDecimalColor;}   //period goes here
   }
   if ((humiDisplayType == 2) && (sensorHumi < 100)) {  //2-Just Humidity (79) under 100
     displayNumber(t2,4,humiColor);
@@ -1128,8 +1192,6 @@ void displayHumidityMode() {   //main humidity function
 }//end of update humidity
 
 
-
-
 void displayScrollMode(){   //scrollmode for displaying clock things not just text
   currentMode = 0;
   if (realtimeMode == 0) {
@@ -1137,7 +1199,8 @@ void displayScrollMode(){   //scrollmode for displaying clock things not just te
     char strTime[10];
     char strDate[10];
     char strYear[10];
-    char strTemp[15];
+    char strTemp[25];
+    char strOutdoorTemp[25];
     char strHumitidy[10];
     char strIPaddy[20];
     char processedText[255];
@@ -1152,6 +1215,7 @@ void displayScrollMode(){   //scrollmode for displaying clock things not just te
     float f = dht.readTemperature(true);
     if (isnan(h) || isnan(sensorTemp) || isnan(f)) {  Serial.println(F("Failed to read from DHT sensor!"));  return;  }
     float correctedTemp = sensorTemp + temperatureCorrection;
+
     if (temperatureSymbol == 39) {  correctedTemp = ((sensorTemp * 1.8000) + 32) + temperatureCorrection; }
     if (timeinfo.tm_wday == 1)    {sprintf(DOW,"%s","Mon    ");}
     if (timeinfo.tm_wday == 2)    {sprintf(DOW,"%s","tUES    ");}
@@ -1163,8 +1227,16 @@ void displayScrollMode(){   //scrollmode for displaying clock things not just te
     sprintf(strTime, "%.2d%.2d    ", hour, mins);  //1111
     sprintf(strDate, "%.2d-%.2d    ", mont, mday);  //10-22
     sprintf(strYear, "%d    ", year);  //2021
-    sprintf(strTemp, "%.1f^F    ", correctedTemp );  //98_6 ^F
-    sprintf(strHumitidy, "%.0fH    ", h);  //48_6 H
+    if (temperature.outdoor_enable == true && outdoorTemp != -500) {
+      sprintf(strTemp, "%.1f : %.1f^F     ", correctedTemp, outdoorTemp);
+    } else {
+      sprintf(strTemp, "%.1f^F    ", correctedTemp );  //98_6 ^F
+    }
+    if (humidity.outdoor_enable == true && outdoorHumidity != -1) {
+      sprintf(strHumitidy, "%.0f : %.0fH    ", h, outdoorHumidity);  //48_6 H
+    } else {
+      sprintf(strHumitidy, "%.0fH    ", h);  //48_6 H
+    }
     sprintf(strIPaddy, "%s", WiFi.localIP().toString().c_str());  //192_168_0_10
     strcpy(processedText, " ");
     if (scrollOptions1 == 1)    {strcat(processedText, strTime);}
@@ -1179,8 +1251,6 @@ void displayScrollMode(){   //scrollmode for displaying clock things not just te
     scroll(processedText);  
     }
 }
-
-
 
 
 void displayCountdownMode() {     //main countdown function
@@ -1221,9 +1291,6 @@ void displayCountdownMode() {     //main countdown function
   }   
 }
 
-
-
-
 void displayStopwatchMode() {     //main stopwatch timer function
   if (millis() >= endCountDownMillis) {  //timer ended
     CountUpMillis = 0;
@@ -1260,9 +1327,6 @@ void displayStopwatchMode() {     //main stopwatch timer function
   }
 }
 
-
-
-
 void displayScoreboardMode() {  //main scoreboard function
   currentMode = 0;
   byte sl1 = scoreboardLeft / 10;
@@ -1277,9 +1341,6 @@ void displayScoreboardMode() {  //main scoreboard function
   displayNumber(sr2,0,scoreboardColorRight);
 }//end of update scoreboard
 
-
-
-
 void displayLightshowMode() {
   currentMode = 0;
   if (lightshowMode == 0) {Chase();}
@@ -1292,9 +1353,6 @@ void displayLightshowMode() {
   //if (lightshowMode == 7) {Cylon();}
 }
 
-
-
-
 void displayRealtimeMode(){   //main RealtimeModes function, always is running
   if ( (suspendType == 0 || isAsleep == 0) && clockMode == 9 && realtimeMode == 1) {SpectrumAnalyzer(); }
   if ( (suspendType == 0 || isAsleep == 0) && clockMode == 5 && lightshowMode == 1) {EVERY_N_MILLISECONDS(30) {Twinkles();FastLED.show();}}
@@ -1305,9 +1363,6 @@ void displayRealtimeMode(){   //main RealtimeModes function, always is running
   if ( (suspendType == 0 || isAsleep == 0) && clockMode == 5 && lightshowMode == 6) {EVERY_N_MILLISECONDS(getSlower) {Snake();FastLED.show();}}
   if ( (suspendType == 0 || isAsleep == 0) && clockMode == 5 && lightshowMode == 7) {EVERY_N_MILLISECONDS(150) {Cylon(); FastLED.show();}}
 }//end of RealtimeModes
-
-
-
 
 void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-FastLED-Music-Visualizer/blob/master/music_visualizer.ino
   currentMode = 0;
@@ -1378,9 +1433,6 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
   }
 }
 
-
-
-
 void endCountdown() {  //countdown timer has reached 0, sound alarm and flash End for 30 seconds
   //  Serial.println("endcountdown function");
   breakOutSet = 0;
@@ -1440,8 +1492,6 @@ void endCountdown() {  //countdown timer has reached 0, sound alarm and flash En
   allBlank(); 
 }
 
-
-
 CRGB colorWheel(int pos) {   //color wheel for spectrum analyzer
   CRGB color (0,0,0);
   if(pos < 85) {
@@ -1477,9 +1527,6 @@ CRGB colorWheel2(int pos) {   //color wheel for things not the spectrum analyzer
   }
   return color;
 }
-
-
-
 
 void scroll(String IncomingString) {    //main scrolling function
   breakOutSet = 0;
@@ -1573,7 +1620,6 @@ void scroll(String IncomingString) {    //main scrolling function
     if( SentenceLetter == ':') { LetterNumber = 27; }
     if( SentenceLetter == '^') { LetterNumber = 26; }
     if( SentenceLetter == '\'') { LetterNumber = 17; }
-    if( SentenceLetter == '%') { LetterNumber = 15; }
     TranslatedSentence[(realposition*2)+6] = LetterNumber;  //letter starting at position 7 
     TranslatedSentence[(realposition*2)+7] = 96; //add padding to next position because fake digit shares a leg with adjacent real ones and can't be on at the same time
   }  
@@ -1581,7 +1627,7 @@ void scroll(String IncomingString) {    //main scrolling function
   if (scrollColorSettings == 1 && pastelColors == 0){ scrollColor = CHSV(random(0, 255), 255, 255); }
   if (scrollColorSettings == 1 && pastelColors == 1){ scrollColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
   for (uint16_t finalposition=0; finalposition<((IncomingString.length()*2)+6); finalposition++){  //count to end of padded array
-    for (int i=0; i<SEGMENTS_LEDS; i++) { LEDs[i] = CRGB::Black;  }    //clear 
+    for (int i=0; i<259; i++) { LEDs[i] = CRGB::Black;  }    //clear 
     if( TranslatedSentence[finalposition] != 96) { displayNumber(TranslatedSentence[finalposition],6,scrollColor); }
     if( TranslatedSentence[finalposition+1] != 96) { displayNumber(TranslatedSentence[finalposition+1],5,scrollColor); }
     if( TranslatedSentence[finalposition+2] != 96) { displayNumber(TranslatedSentence[finalposition+2],4,scrollColor); }
@@ -1597,8 +1643,6 @@ void scroll(String IncomingString) {    //main scrolling function
     } 
   }
 } //end of scroll function
-
-
 
 
 void printLocalTime() {  //what could this do
@@ -1706,7 +1750,7 @@ void displayNumber(uint16_t number, byte segment, CRGB color) {   //main digit r
       break;    
   }
 
-  for (byte i=0; i<SEGMENTS_PER_NUMBER; i++){                // 7 segments
+  for (byte i=0; i<NUMBER_OF_DIGITS; i++){                // 7 segments
     if (fakeclockrunning == 0 && (((ClockColorSettings == 4 && clockMode == 0) || (DateColorSettings == 4 && clockMode == 7) || (tempColorSettings == 4 && clockMode == 2) || (humiColorSettings == 4 && clockMode == 8)) && pastelColors == 0))  { color = CHSV(random(0, 255), 255, 255);}
     if (fakeclockrunning == 0 && (((ClockColorSettings == 4 && clockMode == 0) || (DateColorSettings == 4 && clockMode == 7) || (tempColorSettings == 4 && clockMode == 2) || (humiColorSettings == 4 && clockMode == 8)) && pastelColors == 1)) { color = CRGB(random(0, 255), random(0, 255), random(0, 255));}
     for (byte j=0; j<LEDS_PER_SEGMENT; j++ ){              // 7 LEDs per segment
@@ -1717,11 +1761,9 @@ void displayNumber(uint16_t number, byte segment, CRGB color) {   //main digit r
 } //end of displayNumber
 
 
-
-
 void allBlank() {   //clears all non-shelf LEDs to black
   //  Serial.println("allblank function");
-  for (int i=0; i<SEGMENTS_LEDS; i++) {
+  for (int i=0; i<259; i++) {
     LEDs[i] = CRGB::Black;
   }
   FastLED.show();
@@ -1733,30 +1775,28 @@ void allBlank() {   //clears all non-shelf LEDs to black
 }  // end of all-blank
 
 
-
-
 void fakeClock(int loopy) {  //flashes 12:00 like all old clocks did
   fakeclockrunning = 1;
   for (int i=0; i<loopy; i++) {
-      for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Red;}
+      for (int i=224; i<238; i++) { LEDs[i] = CRGB::Red;}
       displayNumber(2,5,CRGB::Red);
-      for (int i=(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Black; }
-      for (int i=(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Black; }
+      for (int i=177; i<180; i++) { LEDs[i] = CRGB::Black; }
+      for (int i=142; i<145; i++) { LEDs[i] = CRGB::Black; }
       displayNumber(0,2,CRGB::Red);
       displayNumber(0,0,CRGB::Red); 
       FastLED.show();
       delay(500);
-      for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black;}
+      for (int i=224; i<238; i++) { LEDs[i] = CRGB::Black;}
       displayNumber(2,5,CRGB::Black);
-      for (int i=(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Red; }
-      for (int i=(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Red; }
+      for (int i=177; i<180; i++) { LEDs[i] = CRGB::Red; }
+      for (int i=142; i<145; i++) { LEDs[i] = CRGB::Red; }
       displayNumber(0,2,CRGB::Black);
       displayNumber(0,0,CRGB::Black); 
       FastLED.show();
       delay(500);
    }
-  for (int i=(25*LEDS_PER_SEGMENT); i<(26*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black; }
-  for (int i=(20*LEDS_PER_SEGMENT); i<(21*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black; }
+  for (int i=175; i<182; i++) { LEDs[i] = CRGB::Black; }
+  for (int i=140; i<147; i++) { LEDs[i] = CRGB::Black; }
   fakeclockrunning = 0;  // so the digit render knows not to apply the rainbow colors
 }  //end of fakeClock
 
@@ -1768,11 +1808,11 @@ void ShelfDownLights() {  //turns on the drop lights on the underside of each sh
  if ((suspendType != 2 || isAsleep == 0) && useSpotlights == 1) {  //not sleeping? suposed to be running?
   unsigned long currentMillis = millis();  
   if (currentMillis - prevTime2 >= 250) {  //run everything inside here every quarter second
-    for (int i=SEGMENTS_LEDS; i<NUM_LEDS; i++) {
+    for (int i=259; i<273; i++) {
         if (spotlightsColorSettings == 0){ spotlightsColor = CRGB(r0_val, g0_val, b0_val);  LEDs[i] = spotlightsColor;}
         if ((spotlightsColorSettings == 1 && pastelColors == 0)  && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { spotlightsColor = CHSV(random(0, 255), 255, 255);  LEDs[i] = spotlightsColor;}
         if ((spotlightsColorSettings == 1 && pastelColors == 1)  && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { spotlightsColor = CRGB(random(0, 255), random(0, 255), random(0, 255));  LEDs[i] = spotlightsColor;}
-        if (spotlightsColorSettings == 2 ){ LEDs[i] = colorWheel2(((i-SEGMENTS_LEDS)  * 18 + colorWheelPositionTwo) % 256); }
+        if (spotlightsColorSettings == 2 ){ LEDs[i] = colorWheel2(((i-259)  * 18 + colorWheelPositionTwo) % 256); }
         if (spotlightsColorSettings == 3 ){ LEDs[i] = colorWheel2(((255) + colorWheelPositionTwo) % 256); }
     }
     colorWheelPositionTwo = colorWheelPositionTwo - 1; // SPEED OF 2nd COLOR WHEEL
@@ -1781,7 +1821,7 @@ void ShelfDownLights() {  //turns on the drop lights on the underside of each sh
     prevTime2 = currentMillis;
   }
  } else {  //or turn them all off
-  for (int i=SEGMENTS_LEDS; i<NUM_LEDS; i++) {
+  for (int i=259; i<273; i++) {
     LEDs[i] = CRGB::Black;
     FastLED.show();
   }
@@ -1800,33 +1840,30 @@ void BlinkDots() {  //displays the 2 dots in the middle of the time (colon)
     if (colonType == 0) {
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
+      for (int i=177; i<180; i++) { LEDs[i] = colonColor;}
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
+      for (int i=142; i<145; i++) { LEDs[i] = colonColor;}
     }
     if (colonType == 1) {
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=25*LEDS_PER_SEGMENT; i<26*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
+      for (int i=175; i<182; i++) { LEDs[i] = colonColor;}
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
+      for (int i=140; i<147; i++) { LEDs[i] = colonColor;}
     }
     if (colonType == 2) {
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-	  for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
+      for (int i=140; i<147; i++) { LEDs[i] = colonColor;}
     }
   } else {
-	  for (int i=25*LEDS_PER_SEGMENT; i<26*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
-	  for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
+    for (int i=175; i<182; i++) { LEDs[i] = CRGB::Black; }
+    for (int i=140; i<147; i++) { LEDs[i] = CRGB::Black; }
   }
   dotsOn = !dotsOn;  
 }//end of shelf and gaps
-
-
-
 
 void happyNewYear() {  
   CRGB color = CRGB::Red; 
@@ -1847,13 +1884,10 @@ void happyNewYear() {
     FastLED.show();
     colorWheelPosition++;
     server.handleClient();   
-       }
-    if (!breakOutSet) {scroll("HAPPy nEW yEAr");}
+  }
+  if (!breakOutSet) {scroll("HAPPy nEW yEAr");}
   allBlank();
 }
-
-
-
 
 void Chase() {   //lightshow chase mode
   int chaseMode = random(0, 7);
@@ -2055,8 +2089,6 @@ void updaterain() {
 
 }
 
-
-
 void Fire2021() {
 // Array of temperature readings at each simulation cell
   static byte heat[SPECTRUM_PIXELS];
@@ -2176,7 +2208,7 @@ void Snake() {  //real random snake mode with random food changing its color
   int Level = map(audio_input, 100, 2000, 1, 10);
   if (audio_input < 100){  Level = 1;  }
   if (audio_input > 2000){  Level = 10;  }
-  if (snakeWaiting > random((30/Level),(600/Level))) {snakeWaiting = 0; foodSpot = random(SPECTRUM_PIXELS-1); spotcolor = CHSV(random(0, 255), 255, 255); if (getSlower > 3){  getSlower =  getSlower / 3;  }}  //waiting time is up, pick new spot, new color, reset speed
+  if (snakeWaiting > random((30/Level),(600/Level))) {snakeWaiting = 0; foodSpot = random(36); spotcolor = CHSV(random(0, 255), 255, 255); if (getSlower > 3){  getSlower =  getSlower / 3;  }}  //waiting time is up, pick new spot, new color, reset speed
   if (getSlower > 1000){  getSlower = 1000;  }
   int fake =  foodSpot * LEDS_PER_SEGMENT;   //draw food
   for (byte s=0; s<LEDS_PER_SEGMENT; s++ ){              // 7 LEDs per segment
@@ -2218,6 +2250,13 @@ void Cylon() {
 
 void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   preferences.begin("shelfclock", false);
+
+  /* Temporary until this is cleared from all clock devices */
+  /* once cleared we can rename temperature2 to temperature */
+  if(preferences.isKey("temperature")) {
+    preferences.remove("temperature");
+  }
+
   gmtOffset_sec = preferences.getLong("gmtOffset_sec", -28800);
   DSTime = preferences.getBool("DSTime", 0);
   cd_r_val = preferences.getInt("cd_r_val", 0);
@@ -2316,10 +2355,15 @@ void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   lightshowMode = preferences.getInt("lightshowMode", 0);
   suspendFrequency = preferences.getInt("suspendFreq", 1);
   suspendType = preferences.getInt("suspendType", 0);
+  preferences.getBytes("temperature2", &temperature, preferences.getBytesLength("temperature2"));
+  preferences.getBytes("humidity", &humidity, preferences.getBytesLength("humidity"));
+  preferences.getBytes("weatherapi", &weatherapi, preferences.getBytesLength("weatherapi"));
+
+
   //   ssid = preferences.getChar("ssid");
   //    password = preferences.getChar("password");
-}
 
+}
 
 void getpreset1(){
     gmtOffset_sec = preferences.getLong("p1-gmtOffset", -28800);
@@ -2729,1043 +2773,973 @@ void setpreset2(){
 
 void loadWebPageHandlers() {
  
+  server.on("/gethome", []() {
+    DynamicJsonDocument json(500);
+    String output;
 
-// Index.html Webpage Handlers
+    json["scoreboardLeft"] = scoreboardLeft;
+    json["scoreboardRight"] = scoreboardRight;
 
-
-  server.on("/goClockMode", HTTP_POST, []() {     
-    allBlank();  
-    clockMode = 0; 
-    preferences.putInt("clockMode", clockMode);   
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-    printLocalTime(); 
-  }); 
-
-  server.on("/goCountdownMode", HTTP_POST, []() {    
-    countdownMilliSeconds = server.arg("ms").toInt();     
-    if (countdownMilliSeconds < 1000) {countdownMilliSeconds = 1000;}
-    if (countdownMilliSeconds > 86400000) {countdownMilliSeconds = 86400000;} 
-    endCountDownMillis = millis() + countdownMilliSeconds;
-    if (currentMode == 0) {currentMode = clockMode; currentReal = realtimeMode;}
-    allBlank(); 
-    clockMode = 1;  
-    //preferences.putInt("clockMode", clockMode);  
-    realtimeMode = 0;   
-    //preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
+    serializeJson(json, output);
+    server.send(200, "application/json", output);
   });
 
-  server.on("/goTemperatureMode", HTTP_POST, []() {   
-    allBlank();
-    clockMode = 2;    
-    preferences.putInt("clockMode", clockMode); 
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });  
+  server.on("/getsettings", []() {
+    DynamicJsonDocument json(2000);
+    String output;
+    char spotlightcolor[8];
+    char colorHour[8], colorMin[8], colorColon[8];
+    char dayColor[8], monthColor[8], separatorColor[8];
+    char tempColor[8], typeColor[8], degreeColor[8];
+    char humiColor[8], humiDecimalColor[8], humiSymbolColor[8];
+    char colorCD[8], scoreboardColorLeft[8], scoreboardColorRight[8];
+    char spectrumColor[8], spectrumBackgroundColor[8], scrollingColor[8];
 
-  server.on("/goScoreboardMode", HTTP_POST, []() {   
-    scoreboardLeft = server.arg("left").toInt();
-    if (scoreboardLeft < 0) {scoreboardLeft = 0;}
-    if (scoreboardLeft > 99) {scoreboardLeft = 99;}
-    scoreboardRight = server.arg("right").toInt();
-    if (scoreboardRight < 0) {scoreboardRight = 0;}
-    if (scoreboardRight > 99) {scoreboardRight = 99;}
-    allBlank();
-    clockMode = 3;   
-    preferences.putInt("clockMode", clockMode);  
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });  
-   
-  server.on("/goStopwatchMode", HTTP_POST, []() {    
-    CountUpMillis = millis(); // TODO: set starting condition properly
-    countdownMilliSeconds = server.arg("ms").toInt();    
-    if (countdownMilliSeconds < 1000) {countdownMilliSeconds = 1000;}
-    if (countdownMilliSeconds > 86400000) {countdownMilliSeconds = 86400000;} 
-    endCountDownMillis = millis() + countdownMilliSeconds;
-    if (currentMode == 0) {currentMode = clockMode; currentReal = realtimeMode;}
-    allBlank(); 
-    clockMode = 4;    
-    //preferences.putInt("clockMode", clockMode); 
-    realtimeMode = 0;   
-    //preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/goLightshowMode", HTTP_POST, []() {  
-    allBlank(); 
-    lightshowMode = server.arg("lightshowMode").toInt();
-    oldsnakecolor = CRGB::Green;
-    getSlower = 180;
-    clockMode = 5;    
-    preferences.putInt("lightshowMode", lightshowMode); 
-    preferences.putInt("clockMode", clockMode); 
-    realtimeMode = 1;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
-  
-  server.on("/goDateMode", HTTP_POST, []() {     
-    allBlank();   
-    clockMode = 7;     
-    preferences.putInt("clockMode", clockMode);
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
-  
-  server.on("/goHumidityMode", HTTP_POST, []() {     
-    allBlank();   
-    clockMode = 8;     
-    preferences.putInt("clockMode", clockMode);
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
+    json["ColorPalette"] = pastelColors;
+    json["ColorChangeFrequency"] = ColorChangeFrequency;
+    json["rangeBrightness"] = brightness;
+    json["suspendType"] = suspendType;
+    json["suspendFrequency"] = suspendFrequency;
+    json["useSpotlights"] = useSpotlights;
+    
+    sprintf(spotlightcolor, "#%02X%02X%02X", r0_val, g0_val, b0_val);
+    json["spotlightcolor"] = spotlightcolor;
 
-  server.on("/goSpectrumMode", HTTP_POST, []() {  
-    allBlank(); 
-    spectrumMode = server.arg("spectrumMode").toInt();
-    clockMode = 9;    
-    preferences.putInt("spectrumMode", spectrumMode); 
-    preferences.putInt("clockMode", clockMode); 
-    realtimeMode = 1;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
-  
-  server.on("/goDisplayOffMode", HTTP_POST, []() {     
-    allBlank();   
-    clockMode = 10;     
-    preferences.putInt("clockMode", clockMode);
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-    rtttl::stop();
-    breakOutSet = 1;   
-  }); 
+    json["spotlightsColorSettings"] = spotlightsColorSettings;
+    json["ClockDisplayType"] = clockDisplayType;
+    json["ColonType"] = colonType;
+    json["TimezoneSetting"] = gmtOffset_sec;
+    json["DSTime"] = DSTime;
+    json["ClockColorSettings"] = ClockColorSettings;
 
-  server.on("/goScrollingMode", HTTP_POST, []() {     
-    allBlank();   
-    clockMode = 11;     
-    preferences.putInt("clockMode", clockMode);
-    realtimeMode = 0;   
-    preferences.putInt("realtimeMode", realtimeMode);  
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
+    sprintf(colorHour, "#%02X%02X%02X", r1_val, g1_val, b1_val);
+    json["colorHour"] = colorHour;
+    sprintf(colorMin, "#%02X%02X%02X", r2_val, g2_val, b2_val);
+    json["colorMin"] = colorMin;
+    sprintf(colorColon, "#%02X%02X%02X", r3_val, g3_val, b3_val);
+    json["colorColon"] = colorColon;
 
-// Get/Load Presets Handlers
-  server.on("/getPreset1", HTTP_POST, []() {   
-    getpreset1();   
-    GetBrightnessLevel();        
-    allBlank(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/getPreset2", HTTP_POST, []() {   
-    getpreset2();   
-    GetBrightnessLevel();        
-    allBlank(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
+    json["DateDisplayType"] = dateDisplayType;
+    json["DateColorSettings"] = DateColorSettings;
+
+    sprintf(dayColor, "#%02X%02X%02X", r4_val, g4_val, b4_val);
+    json["dayColor"] = dayColor;
+    sprintf(monthColor, "#%02X%02X%02X", r5_val, g5_val, b5_val);
+    json["monthColor"] = monthColor;
+    sprintf(separatorColor, "#%02X%02X%02X", r6_val, g6_val, b6_val);
+    json["separatorColor"] = separatorColor;
+
+    json["TempType"] = temperatureSymbol;
+    json["CorrectionSelect"] = temperatureCorrection;
+    json["TempDisplayType"] = tempDisplayType;
+    json["TempColorSettings"] = tempColorSettings;
+
+    sprintf(tempColor, "#%02X%02X%02X", r7_val, g7_val, b7_val);
+    json["TempColor"] = tempColor;
+    sprintf(typeColor, "#%02X%02X%02X", r8_val, g8_val, b8_val);
+    json["TypeColor"] = typeColor;
+    sprintf(degreeColor, "#%02X%02X%02X", r9_val, g9_val, b9_val);
+    json["DegreeColor"] = degreeColor;
+
+    json["HumiDisplayType"] = humiDisplayType;
+    json["HumiColorSettings"] = humiColorSettings;
+
+    sprintf(humiColor, "#%02X%02X%02X", r10_val, g10_val, b10_val);
+    json["HumiColor"] = humiColor;
+    sprintf(humiDecimalColor, "#%02X%02X%02X", r11_val, g11_val, b11_val);
+    json["HumiDecimalColor"] = humiDecimalColor;
+    sprintf(humiSymbolColor, "#%02X%02X%02X", r12_val, g12_val, b12_val);
+    json["HumiSymbolColor"] = humiSymbolColor;
+    json["useAudibleAlarm"] = useAudibleAlarm;
+    json["colorchangeCD"] = colorchangeCD;
+
+    sprintf(colorCD, "#%02X%02X%02X", cd_r_val, cd_g_val, cd_b_val);
+    json["colorCD"] = colorCD;
+    sprintf(scoreboardColorLeft, "#%02X%02X%02X", r13_val, g13_val, b13_val);
+    json["scoreboardColorLeft"] = scoreboardColorLeft;
+    sprintf(scoreboardColorRight, "#%02X%02X%02X", r14_val, g14_val, b14_val);
+    json["scoreboardColorRight"] = scoreboardColorRight;
+
+    json["randomSpectrumMode"] = randomSpectrumMode;
+    sprintf(spectrumColor, "#%02X%02X%02X", r15_val, g15_val, b15_val);
+    json["spectrumColor"] = spectrumColor;
+    sprintf(spectrumBackgroundColor, "#%02X%02X%02X", r17_val, g17_val, b17_val);
+    json["spectrumBackgroundColor"] = spectrumBackgroundColor;
+
+    json["spectrumBackgroundSettings"] = spectrumBackgroundSettings;
+    json["spectrumColorSettings"] = spectrumColorSettings;
+    json["scrollFrequency"] = scrollFrequency;
+    json["scrollOptions1"] = scrollOptions1;
+    json["scrollOptions2"] = scrollOptions2;
+    json["scrollOptions3"] = scrollOptions3;
+    json["scrollOptions4"] = scrollOptions4;
+    json["scrollOptions5"] = scrollOptions5;
+    json["scrollOptions6"] = scrollOptions6;
+    json["scrollOptions7"] = scrollOptions7;
+    json["scrollOptions8"] = scrollOptions8;
+    json["scrollText"] = scrollText;
+    json["scrollOverride"] = scrollOverride;
+
+    sprintf(scrollingColor, "#%02X%02X%02X", r16_val, g16_val, b16_val);
+    json["scrollColor"] = scrollingColor;
+
+    json["scrollColorSettings"] = scrollColorSettings;
+
+    json["weatherapi"]["latitude"] = weatherapi.latitude;
+    json["weatherapi"]["longitude"] = weatherapi.longitude;
+    json["weatherapi"]["apikey"] = weatherapi.apikey;
+
+    json["humidity"]["outdoor_enable"] = humidity.outdoor_enable;
+    json["temperature"]["outdoor_enable"] = temperature.outdoor_enable;
+     
+    serializeJson(json, output);
+    server.send(200, "application/json", output);
+
   });
 
+  server.on("/updateanything", HTTP_POST, []() {
+    DynamicJsonDocument json(1500);
+    if(server.args() > 0) {
+      String body = server.arg(0);
+      Serial.println("----");
+      Serial.println(body);
+      Serial.println("----");
+      deserializeJson(json, server.arg(0));
 
+      // ColorPalette
+      if (!json["ColorPalette"].isNull()){
+        pastelColors = (int)json["ColorPalette"];
+        preferences.putInt("pastelColors", pastelColors);
+        allBlank();
+      }
 
-// Settings.html Webpage Handlers
+      // SuspendType
+      if (!json["suspendType"].isNull()) {
+        suspendType = (int)json["suspendType"];
+        preferences.putInt("suspendType", suspendType);
+      }
 
-// Global Settings 
-  server.on("/getpastelColors", []() { server.send(200, "text/plain", String(pastelColors)); });
-  server.on("/getColorChangeFrequency", []() { server.send(200, "text/plain", String(ColorChangeFrequency));});
-  server.on("/getsuspendType", []() { server.send(200, "text/plain", String(suspendType)); });
-  server.on("/getsuspendFrequency", []() { server.send(200, "text/plain", String(suspendFrequency));});
+      // spotlightsColorSettings
+      if (!json["spotlightsColorSettings"].isNull()) {
+        spotlightsColorSettings = (int)json["spotlightsColorSettings"];
+        preferences.putInt("spotlightsCoSe", spotlightsColorSettings);
+        ShelfDownLights(); 
+      }
 
-  server.on("/updatePastelColors", HTTP_POST, []() {   
-    pastelColors = server.arg("ColorPalette").toInt();
-    preferences.putInt("pastelColors", pastelColors);
-    allBlank(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
+      // ClockDisplayType
+      if (!json["ClockDisplayType"].isNull()) {
+        clockDisplayType = (int)json["ClockDisplayType"];
+        preferences.putInt("clockDispType", clockDisplayType);
+        if (clockMode == 0) { allBlank(); }  
+      }
+
+      // ColonType
+      if (!json["ColonType"].isNull()) {
+        colonType = (int)json["ColonType"];
+        preferences.putInt("colonType", colonType);
+        if (clockMode == 0) { allBlank(); } 
+      }
+
+      // ClockColorSettings
+      if (!json["ClockColorSettings"].isNull()) {
+        ClockColorSettings = (int)json["ClockColorSettings"];
+        preferences.putInt("ClockColorSet", ClockColorSettings);
+        if (clockMode == 0) { allBlank(); } 
+      }
+
+      // DateDisplayType
+      if (!json["DateDisplayType"].isNull()) {
+        ClockColorSettings = (int)json["DateDisplayType"];
+        preferences.putInt("dateDisplayType", dateDisplayType);
+        if (clockMode == 7) { allBlank(); }
+      }
+
+      // DateColorSettings
+      if (!json["DateColorSettings"].isNull()) {
+        DateColorSettings = (int)json["DateColorSettings"];
+        preferences.putInt("DateColorSet", DateColorSettings);
+        if (clockMode == 7) { allBlank(); } 
+      }
+
+      // TempType
+      if (!json["TempType"].isNull()) {
+        temperatureSymbol = (int)json["TempType"];
+        preferences.putInt("temperatureSym", temperatureSymbol);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // TempDisplayType
+      if (!json["TempDisplayType"].isNull()) {
+        tempDisplayType = (int)json["TempDisplayType"];
+        preferences.putInt("tempDisplayType", tempDisplayType);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // TempColorSettings
+      if (!json["TempColorSettings"].isNull()) {
+        tempColorSettings = (int)json["TempColorSettings"];
+        preferences.putInt("tempColorSet", tempColorSettings);
+        if (clockMode == 2) { allBlank(); }
+      }
+
+      // HumiDisplayType
+      if (!json["HumiDisplayType"].isNull()) {
+        humiDisplayType = (int)json["HumiDisplayType"];
+        preferences.putInt("humiDisplayType", humiDisplayType);
+        if (clockMode == 8) { allBlank(); } 
+      }
+
+      // HumiColorSettings
+      if (!json["HumiColorSettings"].isNull()) {
+        humiColorSettings = (int)json["HumiColorSettings"];
+        preferences.putInt("humiColorSet", humiColorSettings);
+        if (clockMode == 8) { allBlank(); } 
+      }
+
+      // spectrumBackgroundSettings
+      if (!json["spectrumBackgroundSettings"].isNull()) {
+        spectrumBackgroundSettings = (int)json["spectrumBackgroundSettings"];
+        preferences.putInt("spectrumBkgd", spectrumBackgroundSettings);
+        if (clockMode == 9) { allBlank(); } 
+      }
+
+      // spectrumColorSettings
+      if (!json["spectrumColorSettings"].isNull()) {
+        spectrumColorSettings = (int)json["spectrumColorSettings"];
+        preferences.putInt("spectrumColor", spectrumColorSettings);
+        if (clockMode == 9) { allBlank(); } 
+      }
+
+      // scrollColorSettings
+      if (!json["scrollColorSettings"].isNull()) {
+        scrollColorSettings = (int)json["scrollColorSettings"];
+        preferences.putInt("scrollColorSet", scrollColorSettings);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // ColorChangeFrequency
+      if (!json["ColorChangeFrequency"].isNull()) {
+        ColorChangeFrequency = (int)json["ColorChangeFrequency"];
+        preferences.putInt("ColorChangeFreq", ColorChangeFrequency);
+        allBlank(); 
+      }
+
+      // suspendFrequency
+      if (!json["suspendFrequency"].isNull()) {
+        suspendFrequency = (int)json["suspendFrequency"];
+        preferences.putInt("suspendFreq", suspendFrequency);
+      }
+
+      // TimezoneSetting
+      if (!json["TimezoneSetting"].isNull()) {
+        gmtOffset_sec = (int)json["TimezoneSetting"];
+        configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
+        if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
+        int tempyear = (timeinfo.tm_year +1900);
+        int tempmonth = (timeinfo.tm_mon + 1);
+        rtc.adjust(DateTime(tempyear, tempmonth, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
+        preferences.putLong("gmtOffset_sec", gmtOffset_sec);
+        if (clockMode == 0) { allBlank(); } 
+        printLocalTime(); 
+      }
+
+      // CorrectionSelect
+      if (!json["CorrectionSelect"].isNull()) {
+        temperatureCorrection = (int)json["CorrectionSelect"];
+        preferences.putInt("tempCorrection", temperatureCorrection);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // scrollFrequency
+      if (!json["scrollFrequency"].isNull()) {
+        scrollFrequency = (int)json["scrollFrequency"];
+        preferences.putInt("scrollFreq", scrollFrequency);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // rangeBrightness
+      if (!json["rangeBrightness"].isNull()) {
+        brightness = (int)json["rangeBrightness"];
+        preferences.putInt("brightness", brightness);
+        ShelfDownLights();
+      }
+      
+      // spotlightcolor
+      if (!json["spotlightcolor"].isNull()) {
+        r0_val = (int)json["spotlightcolor"]["r"];
+        g0_val = (int)json["spotlightcolor"]["g"];
+        b0_val = (int)json["spotlightcolor"]["b"];
+        preferences.putInt("r0_val", r0_val);
+        preferences.putInt("g0_val", g0_val);
+        preferences.putInt("b0_val", b0_val);
+        ShelfDownLights();
+      }
+
+      // colorHour
+      if (!json["colorHour"].isNull()) {
+        r1_val = (int)json["colorHour"]["r"];
+        g1_val = (int)json["colorHour"]["g"];
+        b1_val = (int)json["colorHour"]["b"];
+        preferences.putInt("r1_val", r1_val);
+        preferences.putInt("g1_val", g1_val);
+        preferences.putInt("b1_val", b1_val);
+        if (clockMode == 0) { allBlank(); } 
+      }
+
+      // colorMin
+      if (!json["colorMin"].isNull()) {
+        r2_val = (int)json["colorMin"]["r"];
+        g2_val = (int)json["colorMin"]["g"];
+        b2_val = (int)json["colorMin"]["b"];
+        preferences.putInt("r2_val", r2_val);
+        preferences.putInt("g2_val", g2_val);
+        preferences.putInt("b2_val", b2_val);
+        if (clockMode == 0) { allBlank(); } 
+      }
+
+      // colorColon
+      if (!json["colorColon"].isNull()) {
+        r3_val = (int)json["colorColon"]["r"];
+        g3_val = (int)json["colorColon"]["g"];
+        b3_val = (int)json["colorColon"]["b"];
+        preferences.putInt("r3_val", r3_val);
+        preferences.putInt("g3_val", g3_val);
+        preferences.putInt("b3_val", b3_val);
+        if (clockMode == 0) { allBlank(); } 
+      }
+
+      // dayColor
+      if (!json["dayColor"].isNull()) {
+        r4_val = (int)json["dayColor"]["r"];
+        g4_val = (int)json["dayColor"]["g"];
+        b4_val = (int)json["dayColor"]["b"];
+        preferences.putInt("r4_val", r4_val);
+        preferences.putInt("g4_val", g4_val);
+        preferences.putInt("b4_val", b4_val);
+        if (clockMode == 7) { allBlank(); } 
+      }
+
+      // monthColor
+      if (!json["monthColor"].isNull()) {
+        r5_val = (int)json["monthColor"]["r"];
+        g5_val = (int)json["monthColor"]["g"];
+        b5_val = (int)json["monthColor"]["b"];
+        preferences.putInt("r5_val", r5_val);
+        preferences.putInt("g5_val", g5_val);
+        preferences.putInt("b5_val", b5_val);
+        if (clockMode == 7) { allBlank(); } 
+      }
+
+      // separatorColor
+      if (!json["separatorColor"].isNull()) {
+        r6_val = (int)json["separatorColor"]["r"];
+        g6_val = (int)json["separatorColor"]["g"];
+        b6_val = (int)json["separatorColor"]["b"];
+        preferences.putInt("r6_val", r6_val);
+        preferences.putInt("g6_val", g6_val);
+        preferences.putInt("b6_val", b6_val);
+        if (clockMode == 7) { allBlank(); } 
+      }
+      
+      // TempColor
+      if (!json["TempColor"].isNull()) {
+        r7_val = (int)json["TempColor"]["r"];
+        g7_val = (int)json["TempColor"]["g"];
+        b7_val = (int)json["TempColor"]["b"];
+        preferences.putInt("r7_val", r7_val);
+        preferences.putInt("g7_val", g7_val);
+        preferences.putInt("b7_val", b7_val);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // TypeColor
+      if (!json["TypeColor"].isNull()) {
+        r8_val = (int)json["TypeColor"]["r"];
+        g8_val = (int)json["TypeColor"]["g"];
+        b8_val = (int)json["TypeColor"]["b"];
+        preferences.putInt("r8_val", r8_val);
+        preferences.putInt("g8_val", g8_val);
+        preferences.putInt("b8_val", b8_val);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // DegreeColor
+      if (!json["DegreeColor"].isNull()) {
+        r9_val = (int)json["DegreeColor"]["r"];
+        g9_val = (int)json["DegreeColor"]["g"];
+        b9_val = (int)json["DegreeColor"]["b"];
+        preferences.putInt("r9_val", r9_val);
+        preferences.putInt("g9_val", g9_val);
+        preferences.putInt("b9_val", b9_val);
+        if (clockMode == 2) { allBlank(); } 
+      }
+
+      // HumiColor
+      if (!json["HumiColor"].isNull()) {
+        r10_val = (int)json["HumiColor"]["r"];
+        g10_val = (int)json["HumiColor"]["g"];
+        b10_val = (int)json["HumiColor"]["b"];
+        preferences.putInt("r10_val", r10_val);
+        preferences.putInt("g10_val", g10_val);
+        preferences.putInt("b10_val", b10_val);
+        if (clockMode == 8) { allBlank(); } 
+      }
+
+       // HumiDecimalColor
+      if (!json["HumiDecimalColor"].isNull()) {
+        r11_val = (int)json["HumiDecimalColor"]["r"];
+        g11_val = (int)json["HumiDecimalColor"]["g"];
+        b11_val = (int)json["HumiDecimalColor"]["b"];
+        preferences.putInt("r11_val", r11_val);
+        preferences.putInt("g11_val", g11_val);
+        preferences.putInt("b11_val", b11_val);
+        if (clockMode == 8) { allBlank(); } 
+      }
+
+      // HumiSymbolColor
+      if (!json["HumiSymbolColor"].isNull()) {
+        r12_val = (int)json["HumiSymbolColor"]["r"];
+        g12_val = (int)json["HumiSymbolColor"]["g"];
+        b12_val = (int)json["HumiSymbolColor"]["b"];
+        preferences.putInt("r12_val", r12_val);
+        preferences.putInt("g12_val", g12_val);
+        preferences.putInt("b12_val", b12_val);
+        if (clockMode == 8) { allBlank(); } 
+      }
+
+      // colorCD
+      if (!json["colorCD"].isNull()) {
+        cd_r_val = (int)json["colorCD"]["r"];
+        cd_g_val = (int)json["colorCD"]["g"];
+        cd_b_val = (int)json["colorCD"]["b"];
+        preferences.putInt("cd_r_val", cd_r_val);
+        preferences.putInt("cd_g_val", cd_g_val);
+        preferences.putInt("cd_b_val", cd_b_val);
+        if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
+      }
+
+      // scoreboardColorLeft
+      if (!json["scoreboardColorLeft"].isNull()) {
+        r13_val = (int)json["scoreboardColorLeft"]["r"];
+        g13_val = (int)json["scoreboardColorLeft"]["g"];
+        b13_val = (int)json["scoreboardColorLeft"]["b"];
+        preferences.putInt("r13_val", r13_val);
+        preferences.putInt("g13_val", g13_val);
+        preferences.putInt("b13_val", b13_val);
+        if (clockMode == 3) { allBlank(); } 
+      }
+
+      // scoreboardColorRight
+      if (!json["scoreboardColorRight"].isNull()) {
+        r14_val = (int)json["scoreboardColorRight"]["r"];
+        g14_val = (int)json["scoreboardColorRight"]["g"];
+        b14_val = (int)json["scoreboardColorRight"]["b"];
+        preferences.putInt("r14_val", r14_val);
+        preferences.putInt("g14_val", g14_val);
+        preferences.putInt("b14_val", b14_val);
+        if (clockMode == 3) { allBlank(); } 
+      }
+
+      // spectrumColor
+      if (!json["spectrumColor"].isNull()) {
+        r15_val = (int)json["spectrumColor"]["r"];
+        g15_val = (int)json["spectrumColor"]["g"];
+        b15_val = (int)json["spectrumColor"]["b"];
+        preferences.putInt("r15_val", r15_val);
+        preferences.putInt("g15_val", g15_val);
+        preferences.putInt("b15_val", b15_val);
+        if (clockMode == 9) { allBlank(); }
+      }
+
+      // scrollColor
+      if (!json["scrollColor"].isNull()) {
+        r16_val = (int)json["scrollColor"]["r"];
+        g16_val = (int)json["scrollColor"]["g"];
+        b16_val = (int)json["scrollColor"]["b"];
+        preferences.putInt("r16_val", r16_val);
+        preferences.putInt("g16_val", g16_val);
+        preferences.putInt("b16_val", b16_val);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // spectrumBackgroundColor
+      if (!json["spectrumBackgroundColor"].isNull()) {
+        r17_val = (int)json["spectrumBackgroundColor"]["r"];
+        g17_val = (int)json["spectrumBackgroundColor"]["g"];
+        b17_val = (int)json["spectrumBackgroundColor"]["b"];
+        preferences.putInt("r17_val", r17_val);
+        preferences.putInt("g17_val", g17_val);
+        preferences.putInt("b17_val", b17_val);
+        if (clockMode == 9) { allBlank(); } 
+      }
+
+      // useSpotlights
+      if (!json["useSpotlights"].isNull()) {
+        if ( json["useSpotlights"] == true) {useSpotlights = 1;}
+        if ( json["useSpotlights"] == false) {useSpotlights = 0;}
+        preferences.putBool("useSpotlights", useSpotlights);
+        ShelfDownLights(); 
+      }
+
+      // DSTime
+      if (!json["DSTime"].isNull()) {
+        if ( json["DSTime"] == true) {DSTime = 1;}
+        if ( json["DSTime"] == false) {DSTime = 0;}
+        configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
+        if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
+        int tempyear = (timeinfo.tm_year +1900);
+        int tempmonth = (timeinfo.tm_mon + 1);
+        rtc.adjust(DateTime(tempyear, tempmonth, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
+        preferences.putBool("DSTime", DSTime);
+        if (clockMode == 0) { allBlank(); } 
+        printLocalTime(); 
+      }
+
+      // useAudibleAlarm
+      if (!json["useAudibleAlarm"].isNull()) {
+        if ( json["useAudibleAlarm"] == true) {useAudibleAlarm = 1;}
+        if ( json["useAudibleAlarm"] == false) {useAudibleAlarm = 0;}
+        preferences.putBool("alarmCD", useAudibleAlarm);
+        if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
+      }
+
+      // colorchangeCD
+      if (!json["colorchangeCD"].isNull()) {
+        if ( json["colorchangeCD"] == true) {colorchangeCD = 1;}
+        if ( json["colorchangeCD"] == false) {colorchangeCD = 0;}
+        preferences.putBool("colorchangeCD", colorchangeCD);
+        if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
+      }
+
+      // randomSpectrumMode
+      if (!json["randomSpectrumMode"].isNull()) {
+        if ( json["randomSpectrumMode"] == true) {randomSpectrumMode = 1;}
+        if ( json["randomSpectrumMode"] == false) {randomSpectrumMode = 0;}
+        preferences.putBool("randSpecMode", randomSpectrumMode);
+        if (clockMode == 9) { allBlank(); } 
+      }
+
+      // scrollOptions1
+      if (!json["scrollOptions1"].isNull()) {
+        if ( json["scrollOptions1"] == true) {scrollOptions1 = 1;}
+        if ( json["scrollOptions1"] == false) {scrollOptions1 = 0;}
+        preferences.putBool("scrollOptions1", scrollOptions1);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions2
+      if (!json["scrollOptions2"].isNull()) {
+        if ( json["scrollOptions2"] == true) {scrollOptions2 = 1;}
+        if ( json["scrollOptions2"] == false) {scrollOptions2 = 0;}
+        preferences.putBool("scrollOptions2", scrollOptions2);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions3
+      if (!json["scrollOptions3"].isNull()) {
+        if ( json["scrollOptions3"] == true) {scrollOptions3 = 1;}
+        if ( json["scrollOptions3"] == false) {scrollOptions3 = 0;}
+        preferences.putBool("scrollOptions3", scrollOptions3);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions4
+      if (!json["scrollOptions4"].isNull()) {
+        if ( json["scrollOptions4"] == true) {scrollOptions4 = 1;}
+        if ( json["scrollOptions4"] == false) {scrollOptions4 = 0;}
+        preferences.putBool("scrollOptions4", scrollOptions4);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions5
+      if (!json["scrollOptions5"].isNull()) {
+        if ( json["scrollOptions5"] == true) {scrollOptions5 = 1;}
+        if ( json["scrollOptions5"] == false) {scrollOptions5 = 0;}
+        preferences.putBool("scrollOptions5", scrollOptions5);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions6
+      if (!json["scrollOptions6"].isNull()) {
+        if ( json["scrollOptions6"] == true) {scrollOptions6 = 1;}
+        if ( json["scrollOptions6"] == false) {scrollOptions6 = 0;}
+        preferences.putBool("scrollOptions6", scrollOptions6);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions7
+      if (!json["scrollOptions7"].isNull()) {
+        if ( json["scrollOptions7"] == true) {scrollOptions7 = 1;}
+        if ( json["scrollOptions7"] == false) {scrollOptions7 = 0;}
+        preferences.putBool("scrollOptions7", scrollOptions7);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOptions8
+      if (!json["scrollOptions8"].isNull()) {
+        if ( json["scrollOptions8"] == true) {scrollOptions8 = 1;}
+        if ( json["scrollOptions8"] == false) {scrollOptions8 = 0;}
+        preferences.putBool("scrollOptions8", scrollOptions8);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollOverride
+      if (!json["scrollOverride"].isNull()) {
+        if ( json["scrollOverride"] == true) {scrollOverride = 1;}
+        if ( json["scrollOverride"] == false) {scrollOverride = 0;}
+        preferences.putBool("scrollOverride", scrollOverride);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // scrollText
+      if (!json["scrollText"].isNull()) {
+        scrollText = json["scrollText"].as<String>();
+        if ( scrollText == "") {scrollText = "dAdS ArE tHE bESt";}
+        preferences.putString("scrollText", scrollText);
+        if (clockMode == 11) { allBlank(); } 
+      }
+
+      // setpreset1
+      if (!json["setpreset1"].isNull()) {
+         setpreset1();  
+      }
+
+      // setpreset2
+      if (!json["setpreset2"].isNull()) {
+         setpreset2();  
+      }
+
+      // setdate
+      if (!json["setdate"].isNull()) {
+          int yeararg = json["setdate"]["year"].as<int>();
+          int montharg = json["setdate"]["month"].as<int>();
+          int dayarg = json["setdate"]["day"].as<int>();
+          int hourarg = json["setdate"]["hour"].as<int>();
+          int minarg = json["setdate"]["min"].as<int>();
+          int secarg = json["setdate"]["sec"].as<int>();
+          rtc.adjust(DateTime(yeararg, montharg, dayarg, hourarg, minarg, secarg));   //set time on the RTC of the DS3231
+          struct tm tm;
+          tm.tm_year = yeararg - 1900;
+          tm.tm_mon = montharg - 1;
+          tm.tm_mday = dayarg;
+          tm.tm_hour = hourarg;
+          tm.tm_min = minarg;
+          tm.tm_sec = secarg;
+          time_t t = mktime(&tm);
+          struct timeval now1 = { .tv_sec = t };
+          settimeofday(&now1, NULL);    //set time on the RTC of the ESP32
+          printLocalTime(); 
+      }
+
+      // ClockMode
+      if (!json["ClockMode"].isNull()) {
+        allBlank();  
+        clockMode = 0; 
+        preferences.putInt("clockMode", clockMode);   
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode);  
+        printLocalTime(); 
+      }
+
+      // DateMode
+      if (!json["DateMode"].isNull()) {
+        allBlank();   
+        clockMode = 7;     
+        preferences.putInt("clockMode", clockMode);
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode);
+      }
+
+      // TemperatureMode
+      if (!json["TemperatureMode"].isNull()) {
+        allBlank();
+        clockMode = 2;    
+        preferences.putInt("clockMode", clockMode); 
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode);  
+      }
+
+      // HumidityMode
+      if (!json["HumidityMode"].isNull()) {
+        allBlank();   
+        clockMode = 8;     
+        preferences.putInt("clockMode", clockMode);
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode); 
+      }
+
+      // ScrollingMode
+      if (!json["ScrollingMode"].isNull()) {  
+          allBlank();   
+          clockMode = 11;     
+          preferences.putInt("clockMode", clockMode);
+          realtimeMode = 0;   
+          preferences.putInt("realtimeMode", realtimeMode);  
+      }; 
+
+      // DisplayOffMode
+      if (!json["DisplayOffMode"].isNull()) {
+        allBlank();   
+        clockMode = 10;     
+        preferences.putInt("clockMode", clockMode);
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode);  
+        rtttl::stop();
+        breakOutSet = 1;   
+      }
+
+      // loadpreset1
+      if (!json["loadPreset1"].isNull()) {
+        getpreset1();   
+        GetBrightnessLevel();        
+        allBlank(); 
+      }
+
+      // loadpreset2
+      if (!json["loadPreset2"].isNull()) {
+        getpreset2();   
+        GetBrightnessLevel();        
+        allBlank();  
+      }
+
+      // CountdownMode
+      if (!json["CountdownMode"].isNull() || !json["StopwatchMode"].isNull()) {
+        CountUpMillis = !json["CountdownMode"].isNull() ? CountUpMillis : millis();
+        countdownMilliSeconds = !json["CountdownMode"].isNull() ? json["CountdownMode"].as<int>() : json["StopwatchMode"].as<int>();
+        if (countdownMilliSeconds < 1000) {countdownMilliSeconds = 1000;}
+        if (countdownMilliSeconds > 86400000) {countdownMilliSeconds = 86400000;} 
+        endCountDownMillis = millis() + countdownMilliSeconds;
+        if (currentMode == 0) {currentMode = clockMode; currentReal = realtimeMode;}
+        allBlank();
+        clockMode = !json["CountdownMode"].isNull() ? 1 : 4;
+        realtimeMode = 0; 
+      }
+
+      // ScoreboardMode
+      if (!json["ScoreboardMode"].isNull()) {
+        scoreboardLeft = json["ScoreboardMode"]["left"].as<int>();
+        if (scoreboardLeft < 0) {scoreboardLeft = 0;}
+        if (scoreboardLeft > 99) {scoreboardLeft = 99;}
+        scoreboardRight = json["ScoreboardMode"]["right"].as<int>();
+        if (scoreboardRight < 0) {scoreboardRight = 0;}
+        if (scoreboardRight > 99) {scoreboardRight = 99;}
+        allBlank();
+        clockMode = 3;   
+        preferences.putInt("clockMode", clockMode);  
+        realtimeMode = 0;   
+        preferences.putInt("realtimeMode", realtimeMode);  
+      }
+
+      // lightshowMode
+      if (!json["lightshowMode"].isNull()) {
+        allBlank(); 
+        lightshowMode = json["lightshowMode"].as<int>();
+        oldsnakecolor = CRGB::Green;
+        getSlower = 180;
+        clockMode = 5;    
+        preferences.putInt("lightshowMode", lightshowMode); 
+        preferences.putInt("clockMode", clockMode); 
+        realtimeMode = 1;   
+        preferences.putInt("realtimeMode", realtimeMode);
+      }
+
+      // spectrumMode
+      if (!json["spectrumMode"].isNull()) {
+        allBlank(); 
+        spectrumMode = json["spectrumMode"].as<int>();
+        clockMode = 9;    
+        preferences.putInt("spectrumMode", spectrumMode); 
+        preferences.putInt("clockMode", clockMode); 
+        realtimeMode = 1;   
+        preferences.putInt("realtimeMode", realtimeMode);
+      }
+
+      // outdoor weather api
+      if (!json["weatherapi"].isNull()) {       
+        if (!json["weatherapi"]["latitude"].isNull()) strncpy(weatherapi.latitude, json["weatherapi"]["latitude"], sizeof(weatherapi.latitude));
+        if (!json["weatherapi"]["longitude"].isNull()) strncpy(weatherapi.longitude, json["weatherapi"]["longitude"], sizeof(weatherapi.longitude));
+        if (!json["weatherapi"]["apikey"].isNull()) strncpy(weatherapi.apikey, json["weatherapi"]["apikey"], sizeof(weatherapi.apikey));
+        preferences.putBytes("weatherapi", &weatherapi, sizeof(weatherapi));
+      }
+
+      // humidity
+      if (!json["humidity"].isNull()) {
+        if (!json["humidity"]["outdoor_enable"].isNull()) humidity.outdoor_enable = json["humidity"]["outdoor_enable"];
+        preferences.putBytes("humidity", &humidity, sizeof(humidity));
+      }
+
+      // temperature
+      if (!json["temperature"].isNull()) {
+        if (!json["temperature"]["outdoor_enable"].isNull()) temperature.outdoor_enable = json["temperature"]["outdoor_enable"];
+        preferences.putBytes("temperature2", &temperature, sizeof(temperature));
+      }
+
+      server.send(200, "text/json", "{\"result\":\"ok\"}");
+    } 
+    server.send(401);
   });
 
-  server.on("/updateColorChangeFrequency", HTTP_POST, []() {    
-    ColorChangeFrequency = server.arg("ColorChangeFrequency").toInt();
-    preferences.putInt("ColorChangeFreq", ColorChangeFrequency);
-    allBlank(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
- server.on("/updatesuspendType", HTTP_POST, []() {    
-    suspendType = server.arg("suspendType").toInt();
-    preferences.putInt("suspendType", suspendType);
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-  server.on("/updatesuspendFrequency", HTTP_POST, []() {    
-    suspendFrequency = server.arg("suspendFrequency").toInt();
-    preferences.putInt("suspendFreq", suspendFrequency);
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Spotlight Settings
-  server.on("/getspotlightsColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r0_val, g0_val, b0_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getspotlightsColorSettings", []() { server.send(200, "text/plain", String(spotlightsColorSettings)); });
-  server.on("/getuseSpotlights", []() { server.send(200, "text/plain", String(useSpotlights)); });
-  server.on("/getrangeBrightness", []() { server.send(200, "text/plain", String(brightness)); });
-
-  server.on("/updatespotlightsColor", HTTP_POST, []() {  
-    r0_val = server.arg("r").toInt();
-    g0_val = server.arg("g").toInt();
-    b0_val = server.arg("b").toInt();  
-    preferences.putInt("r0_val", r0_val);
-    preferences.putInt("g0_val", g0_val);
-    preferences.putInt("b0_val", b0_val);
-    ShelfDownLights(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatespotlightsColorSettings", HTTP_POST, []() {    
-    spotlightsColorSettings = server.arg("spotlightsColorSettings").toInt();
-    preferences.putInt("spotlightsCoSe", spotlightsColorSettings);
-    ShelfDownLights(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateuseSpotlights", HTTP_POST, []() {   
-    if ( server.arg("useSpotlights") == "true") {useSpotlights = 1;}
-    if ( server.arg("useSpotlights") == "false") {useSpotlights = 0;}
-    preferences.putBool("useSpotlights", useSpotlights);
-    ShelfDownLights(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-  server.on("/updaterangeBrightness", HTTP_POST, []() {    
-    brightness = server.arg("rangeBrightness").toInt();
-    preferences.putInt("brightness", brightness);
-    ShelfDownLights(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Clock Mode Settings
-  server.on("/getClockDisplayType", []() { server.send(200, "text/plain", String(clockDisplayType)); });
-  server.on("/getcolonType", []() { server.send(200, "text/plain", String(colonType)); });
-  server.on("/getgmtOffset_sec", []() { server.send(200, "text/plain", String(gmtOffset_sec));});
-  server.on("/getDSTime", []() { server.send(200, "text/plain", String(DSTime)); });
-  server.on("/getcolorHour", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r1_val, g1_val, b1_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getcolorMins", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r2_val, g2_val, b2_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getcolorColon", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r3_val, g3_val, b3_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getClockColorSettings", []() { server.send(200, "text/plain", String(ClockColorSettings)); });
-  
-  server.on("/updateClockDisplayType", HTTP_POST, []() {    
-    clockDisplayType = server.arg("ClockDisplayType").toInt();
-    preferences.putInt("clockDispType", clockDisplayType);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
- 
-  server.on("/updateColonType", HTTP_POST, []() {    
-    colonType = server.arg("ColonType").toInt();
-    preferences.putInt("colonType", colonType);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateTimezoneSettings", HTTP_POST, []() {    
-    gmtOffset_sec = server.arg("TimezoneSetting").toInt();
-    configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
-    if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
-    int tempyear = (timeinfo.tm_year +1900);
-    int tempmonth = (timeinfo.tm_mon + 1);
-    rtc.adjust(DateTime(tempyear, tempmonth, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
-    preferences.putLong("gmtOffset_sec", gmtOffset_sec);
-    if (clockMode == 0) { allBlank(); } 
-    printLocalTime(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateDSTime", HTTP_POST, []() {   
-    if ( server.arg("DSTime") == "true") {DSTime = 1;}
-    if ( server.arg("DSTime") == "false") {DSTime = 0;}
-    configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
-    if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
-    int tempyear = (timeinfo.tm_year +1900);
-    int tempmonth = (timeinfo.tm_mon + 1);
-    rtc.adjust(DateTime(tempyear, tempmonth, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
-    preferences.putBool("DSTime", DSTime);
-    if (clockMode == 0) { allBlank(); } 
-    printLocalTime(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateHourColor", HTTP_POST, []() {  
-    r1_val = server.arg("r").toInt();
-    g1_val = server.arg("g").toInt();
-    b1_val = server.arg("b").toInt();  
-    preferences.putInt("r1_val", r1_val);
-    preferences.putInt("g1_val", g1_val);
-    preferences.putInt("b1_val", b1_val);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateMinsColor", HTTP_POST, []() {  
-    r2_val = server.arg("r").toInt();
-    g2_val = server.arg("g").toInt();
-    b2_val = server.arg("b").toInt();  
-    preferences.putInt("r2_val", r2_val);
-    preferences.putInt("g2_val", g2_val);
-    preferences.putInt("b2_val", b2_val);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateColonColor", HTTP_POST, []() {  
-    r3_val = server.arg("r").toInt();
-    g3_val = server.arg("g").toInt();
-    b3_val = server.arg("b").toInt();  
-    preferences.putInt("r3_val", r3_val);
-    preferences.putInt("g3_val", g3_val);
-    preferences.putInt("b3_val", b3_val);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateClockColorSettings", HTTP_POST, []() {    
-    ClockColorSettings = server.arg("ClockColorSettings").toInt();
-    preferences.putInt("ClockColorSet", ClockColorSettings);
-    if (clockMode == 0) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Date Mode Settings
-
-  server.on("/getDateDisplayType", []() { server.send(200, "text/plain", String(dateDisplayType)); });
-  server.on("/getdayColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r4_val, g4_val, b4_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getmonthColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r5_val, g5_val, b5_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getseparatorColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r6_val, g6_val, b6_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getDateColorSettings", []() { server.send(200, "text/plain", String(DateColorSettings)); });
-
- server.on("/updateDateDisplayType", HTTP_POST, []() {    
-    dateDisplayType = server.arg("DateDisplayType").toInt();
-    preferences.putInt("dateDisplayType", dateDisplayType);
-    if (clockMode == 7) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-  server.on("/updatedayColor", HTTP_POST, []() {  
-    r4_val = server.arg("r").toInt();
-    g4_val = server.arg("g").toInt();
-    b4_val = server.arg("b").toInt();  
-    preferences.putInt("r4_val", r4_val);
-    preferences.putInt("g4_val", g4_val);
-    preferences.putInt("b4_val", b4_val);
-    if (clockMode == 7) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  server.on("/updatemonthColor", HTTP_POST, []() {  
-    r5_val = server.arg("r").toInt();
-    g5_val = server.arg("g").toInt();
-    b5_val = server.arg("b").toInt();  
-    preferences.putInt("r5_val", r5_val);
-    preferences.putInt("g5_val", g5_val);
-    preferences.putInt("b5_val", b5_val);
-    if (clockMode == 7) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateseparatorColor", HTTP_POST, []() {  
-    r6_val = server.arg("r").toInt();
-    g6_val = server.arg("g").toInt();
-    b6_val = server.arg("b").toInt(); 
-    preferences.putInt("r6_val", r6_val);
-    preferences.putInt("g6_val", g6_val);
-    preferences.putInt("b6_val", b6_val);
-    if (clockMode == 7) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateDateColorSettings", HTTP_POST, []() {    
-    DateColorSettings = server.arg("DateColorSettings").toInt();
-    preferences.putInt("DateColorSet", DateColorSettings);
-    if (clockMode == 7) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Temperature Mode Settings
-   
-  server.on("/gettemperatureSymbol", []() { server.send(200, "text/plain", String(temperatureSymbol)); });
-  server.on("/gettemperatureCorrection", []() { server.send(200, "text/plain", String(temperatureCorrection));});
-  server.on("/gettempDisplayType", []() { server.send(200, "text/plain", String(tempDisplayType)); });
-  server.on("/gettempColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r7_val, g7_val, b7_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/gettypeColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r8_val, g8_val, b8_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getdegreeColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r9_val, g9_val, b9_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/gettempColorSettings", []() { server.send(200, "text/plain", String(tempColorSettings)); });
-
-  
-  server.on("/updateTempType", HTTP_POST, []() {    
-    temperatureSymbol = server.arg("TempType").toInt();
-    preferences.putInt("temperatureSym", temperatureSymbol);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateCorrectionSelect", HTTP_POST, []() {    
-    temperatureCorrection = server.arg("CorrectionSelect").toInt();
-    preferences.putInt("tempCorrection", temperatureCorrection);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  }); 
-  
-  server.on("/updateTempDisplayType", HTTP_POST, []() {    
-    tempDisplayType = server.arg("TempDisplayType").toInt();
-    preferences.putInt("tempDisplayType", tempDisplayType);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-   server.on("/updateTempColor", HTTP_POST, []() {  
-    r7_val = server.arg("r").toInt();
-    g7_val = server.arg("g").toInt();
-    b7_val = server.arg("b").toInt();  
-    preferences.putInt("r7_val", r7_val);
-    preferences.putInt("g7_val", g7_val);
-    preferences.putInt("b7_val", b7_val);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateTypeColor", HTTP_POST, []() {  
-    r8_val = server.arg("r").toInt();
-    g8_val = server.arg("g").toInt();
-    b8_val = server.arg("b").toInt(); 
-    preferences.putInt("r8_val", r8_val);
-    preferences.putInt("g8_val", g8_val);
-    preferences.putInt("b8_val", b8_val); 
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateDegreeColor", HTTP_POST, []() {  
-    r9_val = server.arg("r").toInt();
-    g9_val = server.arg("g").toInt();
-    b9_val = server.arg("b").toInt();  
-    preferences.putInt("r9_val", r9_val);
-    preferences.putInt("g9_val", g9_val);
-    preferences.putInt("b9_val", b9_val);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateTempColorSettings", HTTP_POST, []() {    
-    tempColorSettings = server.arg("TempColorSettings").toInt();
-    preferences.putInt("tempColorSet", tempColorSettings);
-    if (clockMode == 2) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Humidity Mode Settings
-  
-  server.on("/gethumiDisplayType", []() { server.send(200, "text/plain", String(humiDisplayType)); });
-  server.on("/gethumiColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r10_val, g10_val, b10_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getsymbolColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r11_val, g11_val, b11_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/gethumiDecimalColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r12_val, g12_val, b12_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/gethumiColorSettings", []() { server.send(200, "text/plain", String(humiColorSettings)); });
-  
-  server.on("/updateHumiDisplayType", HTTP_POST, []() {    
-    humiDisplayType = server.arg("HumiDisplayType").toInt();
-    preferences.putInt("humiDisplayType", humiDisplayType);
-    if (clockMode == 8) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-   server.on("/updateHumiColor", HTTP_POST, []() {  
-    r10_val = server.arg("r").toInt();
-    g10_val = server.arg("g").toInt();
-    b10_val = server.arg("b").toInt();  
-    preferences.putInt("r10_val", r10_val);
-    preferences.putInt("g10_val", g10_val);
-    preferences.putInt("b10_val", b10_val);
-    if (clockMode == 8) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateSymbolColor", HTTP_POST, []() {  
-    r11_val = server.arg("r").toInt();
-    g11_val = server.arg("g").toInt();
-    b11_val = server.arg("b").toInt();  
-    preferences.putInt("r11_val", r11_val);
-    preferences.putInt("g11_val", g11_val);
-    preferences.putInt("b11_val", b11_val);
-    if (clockMode == 8) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateHumiDecimalColor", HTTP_POST, []() {  
-    r12_val = server.arg("r").toInt();
-    g12_val = server.arg("g").toInt();
-    b12_val = server.arg("b").toInt();  
-    preferences.putInt("r12_val", r12_val);
-    preferences.putInt("g12_val", g12_val);
-    preferences.putInt("b12_val", b12_val);
-    if (clockMode == 8) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updateHumiColorSettings", HTTP_POST, []() {    
-    humiColorSettings = server.arg("HumiColorSettings").toInt();
-    preferences.putInt("humiColorSet", humiColorSettings);
-    if (clockMode == 8) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Countdown/Stopwatch Mode Settings
-
-  server.on("/getcolorchangeCD", []() { server.send(200, "text/plain", String(colorchangeCD)); });
-  server.on("/getalarmCD", []() { server.send(200, "text/plain", String(useAudibleAlarm)); });
-  server.on("/getcolorCD", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", cd_r_val, cd_g_val, cd_b_val); server.send(200, "text/plain", tempcolor); });
-
-  server.on("/updatecolorchangeCD", HTTP_POST, []() {   
-    if ( server.arg("colorchangeCD") == "true") {colorchangeCD = 1;}
-    if ( server.arg("colorchangeCD") == "false") {colorchangeCD = 0;}
-    preferences.putBool("colorchangeCD", colorchangeCD);
-    if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatealarmCD", HTTP_POST, []() {   
-    if ( server.arg("alarmCD") == "true") {useAudibleAlarm = 1;}
-    if ( server.arg("alarmCD") == "false") {useAudibleAlarm = 0;}
-    preferences.putBool("alarmCD", useAudibleAlarm);
-    if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatecolorCD", HTTP_POST, []() {  
-    cd_r_val = server.arg("r").toInt();
-    cd_g_val = server.arg("g").toInt();
-    cd_b_val = server.arg("b").toInt();  
-    preferences.putInt("cd_r_val", cd_r_val);
-    preferences.putInt("cd_g_val", cd_g_val);
-    preferences.putInt("cd_b_val", cd_b_val);
-    if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-//Scoreboard Mode Settings
-
-  server.on("/getscoreboardColorLeft", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r13_val, g13_val, b13_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getscoreboardColorRight", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r14_val, g14_val, b14_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getscoreboardColorLeftRGB", []() { char tempcolor[25]; sprintf(tempcolor, "rgba(%d, %d, %d, 1)", r13_val, g13_val, b13_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getscoreboardColorRightRGB", []() { char tempcolor[25]; sprintf(tempcolor, "rgba(%d, %d, %d, 1)", r14_val, g14_val, b14_val); server.send(200, "text/plain", tempcolor); });
-
-  server.on("/updatescoreboardColorLeft", HTTP_POST, []() {  
-    r13_val = server.arg("r").toInt();
-    g13_val = server.arg("g").toInt();
-    b13_val = server.arg("b").toInt();  
-    preferences.putInt("r13_val", r13_val);
-    preferences.putInt("g13_val", g13_val);
-    preferences.putInt("b13_val", b13_val);
-    if (clockMode == 3) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescoreboardColorRight", HTTP_POST, []() {  
-    r14_val = server.arg("r").toInt();
-    g14_val = server.arg("g").toInt();
-    b14_val = server.arg("b").toInt();  
-    preferences.putInt("r14_val", r14_val);
-    preferences.putInt("g14_val", g14_val);
-    preferences.putInt("b14_val", b14_val);
-    if (clockMode == 3) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-//Spectrum Mode Settings
-  
-  server.on("/getrandomSpectrumMode", []() { server.send(200, "text/plain", String(randomSpectrumMode)); });
-  server.on("/getspectrumColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r15_val, g15_val, b15_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getspectrumBackground", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r17_val, g17_val, b17_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getspectrumColorSettings", []() { server.send(200, "text/plain", String(spectrumColorSettings)); });
-  server.on("/getspectrumBackgroundSettings", []() { server.send(200, "text/plain", String(spectrumBackgroundSettings)); });
-
-  server.on("/updaterandomSpectrumMode", HTTP_POST, []() {   
-    if ( server.arg("randomSpectrumMode") == "true") {randomSpectrumMode = 1;}
-    if ( server.arg("randomSpectrumMode") == "false") {randomSpectrumMode = 0;}
-    preferences.putBool("randSpecMode", randomSpectrumMode);
-    if (clockMode == 9) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatespectrumBackground", HTTP_POST, []() {  
-    r17_val = server.arg("r").toInt();
-    g17_val = server.arg("g").toInt();
-    b17_val = server.arg("b").toInt();  
-    preferences.putInt("r17_val", r17_val);
-    preferences.putInt("g17_val", g17_val);
-    preferences.putInt("b17_val", b17_val);
-    if (clockMode == 9) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatespectrumColor", HTTP_POST, []() {  
-    r15_val = server.arg("r").toInt();
-    g15_val = server.arg("g").toInt();
-    b15_val = server.arg("b").toInt();  
-    preferences.putInt("r15_val", r15_val);
-    preferences.putInt("g15_val", g15_val);
-    preferences.putInt("b15_val", b15_val);
-    if (clockMode == 9) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatespectrumBackgroundSettings", HTTP_POST, []() {    
-    spectrumBackgroundSettings = server.arg("spectrumBackgroundSettings").toInt();
-    preferences.putInt("spectrumBkgd", spectrumBackgroundSettings);
-    if (clockMode == 9) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatespectrumColorSettings", HTTP_POST, []() {    
-    spectrumColorSettings = server.arg("spectrumColorSettings").toInt();
-    preferences.putInt("spectrumColor", spectrumColorSettings);
-    if (clockMode == 9) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Scrolling-text Mode settings
-
-  server.on("/getscrollFrequency", []() { server.send(200, "text/plain", String(scrollFrequency)); });
-  server.on("/getscrollOverride", []() { server.send(200, "text/plain", String(scrollOverride)); });
-  server.on("/getscrollColor", []() { char tempcolor[8]; sprintf(tempcolor, "#%02X%02X%02X", r16_val, g16_val, b16_val); server.send(200, "text/plain", tempcolor); });
-  server.on("/getscrollColorSettings", []() { server.send(200, "text/plain", String(scrollColorSettings)); });
-  server.on("/getscrollOptions1", []() { server.send(200, "text/plain", String(scrollOptions1)); });
-  server.on("/getscrollOptions2", []() { server.send(200, "text/plain", String(scrollOptions2)); });
-  server.on("/getscrollOptions3", []() { server.send(200, "text/plain", String(scrollOptions3)); });
-  server.on("/getscrollOptions4", []() { server.send(200, "text/plain", String(scrollOptions4)); });
-  server.on("/getscrollOptions5", []() { server.send(200, "text/plain", String(scrollOptions5)); });
-  server.on("/getscrollOptions6", []() { server.send(200, "text/plain", String(scrollOptions6)); });
-  server.on("/getscrollOptions7", []() { server.send(200, "text/plain", String(scrollOptions7)); });
-  server.on("/getscrollOptions8", []() { server.send(200, "text/plain", String(scrollOptions8)); });
-  server.on("/getscrollText", []() { server.send(200, "text/plain", String(scrollText)); });
- 
-  server.on("/updatescrollFrequency", HTTP_POST, []() {    
-    scrollFrequency = server.arg("scrollFrequency").toInt();
-    preferences.putInt("scrollFreq", scrollFrequency);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOverride", HTTP_POST, []() {   
-    if ( server.arg("scrollOverride") == "true") {scrollOverride = 1;}
-    if ( server.arg("scrollOverride") == "false") {scrollOverride = 0;}
-    preferences.putBool("scrollOverride", scrollOverride);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollColor", HTTP_POST, []() {  
-    r16_val = server.arg("r").toInt();
-    g16_val = server.arg("g").toInt();
-    b16_val = server.arg("b").toInt();  
-    preferences.putInt("r16_val", r16_val);
-    preferences.putInt("g16_val", g16_val);
-    preferences.putInt("b16_val", b16_val);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollColorSettings", HTTP_POST, []() {    
-    scrollColorSettings = server.arg("scrollColorSettings").toInt();
-    preferences.putInt("scrollColorSet", scrollColorSettings);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions1", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions1") == "true") {scrollOptions1 = 1;}
-    if ( server.arg("scrollOptions1") == "false") {scrollOptions1 = 0;}
-    preferences.putBool("scrollOptions1", scrollOptions1);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions2", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions2") == "true") {scrollOptions2 = 1;}
-    if ( server.arg("scrollOptions2") == "false") {scrollOptions2 = 0;}
-    preferences.putBool("scrollOptions2", scrollOptions2);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions3", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions3") == "true") {scrollOptions3 = 1;}
-    if ( server.arg("scrollOptions3") == "false") {scrollOptions3 = 0;}
-    preferences.putBool("scrollOptions3", scrollOptions3);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions4", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions4") == "true") {scrollOptions4 = 1;}
-    if ( server.arg("scrollOptions4") == "false") {scrollOptions4 = 0;}
-    preferences.putBool("scrollOptions4", scrollOptions4);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions5", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions5") == "true") {scrollOptions5 = 1;}
-    if ( server.arg("scrollOptions5") == "false") {scrollOptions5 = 0;}
-    preferences.putBool("scrollOptions5", scrollOptions5);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions6", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions6") == "true") {scrollOptions6 = 1;}
-    if ( server.arg("scrollOptions6") == "false") {scrollOptions6 = 0;}
-    preferences.putBool("scrollOptions6", scrollOptions6);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions7", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions7") == "true") {scrollOptions7 = 1;}
-    if ( server.arg("scrollOptions7") == "false") {scrollOptions7 = 0;}
-    preferences.putBool("scrollOptions7", scrollOptions7);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollOptions8", HTTP_POST, []() {   
-    if ( server.arg("scrollOptions8") == "true") {scrollOptions8 = 1;}
-    if ( server.arg("scrollOptions8") == "false") {scrollOptions8 = 0;}
-    preferences.putBool("scrollOptions8", scrollOptions8);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/updatescrollText", HTTP_POST, []() {   
-    scrollText = server.arg("scrollText");
-    if ( scrollText == "") {scrollText = "dAdS ArE tHE bESt";}
-    preferences.putString("scrollText", scrollText);
-    if (clockMode == 11) { allBlank(); } 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Save Preset Handles
-
-  server.on("/setpreset1", HTTP_POST, []() {   
-    setpreset1();   
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-  
-  server.on("/setpreset2", HTTP_POST, []() {   
-    setpreset2();   
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-// Manually update time from browser
-
-  server.on("/setdate", HTTP_POST, []() { 
-    int yeararg = server.arg("year").toInt();
-    int montharg = server.arg("month").toInt();
-    int dayarg = server.arg("day").toInt();
-    int hourarg = server.arg("hour").toInt();
-    int minarg = server.arg("min").toInt();
-    int secarg = server.arg("sec").toInt();
-    rtc.adjust(DateTime(yeararg, montharg, dayarg, hourarg, minarg, secarg));   //set time on the RTC of the DS3231
-    struct tm tm;
-    tm.tm_year = yeararg - 1900;
-    tm.tm_mon = montharg - 1;
-    tm.tm_mday = dayarg;
-    tm.tm_hour = hourarg;
-    tm.tm_min = minarg;
-    tm.tm_sec = secarg;
-    time_t t = mktime(&tm);
-    struct timeval now1 = { .tv_sec = t };
-    settimeofday(&now1, NULL);    //set time on the RTC of the ESP32
-    printLocalTime(); 
-    server.send(200, "text/json", "{\"result\":\"ok\"}");
-  });
-
-
-
-
-//debug page
-   server.on("/debugpage", []() {    
-    char webString[4096]="";  //uses about 3600 characters at startup without color info
-    char tempString[255]="";
-    char tempRTC[64]="";
-    char tempRTCE[64]="";
-    DateTime now = rtc.now();
+  server.on("/getdebug", []() {
     char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
     char monthsOfTheYear[12][12] = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
     int humidTemp = dht.readHumidity();        // read humidity
     float sensorTemp = dht.readTemperature();     // read temperature
+    char tempRTC[64]="";
+    char tempRTCE[64]="";
+    String output;
+    DynamicJsonDocument json(3000);
+    DateTime now = rtc.now();
+
     //DS3231 RTC    
-    sprintf(tempString, "%s", daysOfTheWeek[now.dayOfTheWeek()]);strcpy(tempRTC, tempString);
-    strcat(tempRTC, ", ");
-    sprintf(tempString, "%s", monthsOfTheYear[now.month()-1]);strcat(tempRTC, tempString);
-    strcat(tempRTC, " ");
-    sprintf(tempString, "%02d", now.day());strcat(tempRTC, tempString);
-    strcat(tempRTC, " ");
-    sprintf(tempString, "%d", now.year());strcat(tempRTC, tempString);
-    strcat(tempRTC, " ");
-    sprintf(tempString, "%02d", now.hour());strcat(tempRTC, tempString);
-    strcat(tempRTC, ":");
-    sprintf(tempString, "%02d", now.minute());strcat(tempRTC, tempString);
-    strcat(tempRTC, ":");
-    sprintf(tempString, "%02d", now.second());strcat(tempRTC, tempString);
+    sprintf(tempRTC, "%s, ", daysOfTheWeek[now.dayOfTheWeek()]);
+    sprintf(tempRTC + strlen(tempRTC), "%s ", monthsOfTheYear[now.month()-1]);
+    sprintf(tempRTC + strlen(tempRTC), "%02d ", now.day());
+    sprintf(tempRTC + strlen(tempRTC), "%d ", now.year());
+    sprintf(tempRTC + strlen(tempRTC), "%02d:", now.hour());
+    sprintf(tempRTC + strlen(tempRTC), "%02d:", now.minute());
+    sprintf(tempRTC + strlen(tempRTC), "%02d", now.second());
+
     //ESP32 RTC
-    sprintf(tempString, "%s", daysOfTheWeek[timeinfo.tm_wday]);strcpy(tempRTCE, tempString);
-    strcat(tempRTCE, ", ");
-    sprintf(tempString, "%s", monthsOfTheYear[timeinfo.tm_mon]);strcat(tempRTCE, tempString);
-    strcat(tempRTCE, " ");
-    sprintf(tempString, "%02d", timeinfo.tm_mday);strcat(tempRTCE, tempString);
-    strcat(tempRTCE, " ");
-    sprintf(tempString, "%d", timeinfo.tm_year+1900);strcat(tempRTCE, tempString);
-    strcat(tempRTCE, " ");
-    sprintf(tempString, "%02d", timeinfo.tm_hour);strcat(tempRTCE, tempString);
-    strcat(tempRTCE, ":");
-    sprintf(tempString, "%02d", timeinfo.tm_min);strcat(tempRTCE, tempString);
-    strcat(tempRTCE, ":");
-    sprintf(tempString, "%02d", timeinfo.tm_sec);strcat(tempRTCE, tempString);
-    //HTML header
-    strcpy(webString, "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\"><script type=\"text/javascript\" src=\"js/jquery-3.5.1.min.js\"></script><script type=\"text/javascript\" src=\"js/bootstrap.min.js\"></script><link rel=\"stylesheet\" href=\"css/bootstrap.min.css\"><title>Shelf Clock</title></head><body><nav class=\"navbar navbar-expand-md navbar-dark bg-dark mb-4\"><a class=\"navbar-brand\" href=\"./index.html\">Shelf Clock</a><button class=\"navbar-toggler\" type=\"button\" data-toggle=\"collapse\" data-target=\"#navbarCollapse\"aria-controls=\"navbarCollapse\" aria-expanded=\"false\" aria-label=\"Toggle navigation\"><span class=\"navbar-toggler-icon\"></span></button><div class=\"collapse navbar-collapse\" id=\"navbarCollapse\"><ul class=\"navbar-nav mr-auto\"><li class=\"nav-item\"><a class=\"nav-link active\" href=\"./index.html\">Home <span class=\"sr-only\">(current)</span></a></li><li class=\"nav-item\"><a class=\"nav-link\" href=\"./settings.html\">Settings</a></li></div></nav><style type=\"text/css\">body {font: .75rem Inconsolata, monospace;}</style>");
+    sprintf(tempRTCE, "%s, ", daysOfTheWeek[timeinfo.tm_wday]);
+    sprintf(tempRTCE + strlen(tempRTCE), "%s ", monthsOfTheYear[timeinfo.tm_mon]);
+    sprintf(tempRTCE + strlen(tempRTCE), "%02d ", timeinfo.tm_mday);
+    sprintf(tempRTCE + strlen(tempRTCE), "%d ", timeinfo.tm_year+1900);
+    sprintf(tempRTCE + strlen(tempRTCE), "%02d:", timeinfo.tm_hour);
+    sprintf(tempRTCE + strlen(tempRTCE), "%02d:", timeinfo.tm_min);
+    sprintf(tempRTCE + strlen(tempRTCE), "%02d", timeinfo.tm_sec);
 
-    /*
-    strcat(webString, "<br>cd_r_val=");sprintf(tempString, "%d", cd_r_val);strcat(webString, tempString);
-    strcat(webString, "<br>cd_g_val=");sprintf(tempString, "%d", cd_g_val);strcat(webString, tempString);
-    strcat(webString, "<br>cd_b_val=");sprintf(tempString, "%d", cd_b_val);strcat(webString, tempString);
-    strcat(webString, "<br>r0_val=");sprintf(tempString, "%d", r0_val);strcat(webString, tempString);
-    strcat(webString, "<br>g0_val=");sprintf(tempString, "%d", g0_val);strcat(webString, tempString);
-    strcat(webString, "<br>b0_val=");sprintf(tempString, "%d", b0_val);strcat(webString, tempString);
-    strcat(webString, "<br>r1_val=");sprintf(tempString, "%d", r1_val);strcat(webString, tempString);
-    strcat(webString, "<br>g1_val=");sprintf(tempString, "%d", g1_val);strcat(webString, tempString);
-    strcat(webString, "<br>b1_val=");sprintf(tempString, "%d", b1_val);strcat(webString, tempString);
-    strcat(webString, "<br>r2_val=");sprintf(tempString, "%d", r2_val);strcat(webString, tempString);
-    strcat(webString, "<br>g2_val=");sprintf(tempString, "%d", g2_val);strcat(webString, tempString);
-    strcat(webString, "<br>b2_val=");sprintf(tempString, "%d", b2_val);strcat(webString, tempString);
-    strcat(webString, "<br>r3_val=");sprintf(tempString, "%d", r3_val);strcat(webString, tempString);
-    strcat(webString, "<br>g3_val=");sprintf(tempString, "%d", g3_val);strcat(webString, tempString);
-    strcat(webString, "<br>b3_val=");sprintf(tempString, "%d", b3_val);strcat(webString, tempString);
-    strcat(webString, "<br>r4_val=");sprintf(tempString, "%d", r4_val);strcat(webString, tempString);
-    strcat(webString, "<br>g4_val=");sprintf(tempString, "%d", g4_val);strcat(webString, tempString);
-    strcat(webString, "<br>b4_val=");sprintf(tempString, "%d", b4_val);strcat(webString, tempString);
-    strcat(webString, "<br>r5_val=");sprintf(tempString, "%d", r5_val);strcat(webString, tempString);
-    strcat(webString, "<br>g5_val=");sprintf(tempString, "%d", g5_val);strcat(webString, tempString);
-    strcat(webString, "<br>b5_val=");sprintf(tempString, "%d", b5_val);strcat(webString, tempString);
-    strcat(webString, "<br>r6_val=");sprintf(tempString, "%d", r6_val);strcat(webString, tempString);
-    strcat(webString, "<br>g6_val=");sprintf(tempString, "%d", g6_val);strcat(webString, tempString);
-    strcat(webString, "<br>b6_val=");sprintf(tempString, "%d", b6_val);strcat(webString, tempString);
-    strcat(webString, "<br>r7_val=");sprintf(tempString, "%d", r7_val);strcat(webString, tempString);
-    strcat(webString, "<br>g7_val=");sprintf(tempString, "%d", g7_val);strcat(webString, tempString);
-    strcat(webString, "<br>b7_val=");sprintf(tempString, "%d", b7_val);strcat(webString, tempString);
-    strcat(webString, "<br>r8_val=");sprintf(tempString, "%d", r8_val);strcat(webString, tempString);
-    strcat(webString, "<br>g8_val=");sprintf(tempString, "%d", g8_val);strcat(webString, tempString);
-    strcat(webString, "<br>b8_val=");sprintf(tempString, "%d", b8_val);strcat(webString, tempString);
-    strcat(webString, "<br>r9_val=");sprintf(tempString, "%d", r9_val);strcat(webString, tempString);
-    strcat(webString, "<br>g9_val=");sprintf(tempString, "%d", g9_val);strcat(webString, tempString);
-    strcat(webString, "<br>b9_val=");sprintf(tempString, "%d", b9_val);strcat(webString, tempString);
-    strcat(webString, "<br>r10_val=");sprintf(tempString, "%d", r10_val);strcat(webString, tempString);
-    strcat(webString, "<br>g10_val=");sprintf(tempString, "%d", g10_val);strcat(webString, tempString);
-    strcat(webString, "<br>b10_val=");sprintf(tempString, "%d", b10_val);strcat(webString, tempString);
-    strcat(webString, "<br>r11_val=");sprintf(tempString, "%d", r11_val);strcat(webString, tempString);
-    strcat(webString, "<br>g11_val=");sprintf(tempString, "%d", g11_val);strcat(webString, tempString);
-    strcat(webString, "<br>b11_val=");sprintf(tempString, "%d", b11_val);strcat(webString, tempString);
-    strcat(webString, "<br>r12_val=");sprintf(tempString, "%d", r12_val);strcat(webString, tempString);
-    strcat(webString, "<br>g12_val=");sprintf(tempString, "%d", g12_val);strcat(webString, tempString);
-    strcat(webString, "<br>b12_val=");sprintf(tempString, "%d", b12_val);strcat(webString, tempString);
-    strcat(webString, "<br>r13_val=");sprintf(tempString, "%d", r13_val);strcat(webString, tempString);
-    strcat(webString, "<br>g13_val=");sprintf(tempString, "%d", g13_val);strcat(webString, tempString);
-    strcat(webString, "<br>b13_val=");sprintf(tempString, "%d", b13_val);strcat(webString, tempString);
-    strcat(webString, "<br>r14_val=");sprintf(tempString, "%d", r14_val);strcat(webString, tempString);
-    strcat(webString, "<br>g14_val=");sprintf(tempString, "%d", g14_val);strcat(webString, tempString);
-    strcat(webString, "<br>b14_val=");sprintf(tempString, "%d", b14_val);strcat(webString, tempString);
-    strcat(webString, "<br>r15_val=");sprintf(tempString, "%d", r15_val);strcat(webString, tempString);
-    strcat(webString, "<br>g15_val=");sprintf(tempString, "%d", g15_val);strcat(webString, tempString);
-    strcat(webString, "<br>b15_val=");sprintf(tempString, "%d", b15_val);strcat(webString, tempString);
-    strcat(webString, "<br>r16_val=");sprintf(tempString, "%d", r16_val);strcat(webString, tempString);
-    strcat(webString, "<br>g16_val=");sprintf(tempString, "%d", g16_val);strcat(webString, tempString);
-    strcat(webString, "<br>b16_val=");sprintf(tempString, "%d", b16_val);strcat(webString, tempString);
-    strcat(webString, "<br>r17_val=");sprintf(tempString, "%d", r17_val);strcat(webString, tempString);
-    strcat(webString, "<br>g17_val=");sprintf(tempString, "%d", g17_val);strcat(webString, tempString);
-    strcat(webString, "<br>b17_val=");sprintf(tempString, "%d", b17_val);strcat(webString, tempString);
-    strcat(webString, "<br>cd_b_val=");sprintf(tempString, "%d", cd_b_val);strcat(webString, tempString);
-    strcat(webString, "<br>cd_g_val=");sprintf(tempString, "%d", cd_g_val);strcat(webString, tempString);
-    strcat(webString, "<br>cd_r_val=");sprintf(tempString, "%d", cd_r_val);strcat(webString, tempString);
-    */
+    json["DS-3231"] = tempRTC;
+    json["ESP32-NTP"] = tempRTCE;
+    json["DHT11 C Temp"] = sensorTemp;
+    json["DHT11 F Temp"] = (sensorTemp * 1.8000) + 32;
+    json["DHT11 Humidity"] = humidTemp;
+    json["WiFi IP"] = WiFi.localIP().toString();
+    json["analogRead(PHOTORESISTER_PIN)"] = analogRead(PHOTORESISTER_PIN);
+    json["analogRead(MIC_IN_PIN)"] = analogRead(MIC_IN_PIN);
+    json["digitalRead(AUDIO_GATE_PIN)"] = digitalRead(AUDIO_GATE_PIN);
+    json["AUDIO_GATE_PIN"] = AUDIO_GATE_PIN;
+    json["averageAudioInput"] = averageAudioInput;
+    json["breakOutSet"] = breakOutSet;
+    json["brightness"] = brightness;
+    json["BUZZER_PIN"] = BUZZER_PIN;
+    json["clearOldLeds"] = clearOldLeds;
+    json["ClockColorSettings"] = ClockColorSettings;
+    json["clockDisplayType"] = clockDisplayType;
+    json["clockMode"] = clockMode;
+    json["colonType"] = colonType;
+    json["colorchangeCD"] = colorchangeCD;
+    json["ColorChangeFrequency"] = ColorChangeFrequency;
+    json["colorWheelPosition"] = colorWheelPosition;
+    json["colorWheelPositionTwo"] = colorWheelPositionTwo;
+    json["colorWheelSpeed"] = colorWheelSpeed;
+    json["countdownMilliSeconds"] = countdownMilliSeconds;
+    json["CountUpMillis"] = CountUpMillis;
+    json["countupMilliSeconds"] = countupMilliSeconds;
+    json["currentMode"] = currentMode;
+    json["currentReal"] = currentReal;
+    json["cylonPosition"] = cylonPosition;
+    json["DateColorSettings"] = DateColorSettings;
+    json["dateDisplayType"] = dateDisplayType;
+    json["daylightOffset_sec"] = daylightOffset_sec;
+    json["daysUptime"] = daysUptime;
+    json["decay_check"] = decay_check;
+    json["decay"] = decay;
+    json["DHT_PIN"] = DHT_PIN;
+    json["DHTTYPE"] = DHTTYPE;
+    json["dotsOn"] = dotsOn;
+    json["DSTime"] = DSTime;
+    json["endCountDownMillis"] = endCountDownMillis;
+    json["FAKE_NUM_LEDS"] = FAKE_NUM_LEDS;
+    json["fakeclockrunning"] = fakeclockrunning;
+    json["foodSpot"] = foodSpot;
+    json["getSlower"] = getSlower;
+    json["gmtOffset_sec"] = gmtOffset_sec;
+    json["host"] = host;
+    json["humiColorSettings"] = humiColorSettings;
+    json["humiDisplayType"] = humiDisplayType;
+    json["isAsleep"] = isAsleep;
+    json["LED_PIN"] = LED_PIN;
+    json["LEDS_PER_DIGIT"] = LEDS_PER_DIGIT;
+    json["LEDS_PER_SEGMENT"] = LEDS_PER_SEGMENT;
+    json["lightSensorValue"] = lightSensorValue;
+    json["lightshowMode"] = lightshowMode;
+    json["lightshowSpeed"] = lightshowSpeed;
+    json["MIC_IN_PIN"] = MIC_IN_PIN;
+    json["MILLI_AMPS"] = MILLI_AMPS;
+    json["ntpServer"] = ntpServer;
+    json["NUM_LEDS"] = NUM_LEDS;
+    json["NUMBER_OF_DIGITS"] = NUMBER_OF_DIGITS;
+    json["pastelColors"] = pastelColors;
+    json["PHOTO_SAMPLES"] = PHOTO_SAMPLES;
+    json["photoresisterReadings[0]"] = photoresisterReadings[0];
+    json["photoresisterReadings[1]"] = photoresisterReadings[1];
+    json["photoresisterReadings[2]"] = photoresisterReadings[2];
+    json["photoresisterReadings[3]"] = photoresisterReadings[3];
+    json["photoresisterReadings[4]"] = photoresisterReadings[4];
+    json["photoresisterReadings[5]"] = photoresisterReadings[5];
+    json["photoresisterReadings[6]"] = photoresisterReadings[6];
+    json["photoresisterReadings[7]"] = photoresisterReadings[7];
+    json["photoresisterReadings[8]"] = photoresisterReadings[8];
+    json["photoresisterReadings[9]"] = photoresisterReadings[9];
+    json["photoresisterReadings[10]"] = photoresisterReadings[10];
+    json["photoresisterReadings[11]"] = photoresisterReadings[11];
+    json["photoresisterReadings[12]"] = photoresisterReadings[12];
+    json["photoresisterReadings[13]"] = photoresisterReadings[13];
+    json["PHOTORESISTER_PIN"] = PHOTORESISTER_PIN;
+    json["post_react"] = post_react;
+    json["pre_react"] = pre_react;
+    json["previousTimeDay"] = previousTimeDay;
+    json["previousTimeHour"] = previousTimeHour;
+    json["previousTimeMin"] = previousTimeMin;
+    json["previousTimeMonth"] = previousTimeMonth;
+    json["previousTimeWeek"] = previousTimeWeek;
+    json["prevTime"] = prevTime;
+    json["prevTime2"] = prevTime2;
+    json["randomDayPassed"] = randomDayPassed;
+    json["randomHourPassed"] = randomHourPassed;
+    json["randomMinPassed"] = randomMinPassed;
+    json["randomMonthPassed"] = randomMonthPassed;
+    json["randomSpectrumMode"] = randomSpectrumMode;
+    json["randomWeekPassed"] = randomWeekPassed;
+    json["react"] = react;
+    json["readIndex"] = readIndex;
+    json["realtimeMode"] = realtimeMode;
+    json["scoreboardLeft"] = scoreboardLeft;
+    json["scoreboardRight"] = scoreboardRight;
+    json["scrollColorSettings"] = scrollColorSettings;
+    json["scrollFrequency"] = scrollFrequency;
+    json["scrollOptions1"] = scrollOptions1;
+    json["scrollOptions2"] = scrollOptions2;
+    json["scrollOptions3"] = scrollOptions3;
+    json["scrollOptions4"] = scrollOptions4;
+    json["scrollOptions5"] = scrollOptions5;
+    json["scrollOptions6"] = scrollOptions6;
+    json["scrollOptions7"] = scrollOptions7;
+    json["scrollOptions8"] = scrollOptions8;
+    json["scrollText"] = scrollText.c_str();
+    json["SEGMENTS_PER_NUMBER"] = SEGMENTS_PER_NUMBER;
+    json["sleepTimerCurrent"] = sleepTimerCurrent;
+    json["snakeLastDirection"] = snakeLastDirection;
+    json["snakePosition"] = snakePosition;
+    json["snakeWaiting"] = snakeWaiting;
+    json["SPECTRUM_PIXELS"] = SPECTRUM_PIXELS;
+    json["spectrumBackgroundSettings"] = spectrumBackgroundSettings;
+    json["spectrumColorSettings"] = spectrumColorSettings;
+    json["spectrumMode"] = spectrumMode;
+    json["spotlightsColorSettings"] = spotlightsColorSettings;
+    json["suspendFrequency"] = suspendFrequency;
+    json["suspendType"] = suspendType;
+    json["tempColorSettings"] = tempColorSettings;
+    json["tempDisplayType"] = tempDisplayType;
+    json["temperatureCorrection"] = temperatureCorrection;
+    json["temperatureSymbol"] = temperatureSymbol;
+    json["useSpotlights"] = useSpotlights;
+    json["useAudibleAlarm"] = useAudibleAlarm;
+    json["outdoortemp"] = outdoorTemp;
 
-    strcat(webString, "<br>DS-3231 RTC=");strcat(webString, tempRTC);
-    strcat(webString, "<br>ESP32-NTP RTC=");strcat(webString, tempRTCE);
-    strcat(webString, "<br>DHT11 C Temp=");sprintf(tempString, "%.1f", sensorTemp);strcat(webString, tempString);
-    strcat(webString, "<br>DHT11 F Temp=");sprintf(tempString, "%.1f", (sensorTemp*1.8000)+32);strcat(webString, tempString);
-    strcat(webString, "<br>DHT11 Humidity=");sprintf(tempString, "%02d", humidTemp);strcat(webString, tempString);
-    strcat(webString, "<br>WiFi IP=");sprintf(tempString, "%s", WiFi.localIP().toString().c_str());strcat(webString, tempString);
-    strcat(webString, "<br>analogRead(PHOTORESISTER_PIN)=");sprintf(tempString, "%04d", analogRead(PHOTORESISTER_PIN));strcat(webString, tempString);
-    strcat(webString, "<br>analogRead(MIC_IN_PIN)=");sprintf(tempString, "%04d", analogRead(MIC_IN_PIN));strcat(webString, tempString);
-    strcat(webString, "<br>digitalRead(AUDIO_GATE_PIN)=");sprintf(tempString, "%d", digitalRead(AUDIO_GATE_PIN));strcat(webString, tempString);
-    strcat(webString, "<br>AUDIO_GATE_PIN=");sprintf(tempString, "%d", AUDIO_GATE_PIN);strcat(webString, tempString);
-    strcat(webString, "<br>averageAudioInput=");sprintf(tempString, "%d", averageAudioInput);strcat(webString, tempString);
-    strcat(webString, "<br>breakOutSet=");sprintf(tempString, "%d", breakOutSet);strcat(webString, tempString);
-    strcat(webString, "<br>brightness=");sprintf(tempString, "%d", brightness);strcat(webString, tempString);
-    strcat(webString, "<br>BUZZER_PIN=");sprintf(tempString, "%d", BUZZER_PIN);strcat(webString, tempString);
-    strcat(webString, "<br>clearOldLeds=");sprintf(tempString, "%d", clearOldLeds);strcat(webString, tempString);
-    strcat(webString, "<br>ClockColorSettings=");sprintf(tempString, "%d", ClockColorSettings);strcat(webString, tempString);
-    strcat(webString, "<br>clockDisplayType=");sprintf(tempString, "%d", clockDisplayType);strcat(webString, tempString);
-    strcat(webString, "<br>clockMode=");sprintf(tempString, "%d", clockMode);strcat(webString, tempString);
-    strcat(webString, "<br>colonType=");sprintf(tempString, "%d", colonType);strcat(webString, tempString);
-    strcat(webString, "<br>colorchangeCD=");sprintf(tempString, "%d", colorchangeCD);strcat(webString, tempString);
-    strcat(webString, "<br>ColorChangeFrequency=");sprintf(tempString, "%d", ColorChangeFrequency);strcat(webString, tempString);
-    strcat(webString, "<br>colorWheelPosition=");sprintf(tempString, "%d", colorWheelPosition);strcat(webString, tempString);
-    strcat(webString, "<br>colorWheelPositionTwo=");sprintf(tempString, "%d", colorWheelPositionTwo);strcat(webString, tempString);
-    strcat(webString, "<br>colorWheelSpeed=");sprintf(tempString, "%d", colorWheelSpeed);strcat(webString, tempString);
-    strcat(webString, "<br>countdownMilliSeconds=");sprintf(tempString, "%d", countdownMilliSeconds);strcat(webString, tempString);
-    strcat(webString, "<br>CountUpMillis=");sprintf(tempString, "%d", CountUpMillis);strcat(webString, tempString);
-    strcat(webString, "<br>countupMilliSeconds=");sprintf(tempString, "%d", countupMilliSeconds);strcat(webString, tempString);
-    strcat(webString, "<br>currentMode=");sprintf(tempString, "%d", currentMode);strcat(webString, tempString);
-    strcat(webString, "<br>currentReal=");sprintf(tempString, "%d", currentReal);strcat(webString, tempString);
-    strcat(webString, "<br>cylonPosition=");sprintf(tempString, "%d", cylonPosition);strcat(webString, tempString);
-    strcat(webString, "<br>DateColorSettings=");sprintf(tempString, "%d", DateColorSettings);strcat(webString, tempString);
-    strcat(webString, "<br>dateDisplayType=");sprintf(tempString, "%d", dateDisplayType);strcat(webString, tempString);
-    strcat(webString, "<br>daylightOffset_sec=");sprintf(tempString, "%d", daylightOffset_sec);strcat(webString, tempString);
-    strcat(webString, "<br>daysUptime=");sprintf(tempString, "%d", daysUptime);strcat(webString, tempString);
-    strcat(webString, "<br>decay_check=");sprintf(tempString, "%d", decay_check);strcat(webString, tempString);
-    strcat(webString, "<br>decay=");sprintf(tempString, "%d", decay);strcat(webString, tempString);
-    strcat(webString, "<br>DHT_PIN=");sprintf(tempString, "%d", DHT_PIN);strcat(webString, tempString);
-    strcat(webString, "<br>DHTTYPE=");sprintf(tempString, "%d", DHTTYPE);strcat(webString, tempString);
-    strcat(webString, "<br>dotsOn=");sprintf(tempString, "%d", dotsOn);strcat(webString, tempString);
-    strcat(webString, "<br>DSTime=");sprintf(tempString, "%d", DSTime);strcat(webString, tempString);
-    strcat(webString, "<br>endCountDownMillis=");sprintf(tempString, "%d", endCountDownMillis);strcat(webString, tempString);
-    strcat(webString, "<br>FAKE_NUM_LEDS=");sprintf(tempString, "%d", FAKE_NUM_LEDS);strcat(webString, tempString);
-    strcat(webString, "<br>fakeclockrunning=");sprintf(tempString, "%d", fakeclockrunning);strcat(webString, tempString);
-    strcat(webString, "<br>foodSpot=");sprintf(tempString, "%d", foodSpot);strcat(webString, tempString);
-    strcat(webString, "<br>getSlower=");sprintf(tempString, "%d", getSlower);strcat(webString, tempString);
-    strcat(webString, "<br>gmtOffset_sec=");sprintf(tempString, "%d", gmtOffset_sec);strcat(webString, tempString);
-    strcat(webString, "<br>host=");sprintf(tempString, "%s", host);strcat(webString, tempString);
-    strcat(webString, "<br>humiColorSettings=");sprintf(tempString, "%d", humiColorSettings);strcat(webString, tempString);
-    strcat(webString, "<br>humiDisplayType=");sprintf(tempString, "%d", humiDisplayType);strcat(webString, tempString);
-    strcat(webString, "<br>isAsleep=");sprintf(tempString, "%d", isAsleep);strcat(webString, tempString);
-    strcat(webString, "<br>LED_PIN=");sprintf(tempString, "%d", LED_PIN);strcat(webString, tempString);
-    strcat(webString, "<br>LEDS_PER_DIGIT=");sprintf(tempString, "%d", LEDS_PER_DIGIT);strcat(webString, tempString);
-    strcat(webString, "<br>LEDS_PER_SEGMENT=");sprintf(tempString, "%d", LEDS_PER_SEGMENT);strcat(webString, tempString);
-    strcat(webString, "<br>lightSensorValue=");sprintf(tempString, "%d", lightSensorValue);strcat(webString, tempString);
-    strcat(webString, "<br>lightshowMode=");sprintf(tempString, "%d", lightshowMode);strcat(webString, tempString);
-    strcat(webString, "<br>lightshowSpeed=");sprintf(tempString, "%d", lightshowSpeed);strcat(webString, tempString);
-    strcat(webString, "<br>MIC_IN_PIN=");sprintf(tempString, "%d", MIC_IN_PIN);strcat(webString, tempString);
-    strcat(webString, "<br>MILLI_AMPS=");sprintf(tempString, "%d", MILLI_AMPS);strcat(webString, tempString);
-    strcat(webString, "<br>ntpServer=");sprintf(tempString, "%s", ntpServer);strcat(webString, tempString);
-    strcat(webString, "<br>NUM_LEDS=");sprintf(tempString, "%d", NUM_LEDS);strcat(webString, tempString);
-    strcat(webString, "<br>NUMBER_OF_DIGITS=");sprintf(tempString, "%d", NUMBER_OF_DIGITS);strcat(webString, tempString);
-    strcat(webString, "<br>pastelColors=");sprintf(tempString, "%d", pastelColors);strcat(webString, tempString);
-    strcat(webString, "<br>PHOTO_SAMPLES=");sprintf(tempString, "%d", PHOTO_SAMPLES);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[0]=");sprintf(tempString, "%d", photoresisterReadings[0]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[1]=");sprintf(tempString, "%d", photoresisterReadings[1]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[2]=");sprintf(tempString, "%d", photoresisterReadings[2]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[3]=");sprintf(tempString, "%d", photoresisterReadings[3]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[4]=");sprintf(tempString, "%d", photoresisterReadings[4]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[5]=");sprintf(tempString, "%d", photoresisterReadings[5]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[6]=");sprintf(tempString, "%d", photoresisterReadings[6]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[7]=");sprintf(tempString, "%d", photoresisterReadings[7]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[8]=");sprintf(tempString, "%d", photoresisterReadings[8]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[9]=");sprintf(tempString, "%d", photoresisterReadings[9]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[10]=");sprintf(tempString, "%d", photoresisterReadings[10]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[11]=");sprintf(tempString, "%d", photoresisterReadings[11]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[12]=");sprintf(tempString, "%d", photoresisterReadings[12]);strcat(webString, tempString);
-    strcat(webString, "<br>photoresisterReadings[13]=");sprintf(tempString, "%d", photoresisterReadings[13]);strcat(webString, tempString);
-    strcat(webString, "<br>PHOTORESISTER_PIN=");sprintf(tempString, "%d", PHOTORESISTER_PIN);strcat(webString, tempString);
-    strcat(webString, "<br>post_react=");sprintf(tempString, "%d", post_react);strcat(webString, tempString);
-    strcat(webString, "<br>pre_react=");sprintf(tempString, "%d", pre_react);strcat(webString, tempString);
-    strcat(webString, "<br>previousTimeDay=");sprintf(tempString, "%d", previousTimeDay);strcat(webString, tempString);
-    strcat(webString, "<br>previousTimeHour=");sprintf(tempString, "%d", previousTimeHour);strcat(webString, tempString);
-    strcat(webString, "<br>previousTimeMin=");sprintf(tempString, "%d", previousTimeMin);strcat(webString, tempString);
-    strcat(webString, "<br>previousTimeMonth=");sprintf(tempString, "%d", previousTimeMonth);strcat(webString, tempString);
-    strcat(webString, "<br>previousTimeWeek=");sprintf(tempString, "%d", previousTimeWeek);strcat(webString, tempString);
-    strcat(webString, "<br>prevTime=");sprintf(tempString, "%d", prevTime);strcat(webString, tempString);
-    strcat(webString, "<br>prevTime2=");sprintf(tempString, "%d", prevTime2);strcat(webString, tempString);
-    strcat(webString, "<br>randomDayPassed=");sprintf(tempString, "%d", randomDayPassed);strcat(webString, tempString);
-    strcat(webString, "<br>randomHourPassed=");sprintf(tempString, "%d", randomHourPassed);strcat(webString, tempString);
-    strcat(webString, "<br>randomMinPassed=");sprintf(tempString, "%d", randomMinPassed);strcat(webString, tempString);
-    strcat(webString, "<br>randomMonthPassed=");sprintf(tempString, "%d", randomMonthPassed);strcat(webString, tempString);
-    strcat(webString, "<br>randomSpectrumMode=");sprintf(tempString, "%d", randomSpectrumMode);strcat(webString, tempString);
-    strcat(webString, "<br>randomWeekPassed=");sprintf(tempString, "%d", randomWeekPassed);strcat(webString, tempString);
-    strcat(webString, "<br>react=");sprintf(tempString, "%d", react);strcat(webString, tempString);
-    strcat(webString, "<br>readIndex=");sprintf(tempString, "%d", readIndex);strcat(webString, tempString);
-    strcat(webString, "<br>realtimeMode=");sprintf(tempString, "%d", realtimeMode);strcat(webString, tempString);
-    strcat(webString, "<br>scoreboardLeft=");sprintf(tempString, "%d", scoreboardLeft);strcat(webString, tempString);
-    strcat(webString, "<br>scoreboardRight=");sprintf(tempString, "%d", scoreboardRight);strcat(webString, tempString);
-    strcat(webString, "<br>scrollColorSettings=");sprintf(tempString, "%d", scrollColorSettings);strcat(webString, tempString);
-    strcat(webString, "<br>scrollFrequency=");sprintf(tempString, "%d", scrollFrequency);strcat(webString, tempString);
-    strcat(webString, "<br>scrollOptions1=");sprintf(tempString, "%d", scrollOptions1);strcat(webString, tempString);
-    strcat(webString, "<br>scrollOptions2=");sprintf(tempString, "%d", scrollOptions2);strcat(webString, tempString);
-    strcat(webString, "<br>scrollOptions3=");sprintf(tempString, "%d", scrollOptions3);strcat(webString, tempString);
-    strcat(webString, "<br>scrollOptions4=");sprintf(tempString, "%d", scrollOptions4);strcat(webString, tempString);
-    strcat(webString, "<br>scrollOptions5=");sprintf(tempString, "%d", scrollOptions5);strcat(webString, tempString);
-    strcat(webString, "<br>scrollOptions6=");sprintf(tempString, "%d", scrollOptions6);strcat(webString, tempString);
-    strcat(webString, "<br>scrollOptions7=");sprintf(tempString, "%d", scrollOptions7);strcat(webString, tempString);
-    strcat(webString, "<br>scrollOptions8=");sprintf(tempString, "%d", scrollOptions8);strcat(webString, tempString);
-    strcat(webString, "<br>scrollOverride=");sprintf(tempString, "%d", scrollOverride);strcat(webString, tempString);
-    strcat(webString, "<br>scrollText=");sprintf(tempString, "%s", scrollText.c_str());strcat(webString, tempString);
-    strcat(webString, "<br>SEGMENTS_PER_NUMBER=");sprintf(tempString, "%d", SEGMENTS_PER_NUMBER);strcat(webString, tempString);
-    strcat(webString, "<br>sleepTimerCurrent=");sprintf(tempString, "%d", sleepTimerCurrent);strcat(webString, tempString);
-    strcat(webString, "<br>snakeLastDirection=");sprintf(tempString, "%d", snakeLastDirection);strcat(webString, tempString);
-    strcat(webString, "<br>snakePosition=");sprintf(tempString, "%d", snakePosition);strcat(webString, tempString);
-    strcat(webString, "<br>snakeWaiting=");sprintf(tempString, "%d", snakeWaiting);strcat(webString, tempString);
-    strcat(webString, "<br>SPECTRUM_PIXELS=");sprintf(tempString, "%d", SPECTRUM_PIXELS);strcat(webString, tempString);
-    strcat(webString, "<br>spectrumBackgroundSettings=");sprintf(tempString, "%d", spectrumBackgroundSettings);strcat(webString, tempString);
-    strcat(webString, "<br>spectrumColorSettings=");sprintf(tempString, "%d", spectrumColorSettings);strcat(webString, tempString);
-    strcat(webString, "<br>spectrumMode=");sprintf(tempString, "%d", spectrumMode);strcat(webString, tempString);
-    strcat(webString, "<br>spotlightsColorSettings=");sprintf(tempString, "%d", spotlightsColorSettings);strcat(webString, tempString);
-    strcat(webString, "<br>suspendFrequency=");sprintf(tempString, "%d", suspendFrequency);strcat(webString, tempString);
-    strcat(webString, "<br>suspendType=");sprintf(tempString, "%d", suspendType);strcat(webString, tempString);
-    strcat(webString, "<br>tempColorSettings=");sprintf(tempString, "%d", tempColorSettings);strcat(webString, tempString);
-    strcat(webString, "<br>tempDisplayType=");sprintf(tempString, "%d", tempDisplayType);strcat(webString, tempString);
-    strcat(webString, "<br>temperatureCorrection=");sprintf(tempString, "%d", temperatureCorrection);strcat(webString, tempString);
-    strcat(webString, "<br>temperatureSymbol=");sprintf(tempString, "%d", temperatureSymbol);strcat(webString, tempString);
-    strcat(webString, "<br>useSpotlights=");sprintf(tempString, "%d", useSpotlights);strcat(webString, tempString);
-    strcat(webString, "<br>useAudibleAlarm=");sprintf(tempString, "%d", useAudibleAlarm);strcat(webString, tempString);
-    //HTML footer
-    strcat(webString, "</body></html>"); 
-    server.send(200, "text/html", webString ); 
- });
-
-  
+    serializeJson(json, output);
+    server.send(200, "application/json", output);
+  });
 }
 
   

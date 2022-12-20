@@ -1,2193 +1,384 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <script type="text/javascript" src="js/jquery-3.5.1.min.js"></script>
-    <script type="text/javascript" src="js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="js/moment-with-locales.js"></script>
-    <link rel="stylesheet" href="css/bootstrap.min.css">
-<script type="text/javascript">	
-
-function getpastelColors() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("colorPalette1").checked = true;}
-     if (this.responseText == 1) {document.getElementById("colorPalette2").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getpastelColors", true);
-  xhttp.send();
-}
-
-
-function getrangeBrightness() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("rangeBrightness").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getrangeBrightness", true);
-  xhttp.send();
-}
-
-function getsuspendType() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("suspendOff").checked = true;}
-     if (this.responseText == 1) {document.getElementById("digitOff").checked = true;}
-     if (this.responseText == 2) {document.getElementById("shelfOff").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getsuspendType", true);
-  xhttp.send();
-}
-
-function getsuspendFrequency() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-	 if (this.responseText == 0) {document.getElementById("suspendFrequency").selectedIndex = 0;}
-     if (this.responseText == 1) {document.getElementById("suspendFrequency").selectedIndex = 1;}
-     if (this.responseText == 5) {document.getElementById("suspendFrequency").selectedIndex = 2;}
-     if (this.responseText == 10) {document.getElementById("suspendFrequency").selectedIndex = 3;}
-     if (this.responseText == 15) {document.getElementById("suspendFrequency").selectedIndex = 4;}
-     if (this.responseText == 30) {document.getElementById("suspendFrequency").selectedIndex = 5;}
-     if (this.responseText == 45) {document.getElementById("suspendFrequency").selectedIndex = 6;}
-     if (this.responseText == 60) {document.getElementById("suspendFrequency").selectedIndex = 7;}
-    }
-  };
-  xhttp.open("GET", "getsuspendFrequency", true);
-  xhttp.send();
-}
-
-
-function getuseSpotlights() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("useSpotlights").checked = false;}
-     if (this.responseText == 1) {document.getElementById("useSpotlights").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getuseSpotlights", true);
-  xhttp.send();
-}
-
-
-function getClockDisplayType() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("centerTime").checked = true;}
-     if (this.responseText == 1) {document.getElementById("militaryTime").checked = true;}
-     if (this.responseText == 2) {document.getElementById("padZero").checked = true;}
-     if (this.responseText == 3) {document.getElementById("blinkingColon").checked = true;}
-     if (this.responseText == 4) {document.getElementById("newYearsMode").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getClockDisplayType", true);
-  xhttp.send();
-}
-
-				
-function gettemperatureSymbol() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 36) {document.getElementById("tempTypeC").checked = true;}
-     if (this.responseText == 39) {document.getElementById("tempTypeF").checked = true;}
-    }
-  };
-  xhttp.open("GET", "gettemperatureSymbol", true);
-  xhttp.send();
-}
-
-function getClockColorSettings() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("clockColorSettings1").checked = true;}
-     if (this.responseText == 1) {document.getElementById("clockColorSettings2").checked = true;}
-     if (this.responseText == 2) {document.getElementById("clockColorSettings3").checked = true;}
-     if (this.responseText == 3) {document.getElementById("clockColorSettings4").checked = true;}
-     if (this.responseText == 4) {document.getElementById("clockColorSettings5").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getClockColorSettings", true);
-  xhttp.send();
-}
-
-function getDateColorSettings() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("dateColorSettings1").checked = true;}
-     if (this.responseText == 1) {document.getElementById("dateColorSettings2").checked = true;}
-     if (this.responseText == 2) {document.getElementById("dateColorSettings3").checked = true;}
-     if (this.responseText == 3) {document.getElementById("dateColorSettings4").checked = true;}
-     if (this.responseText == 4) {document.getElementById("dateColorSettings5").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getDateColorSettings", true);
-  xhttp.send();
-}
-
-function gettempColorSettings() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("tempColorSettings1").checked = true;}
-     if (this.responseText == 1) {document.getElementById("tempColorSettings2").checked = true;}
-     if (this.responseText == 2) {document.getElementById("tempColorSettings3").checked = true;}
-     if (this.responseText == 3) {document.getElementById("tempColorSettings4").checked = true;}
-     if (this.responseText == 4) {document.getElementById("tempColorSettings5").checked = true;}
-    }
-  };
-  xhttp.open("GET", "gettempColorSettings", true);
-  xhttp.send();
-}
-
-function gethumiColorSettings() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("humiColorSettings1").checked = true;}
-     if (this.responseText == 1) {document.getElementById("humiColorSettings2").checked = true;}
-     if (this.responseText == 2) {document.getElementById("humiColorSettings3").checked = true;}
-     if (this.responseText == 3) {document.getElementById("humiColorSettings4").checked = true;}
-     if (this.responseText == 4) {document.getElementById("humiColorSettings5").checked = true;}
-    }
-  };
-  xhttp.open("GET", "gethumiColorSettings", true);
-  xhttp.send();
-}
-
-function gettempDisplayType() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("tempDegreeType").checked = true;}
-     if (this.responseText == 1) {document.getElementById("tempTypes").checked = true;}
-     if (this.responseText == 2) {document.getElementById("tempDegree").checked = true;}
-     if (this.responseText == 3) {document.getElementById("tempDecimal").checked = true;}
-     if (this.responseText == 4) {document.getElementById("tempJust").checked = true;}
-    }
-  };
-  xhttp.open("GET", "gettempDisplayType", true);
-  xhttp.send();
-}
-
-function gethumiDisplayType() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("humiSymbol").checked = true;}
-     if (this.responseText == 1) {document.getElementById("humiDecimal").checked = true;}
-     if (this.responseText == 2) {document.getElementById("humiJust").checked = true;}
-    }
-  };
-  xhttp.open("GET", "gethumiDisplayType", true);
-  xhttp.send();
-}
-
-
-function gettemperatureCorrection() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-	 if (this.responseText == 5) {document.getElementById("correctionSelect").selectedIndex = 1;}
-     if (this.responseText == 4) {document.getElementById("correctionSelect").selectedIndex = 2;}
-     if (this.responseText == 3) {document.getElementById("correctionSelect").selectedIndex = 3;}
-     if (this.responseText == 2) {document.getElementById("correctionSelect").selectedIndex = 4;}
-     if (this.responseText == 1) {document.getElementById("correctionSelect").selectedIndex = 5;}
-     if (this.responseText == 0) {document.getElementById("correctionSelect").selectedIndex = 6;}
-	 if (this.responseText == -1) {document.getElementById("correctionSelect").selectedIndex = 7;}
-     if (this.responseText == -2) {document.getElementById("correctionSelect").selectedIndex = 8;}
-     if (this.responseText == -3) {document.getElementById("correctionSelect").selectedIndex = 9;}
-     if (this.responseText == -4) {document.getElementById("correctionSelect").selectedIndex = 10;}
-     if (this.responseText == -5) {document.getElementById("correctionSelect").selectedIndex = 11;}
-    }
-  };
-  xhttp.open("GET", "gettemperatureCorrection", true);
-  xhttp.send();
-}
-
-function getColorChangeFrequency() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-	 if (this.responseText == 0) {document.getElementById("colorChangeFrequency").selectedIndex = 1;}
-     if (this.responseText == 1) {document.getElementById("colorChangeFrequency").selectedIndex = 2;}
-     if (this.responseText == 2) {document.getElementById("colorChangeFrequency").selectedIndex = 3;}
-     if (this.responseText == 3) {document.getElementById("colorChangeFrequency").selectedIndex = 4;}
-     if (this.responseText == 4) {document.getElementById("colorChangeFrequency").selectedIndex = 5;}
-     if (this.responseText == 5) {document.getElementById("colorChangeFrequency").selectedIndex = 6;}
-    }
-  };
-  xhttp.open("GET", "getColorChangeFrequency", true);
-  xhttp.send();
-}
-
-function getDateDisplayType() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("militaryDate").checked = true;}
-     if (this.responseText == 1) {document.getElementById("datePadSpace").checked = true;}
-     if (this.responseText == 2) {document.getElementById("centerDate").checked = true;}
-     if (this.responseText == 3) {document.getElementById("dayofWeek").checked = true;}
-     if (this.responseText == 4) {document.getElementById("centerDay").checked = true;}
-     if (this.responseText == 5) {document.getElementById("dateSeparator").checked = true;}
-     if (this.responseText == 6) {document.getElementById("fourYear").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getDateDisplayType", true);
-  xhttp.send();
-}
-
-function getcolonType() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("colonType1").checked = true;}
-     if (this.responseText == 1) {document.getElementById("colonType2").checked = true;}
-     if (this.responseText == 2) {document.getElementById("colonType3").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getcolonType", true);
-  xhttp.send();
-}
-
-function getgmtOffset_sec() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-	 if (this.responseText == -43200) {document.getElementById("timezoneSelect").selectedIndex = 1;}
-	 if (this.responseText == -39600) {document.getElementById("timezoneSelect").selectedIndex = 2;}
-	 if (this.responseText == -36000) {document.getElementById("timezoneSelect").selectedIndex = 3;}
-	 if (this.responseText == -34200) {document.getElementById("timezoneSelect").selectedIndex = 4;}
-	 if (this.responseText == -32400) {document.getElementById("timezoneSelect").selectedIndex = 5;}
-	 if (this.responseText == -28800) {document.getElementById("timezoneSelect").selectedIndex = 6;}
-	 if (this.responseText == -25200) {document.getElementById("timezoneSelect").selectedIndex = 7;}
-	 if (this.responseText == -21600) {document.getElementById("timezoneSelect").selectedIndex = 8;}
-	 if (this.responseText == -18000) {document.getElementById("timezoneSelect").selectedIndex = 9;}
-	 if (this.responseText == -16200) {document.getElementById("timezoneSelect").selectedIndex = 10;}
-	 if (this.responseText == -14400) {document.getElementById("timezoneSelect").selectedIndex = 11;}
-	 if (this.responseText == -12600) {document.getElementById("timezoneSelect").selectedIndex = 12;}
-	 if (this.responseText == -10800) {document.getElementById("timezoneSelect").selectedIndex = 13;}
-	 if (this.responseText == -7200) {document.getElementById("timezoneSelect").selectedIndex = 14;}
-	 if (this.responseText == -3600) {document.getElementById("timezoneSelect").selectedIndex = 15;}
-	 if (this.responseText == 0) {document.getElementById("timezoneSelect").selectedIndex = 16;}
-	 if (this.responseText == 3600) {document.getElementById("timezoneSelect").selectedIndex = 17;}
-	 if (this.responseText == 7200) {document.getElementById("timezoneSelect").selectedIndex = 18;}
-	 if (this.responseText == 10800) {document.getElementById("timezoneSelect").selectedIndex = 19;}
-	 if (this.responseText == 12600) {document.getElementById("timezoneSelect").selectedIndex = 20;}
-	 if (this.responseText == 14400) {document.getElementById("timezoneSelect").selectedIndex = 21;}
-	 if (this.responseText == 16200) {document.getElementById("timezoneSelect").selectedIndex = 22;}
-	 if (this.responseText == 18000) {document.getElementById("timezoneSelect").selectedIndex = 23;}
-	 if (this.responseText == 19800) {document.getElementById("timezoneSelect").selectedIndex = 24;}
-	 if (this.responseText == 20700) {document.getElementById("timezoneSelect").selectedIndex = 25;}
-	 if (this.responseText == 21600) {document.getElementById("timezoneSelect").selectedIndex = 26;}
-	 if (this.responseText == 23400) {document.getElementById("timezoneSelect").selectedIndex = 27;}
-	 if (this.responseText == 25200) {document.getElementById("timezoneSelect").selectedIndex = 28;}
-	 if (this.responseText == 28800) {document.getElementById("timezoneSelect").selectedIndex = 29;}
-	 if (this.responseText == 31500) {document.getElementById("timezoneSelect").selectedIndex = 30;}
-	 if (this.responseText == 32400) {document.getElementById("timezoneSelect").selectedIndex = 31;}
-	 if (this.responseText == 34200) {document.getElementById("timezoneSelect").selectedIndex = 32;}
-	 if (this.responseText == 36000) {document.getElementById("timezoneSelect").selectedIndex = 33;}
-	 if (this.responseText == 37800) {document.getElementById("timezoneSelect").selectedIndex = 34;}
-	 if (this.responseText == 39600) {document.getElementById("timezoneSelect").selectedIndex = 35;}
-	 if (this.responseText == 41400) {document.getElementById("timezoneSelect").selectedIndex = 36;}
-	 if (this.responseText == 43200) {document.getElementById("timezoneSelect").selectedIndex = 37;}
-	 if (this.responseText == 45900) {document.getElementById("timezoneSelect").selectedIndex = 38;}
-	 if (this.responseText == 46800) {document.getElementById("timezoneSelect").selectedIndex = 39;}
-	 if (this.responseText == 50400) {document.getElementById("timezoneSelect").selectedIndex = 40;}
-    }
-  };
-  xhttp.open("GET", "getgmtOffset_sec", true);
-  xhttp.send();
-}
-
-function getDSTime() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("DSTime").checked = false;}
-     if (this.responseText == 1) {document.getElementById("DSTime").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getDSTime", true);
-  xhttp.send();
-}
-
-function getcolorHour() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("colorHour").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getcolorHour", true);
-  xhttp.send();
-}
-
-function getcolorMins() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("colorMins").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getcolorMins", true);
-  xhttp.send();
-}
-
-function getcolorColon() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("colorColon").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getcolorColon", true);
-  xhttp.send();
-}
-
-
-function getdayColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("dayColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getdayColor", true);
-  xhttp.send();
-}
-
-function getmonthColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("monthColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getmonthColor", true);
-  xhttp.send();
-}
-
-function getseparatorColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("separatorColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getseparatorColor", true);
-  xhttp.send();
-}
-
-
-function gettempColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("tempColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "gettempColor", true);
-  xhttp.send();
-}
-
-function gettypeColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("typeColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "gettypeColor", true);
-  xhttp.send();
-}
-
-function getdegreeColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("degreeColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getdegreeColor", true);
-  xhttp.send();
-}
-
-
-
-function gethumiColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("humiColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "gethumiColor", true);
-  xhttp.send();
-}
-
-function getsymbolColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("symbolColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getsymbolColor", true);
-  xhttp.send();
-}
-
-function gethumiDecimalColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("humiDecimalColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "gethumiDecimalColor", true);
-  xhttp.send();
-}
-
-
-function getalarmCD() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("alarmCD").checked = false;}
-     if (this.responseText == 1) {document.getElementById("alarmCD").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getalarmCD", true);
-  xhttp.send();
-}
-
-function getcolorchangeCD() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("colorchangeCD").checked = false;}
-     if (this.responseText == 1) {document.getElementById("colorchangeCD").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getcolorchangeCD", true);
-  xhttp.send();
-}
-
-function getcolorCD() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("colorCD").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getcolorCD", true);
-  xhttp.send();
-}
-
-function getscoreboardColorLeft() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("newscoreboardColorLeft").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getscoreboardColorLeft", true);
-  xhttp.send();
-}
-
-function getscoreboardColorRight() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("newscoreboardColorRight").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getscoreboardColorRight", true);
-  xhttp.send();
-}
-
-function getrandomSpectrumMode() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("randomSpectrumMode").checked = false;}
-     if (this.responseText == 1) {document.getElementById("randomSpectrumMode").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getrandomSpectrumMode", true);
-  xhttp.send();
-}
-
-function getspectrumBackground() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("spectrumBackground").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getspectrumBackground", true);
-  xhttp.send();
-}
-
-function getspectrumColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("spectrumColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getspectrumColor", true);
-  xhttp.send();
-}
-function getspectrumBackgroundSettings() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("spectrumBackgroundSettings1").checked = true;}
-     if (this.responseText == 1) {document.getElementById("spectrumBackgroundSettings2").checked = true;}
-     if (this.responseText == 2) {document.getElementById("spectrumBackgroundSettings3").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getspectrumBackgroundSettings", true);
-  xhttp.send();
-}
-
-function getspectrumColorSettings() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("spectrumColorSettings1").checked = true;}
-     if (this.responseText == 1) {document.getElementById("spectrumColorSettings2").checked = true;}
-     if (this.responseText == 2) {document.getElementById("spectrumColorSettings3").checked = true;}
-     if (this.responseText == 3) {document.getElementById("spectrumColorSettings4").checked = true;}
-     if (this.responseText == 4) {document.getElementById("spectrumColorSettings5").checked = true;}
-     if (this.responseText == 5) {document.getElementById("spectrumColorSettings6").checked = true;}
-     if (this.responseText == 6) {document.getElementById("spectrumColorSettings7").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getspectrumColorSettings", true);
-  xhttp.send();
-}
-
-function getspotlightsColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("spotlightsColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getspotlightsColor", true);
-  xhttp.send();
-}
-function getspotlightsColorSettings() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("spotlightsColorSettings1").checked = true;}
-     if (this.responseText == 1) {document.getElementById("spotlightsColorSettings2").checked = true;}
-     if (this.responseText == 2) {document.getElementById("spotlightsColorSettings3").checked = true;}
-     if (this.responseText == 3) {document.getElementById("spotlightsColorSettings4").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getspotlightsColorSettings", true);
-  xhttp.send();
-}
-
-
-function getscrollFrequency() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 1) {document.getElementById("scrollFrequency").selectedIndex = 1;}
-     if (this.responseText == 2) {document.getElementById("scrollFrequency").selectedIndex = 2;}
-     if (this.responseText == 3) {document.getElementById("scrollFrequency").selectedIndex = 3;}
-     if (this.responseText == 4) {document.getElementById("scrollFrequency").selectedIndex = 4;}
-     if (this.responseText == 5) {document.getElementById("scrollFrequency").selectedIndex = 5;}
-     if (this.responseText == 6) {document.getElementById("scrollFrequency").selectedIndex = 6;}
-    }
-  };
-  xhttp.open("GET", "getscrollFrequency", true);
-  xhttp.send();
-}
-
-
-
-function getscrollOptions1() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("scrollOptions1").checked = false;}
-     if (this.responseText == 1) {document.getElementById("scrollOptions1").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getscrollOptions1", true);
-  xhttp.send();
-}
-function getscrollOptions2() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("scrollOptions2").checked = false;}
-     if (this.responseText == 1) {document.getElementById("scrollOptions2").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getscrollOptions2", true);
-  xhttp.send();
-}
-function getscrollOptions3() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("scrollOptions3").checked = false;}
-     if (this.responseText == 1) {document.getElementById("scrollOptions3").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getscrollOptions3", true);
-  xhttp.send();
-}
-function getscrollOptions4() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("scrollOptions4").checked = false;}
-     if (this.responseText == 1) {document.getElementById("scrollOptions4").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getscrollOptions4", true);
-  xhttp.send();
-}
-function getscrollOptions5() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("scrollOptions5").checked = false;}
-     if (this.responseText == 1) {document.getElementById("scrollOptions5").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getscrollOptions5", true);
-  xhttp.send();
-}
-function getscrollOptions6() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("scrollOptions6").checked = false;}
-     if (this.responseText == 1) {document.getElementById("scrollOptions6").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getscrollOptions6", true);
-  xhttp.send();
-}
-function getscrollOptions7() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("scrollOptions7").checked = false;}
-     if (this.responseText == 1) {document.getElementById("scrollOptions7").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getscrollOptions7", true);
-  xhttp.send();
-}
-function getscrollOptions8() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("scrollOptions8").checked = false;}
-     if (this.responseText == 1) {document.getElementById("scrollOptions8").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getscrollOptions8", true);
-  xhttp.send();
-}
-
-//  text box options go here
-function getscrollText() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-	 document.getElementById("scrollText").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getscrollText", true);
-  xhttp.send();
-}
-
-
-
-function getscrollOverride() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("scrollOverride").checked = false;}
-     if (this.responseText == 1) {document.getElementById("scrollOverride").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getscrollOverride", true);
-  xhttp.send();
-}
-
-function getscrollColor() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     document.getElementById("scrollColor").value = this.responseText;
-    }
-  };
-  xhttp.open("GET", "getscrollColor", true);
-  xhttp.send();
-}
-
-
-
-function getscrollColorSettings() {
-  var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-     if (this.responseText == 0) {document.getElementById("scrollColorSettings1").checked = true;}
-     if (this.responseText == 1) {document.getElementById("scrollColorSettings2").checked = true;}
-    }
-  };
-  xhttp.open("GET", "getscrollColorSettings", true);
-  xhttp.send();
-}
-
-
-
-
-window.addEventListener("load", myInit, true); function myInit(){
-	getpastelColors()
-
-	getuseSpotlights()
-	getrangeBrightness()
-
-
-	getsuspendType()
-	getsuspendFrequency()  
-
-	gettemperatureSymbol()
-	getClockColorSettings()
-	getDateColorSettings()
-	gettempColorSettings()
-	gethumiColorSettings()
-	gettempDisplayType()
-	gethumiDisplayType()
-	gettemperatureCorrection()
-	getcolonType()
-	getColorChangeFrequency()
-	getgmtOffset_sec()
-	getDSTime()
-	getClockDisplayType()
-	getDateDisplayType()
-
-	getcolorHour()
-	getcolorMins()
-	getcolorColon()
-
-	getdayColor()   
-	getmonthColor()   
-	getseparatorColor()   
-
-	gettempColor()
-	gettypeColor()
-	getdegreeColor()
-	gethumiColor()
-	getsymbolColor()
-	gethumiDecimalColor()
-	getcolorCD()
-	getalarmCD()
-	getcolorchangeCD()
-	getscoreboardColorLeft()
-	getscoreboardColorRight()
-
-	getrandomSpectrumMode()
-	getspectrumColor()
-	getspectrumBackground()
-	getspectrumColorSettings()
-	getspectrumBackgroundSettings()
-
-	getspotlightsColor()
-	getspotlightsColorSettings()
-
-	getscrollFrequency()
-	getscrollOptions1()
-	getscrollOptions2()
-	getscrollOptions3()
-	getscrollOptions4()
-	getscrollOptions5()
-	getscrollOptions6()
-	getscrollOptions7()
-	getscrollOptions8()
-	getscrollText()
-	getscrollOverride()
-	getscrollColor()
-	getscrollColorSettings()
-
-  };
-
-var colorHour;
-var defaultColorHour = "#ff0000";
-var defaultColorMins = "#ff0000";
-var defaultColorColon = "#ff0000";
-var colorMins;
-var colorColon;
-var ClockColorSettings;
-
-var defaultmonthColor = "#ff0000";
-var defaultdayColor = "#ff0000";
-var defaultseparatorColor = "#ff0000";
-var monthColor;
-var dayColor;
-var separatorColor;
-
-var defaulttempColor = "#ff0000";
-var defaulttypeColor = "#ff0000";
-var defaultdegreeColor = "#ff0000";
-var tempColor;
-var typeColor;
-var degreeColor;
-
-var defaulthumiColor = "#ff0000";
-var defaultsymbolColor = "#ff0000";
-var defaulthumiDecimalColor = "#ff0000";
-var humiColor;
-var symbolColor;
-var humiDecimalColor;
-
-var defaultcolorCD = "#ff0000";
-var colorCD;
-
-var newscoreboardColorLeft;
-var defaultnewscoreboardColorLeft = "#ff0000";
-
-var newscoreboardColorRight;
-var defaultnewscoreboardColorRight = "#ff0000";
-
-var defaultspectrumBackground = "#000000";
-var spectrumBackground;
-
-var defaultspectrumColor = "#ff0000";
-var spectrumColor;
-
-var defaultspotlightsColor = "#c1cc4e";
-var spotlightsColor;
-
-var defaultscrollColor = "#ffffff";
-var scrollColor;
-
-
-window.addEventListener("load", startup, false);
-
-function startup() {
-  
-  useSpotlights = document.querySelector("#useSpotlights");
-  useSpotlights.addEventListener("input", updateuseSpotlights, false);
-
-  
-  colorPalette1 = document.querySelector("#colorPalette1");
-  colorPalette1.addEventListener("input", updateColorPalette, false);
-  colorPalette2 = document.querySelector("#colorPalette2");
-  colorPalette2.addEventListener("input", updateColorPalette, false);
-  
-  colorChangeFrequency = document.querySelector("#colorChangeFrequency");
-  colorChangeFrequency.addEventListener("input", updateColorChangeFrequency, false); 
-    
-
-  suspendOff = document.querySelector("#suspendOff");
-  suspendOff.addEventListener("input", updatesuspendType, false);
-  digitOff = document.querySelector("#digitOff");
-  digitOff.addEventListener("input", updatesuspendType, false);
-  shelfOff = document.querySelector("#shelfOff");
-  shelfOff.addEventListener("input", updatesuspendType, false);
-  
-  suspendFrequency = document.querySelector("#suspendFrequency");
-  suspendFrequency.addEventListener("input", updatesuspendFrequency, false)	
-	
-  
-  centerTime = document.querySelector("#centerTime");
-  centerTime.addEventListener("input", updateClockDisplayType, false);
-  militaryTime = document.querySelector("#militaryTime");
-  militaryTime.addEventListener("input", updateClockDisplayType, false);
-  padZero = document.querySelector("#padZero");
-  padZero.addEventListener("input", updateClockDisplayType, false);
-  blinkingColon = document.querySelector("#blinkingColon");
-  blinkingColon.addEventListener("input", updateClockDisplayType, false);
-  newYearsMode = document.querySelector("#newYearsMode");
-  newYearsMode.addEventListener("input", updateClockDisplayType, false);
-  	
-	
-  
-  colonType1 = document.querySelector("#colonType1");
-  colonType1.addEventListener("input", updateColonType, false);
-  colonType2 = document.querySelector("#colonType2");
-  colonType2.addEventListener("input", updateColonType, false);
-  colonType3 = document.querySelector("#colonType3");
-  colonType3.addEventListener("input", updateColonType, false);
-  
-  timezoneSetting = document.querySelector("#timezoneSelect");
-  timezoneSetting.addEventListener("input", updateTimezoneSettings, false); 
-  
-  DSTime = document.querySelector("#DSTime");
-  DSTime.addEventListener("input", updateDSTime, false);
-    
-	
-  colorHour = document.querySelector("#colorHour");
-  colorHour.value = defaultColorHour;
-  colorHour.addEventListener("input", updateHourColor, false);
-  colorHour.addEventListener("change", updateHourColor, false);
-  
-  colorMins = document.querySelector("#colorMins");
-  colorMins.value = defaultColorMins;
-  colorMins.addEventListener("input", updateMinsColor, false);
-  colorMins.addEventListener("change", updateMinsColor, false);
-  
-  colorColon = document.querySelector("#colorColon");
-  colorColon.value = defaultColorColon;
-  colorColon.addEventListener("input", updateColonColor, false);
-  colorColon.addEventListener("change", updateColonColor, false);
-	
-	
-  clockColorSettings1 = document.querySelector("#clockColorSettings1");
-  clockColorSettings1.addEventListener("input", updateClockColorSettings, false);
-  clockColorSettings2 = document.querySelector("#clockColorSettings2");
-  clockColorSettings2.addEventListener("input", updateClockColorSettings, false);
-  clockColorSettings3 = document.querySelector("#clockColorSettings3");
-  clockColorSettings3.addEventListener("input", updateClockColorSettings, false);
-  clockColorSettings4 = document.querySelector("#clockColorSettings4");
-  clockColorSettings4.addEventListener("input", updateClockColorSettings, false);
-  clockColorSettings5 = document.querySelector("#clockColorSettings5");
-  clockColorSettings5.addEventListener("input", updateClockColorSettings, false);
-
-  militaryDate = document.querySelector("#militaryDate");
-  militaryDate.addEventListener("input", updateDateDisplayType, false);
-    
-  datePadSpace = document.querySelector("#datePadSpace");
-  datePadSpace.addEventListener("input", updateDateDisplayType, false);
-    
-  centerDate = document.querySelector("#centerDate");
-  centerDate.addEventListener("input", updateDateDisplayType, false);
-    
-  dayofWeek = document.querySelector("#dayofWeek");
-  dayofWeek.addEventListener("input", updateDateDisplayType, false);
-    
-  centerDay = document.querySelector("#centerDay");
-  centerDay.addEventListener("input", updateDateDisplayType, false);
-    
-  dateSeparator = document.querySelector("#dateSeparator");
-  dateSeparator.addEventListener("input", updateDateDisplayType, false);
-    
-  fourYear = document.querySelector("#fourYear");
-  fourYear.addEventListener("input", updateDateDisplayType, false);
-    
-  monthColor = document.querySelector("#monthColor");
-  monthColor.value = defaultmonthColor;
-  monthColor.addEventListener("input", updatemonthColor, false);
-  monthColor.addEventListener("change", updatemonthColor, false);
-  
-  dayColor = document.querySelector("#dayColor");
-  dayColor.value = defaultdayColor;
-  dayColor.addEventListener("input", updatedayColor, false);
-  dayColor.addEventListener("change", updatedayColor, false);
-  
-  separatorColor = document.querySelector("#separatorColor");
-  separatorColor.value = defaultseparatorColor;
-  separatorColor.addEventListener("input", updateseparatorColor, false);
-  separatorColor.addEventListener("change", updateseparatorColor, false); 
-  
-  
-  dateColorSettings1 = document.querySelector("#dateColorSettings1");
-  dateColorSettings1.addEventListener("input", updateDateColorSettings, false);
-  dateColorSettings2 = document.querySelector("#dateColorSettings2");
-  dateColorSettings2.addEventListener("input", updateDateColorSettings, false);
-  dateColorSettings3 = document.querySelector("#dateColorSettings3");
-  dateColorSettings3.addEventListener("input", updateDateColorSettings, false);
-  dateColorSettings4 = document.querySelector("#dateColorSettings4");
-  dateColorSettings4.addEventListener("input", updateDateColorSettings, false);
-  dateColorSettings5 = document.querySelector("#dateColorSettings5");
-  dateColorSettings5.addEventListener("input", updateDateColorSettings, false);
-  
-  tempTypeC = document.querySelector("#tempTypeC");
-  tempTypeC.addEventListener("input", updateTempType, false); 
-  tempTypeF = document.querySelector("#tempTypeF");
-  tempTypeF.addEventListener("input", updateTempType, false);
-  
-
-  correctionSelect = document.querySelector("#correctionSelect");
-  correctionSelect.addEventListener("input", updateCorrectionSelect, false); 
-
-
-  tempDegreeType = document.querySelector("#tempDegreeType");
-  tempDegreeType.addEventListener("input", updateTempDisplayType, false);
-  tempTypes = document.querySelector("#tempTypes");
-  tempTypes.addEventListener("input", updateTempDisplayType, false);
-  tempDegree = document.querySelector("#tempDegree");
-  tempDegree.addEventListener("input", updateTempDisplayType, false);
-  tempDecimal = document.querySelector("#tempDecimal");
-  tempDecimal.addEventListener("input", updateTempDisplayType, false);
-  tempJust = document.querySelector("#tempJust");
-  tempJust.addEventListener("input", updateTempDisplayType, false);
-  
- 
-  tempColor = document.querySelector("#tempColor");
-  tempColor.value = defaulttempColor;
-  tempColor.addEventListener("input", updateTempColor, false);
-  tempColor.addEventListener("change", updateTempColor, false);
-  
-  typeColor = document.querySelector("#typeColor");
-  typeColor.value = defaulttypeColor;
-  typeColor.addEventListener("input", updateTypeColor, false);
-  typeColor.addEventListener("change", updateTypeColor, false);
-  
-  degreeColor = document.querySelector("#degreeColor");
-  degreeColor.value = defaultdegreeColor;
-  degreeColor.addEventListener("input", updateDegreeColor, false);
-  degreeColor.addEventListener("change", updateDegreeColor, false); 
-  
-  
-  tempColorSettings1 = document.querySelector("#tempColorSettings1");
-  tempColorSettings1.addEventListener("input", updateTempColorSettings, false);
-  tempColorSettings2 = document.querySelector("#tempColorSettings2");
-  tempColorSettings2.addEventListener("input", updateTempColorSettings, false);
-  tempColorSettings3 = document.querySelector("#tempColorSettings3");
-  tempColorSettings3.addEventListener("input", updateTempColorSettings, false);
-  tempColorSettings4 = document.querySelector("#tempColorSettings4");
-  tempColorSettings4.addEventListener("input", updateTempColorSettings, false);
-  tempColorSettings5 = document.querySelector("#tempColorSettings5");
-  tempColorSettings5.addEventListener("input", updateTempColorSettings, false);
-  
-  humiSymbol = document.querySelector("#humiSymbol");
-  humiSymbol.addEventListener("input", updateHumiDisplayType, false);
-  humiDecimal = document.querySelector("#humiDecimal");
-  humiDecimal.addEventListener("input", updateHumiDisplayType, false);
-  humiJust = document.querySelector("#humiJust");
-  humiJust.addEventListener("input", updateHumiDisplayType, false);
-  
- 
-  humiColor = document.querySelector("#humiColor");
-  humiColor.value = defaulthumiColor;
-  humiColor.addEventListener("input", updateHumiColor, false);
-  humiColor.addEventListener("change", updateHumiColor, false);
-  
-  symbolColor = document.querySelector("#symbolColor");
-  symbolColor.value = defaultsymbolColor;
-  symbolColor.addEventListener("input", updateSymbolColor, false);
-  symbolColor.addEventListener("change", updateSymbolColor, false);
-  
-  humiDecimalColor = document.querySelector("#humiDecimalColor");
-  humiDecimalColor.value = defaulthumiDecimalColor;
-  humiDecimalColor.addEventListener("input", updateHumiDecimalColor, false);
-  humiDecimalColor.addEventListener("change", updateHumiDecimalColor, false); 
-  
-  
-  humiColorSettings1 = document.querySelector("#humiColorSettings1");
-  humiColorSettings1.addEventListener("input", updateHumiColorSettings, false);
-  humiColorSettings2 = document.querySelector("#humiColorSettings2");
-  humiColorSettings2.addEventListener("input", updateHumiColorSettings, false);
-  humiColorSettings3 = document.querySelector("#humiColorSettings3");
-  humiColorSettings3.addEventListener("input", updateHumiColorSettings, false);
-  humiColorSettings4 = document.querySelector("#humiColorSettings4");
-  humiColorSettings4.addEventListener("input", updateHumiColorSettings, false);
-  humiColorSettings5 = document.querySelector("#humiColorSettings5");
-  humiColorSettings5.addEventListener("input", updateHumiColorSettings, false);
-
-  alarmCD = document.querySelector("#alarmCD");
-  alarmCD.addEventListener("input", updatealarmCD, false);
-  
-  colorchangeCD = document.querySelector("#colorchangeCD");
-  colorchangeCD.addEventListener("input", updatecolorchangeCD, false);
-
-  colorCD = document.querySelector("#colorCD");
-  colorCD.value = defaultcolorCD;
-  colorCD.addEventListener("input", updatecolorCD, false);
-  colorCD.addEventListener("change", updatecolorCD, false);
-
-  newscoreboardColorLeft = document.querySelector("#newscoreboardColorLeft");
-  newscoreboardColorLeft.value = defaultnewscoreboardColorLeft;
-  newscoreboardColorLeft.addEventListener("input", updatescoreboardColorLeft, false);
-  newscoreboardColorLeft.addEventListener("change", updatescoreboardColorLeft, false);
-
-  newscoreboardColorRight = document.querySelector("#newscoreboardColorRight");
-  newscoreboardColorRight.value = defaultnewscoreboardColorRight;
-  newscoreboardColorRight.addEventListener("input", updatescoreboardColorRight, false);
-  newscoreboardColorRight.addEventListener("change", updatescoreboardColorRight, false);  
-  
-  
-  randomSpectrumMode = document.querySelector("#randomSpectrumMode");
-  randomSpectrumMode.addEventListener("input", updaterandomSpectrumMode, false);
- 
-  spectrumBackground = document.querySelector("#spectrumBackground");
-  spectrumBackground.value = defaultspectrumBackground;
-  spectrumBackground.addEventListener("input", updatespectrumBackground, false);
-  spectrumBackground.addEventListener("change", updatespectrumBackground, false);
- 
-  spectrumColor = document.querySelector("#spectrumColor");
-  spectrumColor.value = defaultspectrumColor;
-  spectrumColor.addEventListener("input", updatespectrumColor, false);
-  spectrumColor.addEventListener("change", updatespectrumColor, false);
-  
-    
-  spectrumBackgroundSettings1 = document.querySelector("#spectrumBackgroundSettings1");
-  spectrumBackgroundSettings1.addEventListener("input", updatespectrumBackgroundSettings, false);
-  spectrumBackgroundSettings2 = document.querySelector("#spectrumBackgroundSettings2");
-  spectrumBackgroundSettings2.addEventListener("input", updatespectrumBackgroundSettings, false);
-  spectrumBackgroundSettings3 = document.querySelector("#spectrumBackgroundSettings3");
-  spectrumBackgroundSettings3.addEventListener("input", updatespectrumBackgroundSettings, false);
-    
-  spectrumColorSettings1 = document.querySelector("#spectrumColorSettings1");
-  spectrumColorSettings1.addEventListener("input", updatespectrumColorSettings, false);
-  spectrumColorSettings2 = document.querySelector("#spectrumColorSettings2");
-  spectrumColorSettings2.addEventListener("input", updatespectrumColorSettings, false);
-  spectrumColorSettings3 = document.querySelector("#spectrumColorSettings3");
-  spectrumColorSettings3.addEventListener("input", updatespectrumColorSettings, false);
-  spectrumColorSettings4 = document.querySelector("#spectrumColorSettings4");
-  spectrumColorSettings4.addEventListener("input", updatespectrumColorSettings, false);
-  spectrumColorSettings5 = document.querySelector("#spectrumColorSettings5");
-  spectrumColorSettings5.addEventListener("input", updatespectrumColorSettings, false);
-  spectrumColorSettings6 = document.querySelector("#spectrumColorSettings6");
-  spectrumColorSettings6.addEventListener("input", updatespectrumColorSettings, false);
-  spectrumColorSettings7 = document.querySelector("#spectrumColorSettings7");
-  spectrumColorSettings7.addEventListener("input", updatespectrumColorSettings, false);
-  
-  
-  spotlightsColor = document.querySelector("#spotlightsColor");
-  spotlightsColor.value = defaultspotlightsColor;
-  spotlightsColor.addEventListener("input", updatespotlightsColor, false);
-  spotlightsColor.addEventListener("change", updatespotlightsColor, false);
-  
-
-  rangeBrightness = document.querySelector("#rangeBrightness");
-  rangeBrightness.addEventListener("input", updaterangeBrightness, false); 
-  
-  spotlightsColorSettings1 = document.querySelector("#spotlightsColorSettings1");
-  spotlightsColorSettings1.addEventListener("input", updatespotlightsColorSettings, false);
-  spotlightsColorSettings2 = document.querySelector("#spotlightsColorSettings2");
-  spotlightsColorSettings2.addEventListener("input", updatespotlightsColorSettings, false);
-  spotlightsColorSettings3 = document.querySelector("#spotlightsColorSettings3");
-  spotlightsColorSettings3.addEventListener("input", updatespotlightsColorSettings, false);
-  spotlightsColorSettings4 = document.querySelector("#spotlightsColorSettings4");
-  spotlightsColorSettings4.addEventListener("input", updatespotlightsColorSettings, false);
-
-
-  scrollFrequency = document.querySelector("#scrollFrequency");
-  scrollFrequency.addEventListener("input", updatescrollFrequency, false); 
-  
-  scrollOptions1 = document.querySelector("#scrollOptions1");
-  scrollOptions1.addEventListener("input", updatescrollOptions1, false);
-  
-  scrollOptions2 = document.querySelector("#scrollOptions2");
-  scrollOptions2.addEventListener("input", updatescrollOptions2, false);
-  
-  scrollOptions3 = document.querySelector("#scrollOptions3");
-  scrollOptions3.addEventListener("input", updatescrollOptions3, false);
-  
-  scrollOptions4 = document.querySelector("#scrollOptions4");
-  scrollOptions4.addEventListener("input", updatescrollOptions4, false);
-  
-  scrollOptions5 = document.querySelector("#scrollOptions5");
-  scrollOptions5.addEventListener("input", updatescrollOptions5, false);
-  
-  scrollOptions6 = document.querySelector("#scrollOptions6");
-  scrollOptions6.addEventListener("input", updatescrollOptions6, false);
-  
-  scrollOptions7 = document.querySelector("#scrollOptions7");
-  scrollOptions7.addEventListener("input", updatescrollOptions7, false);
-  
-  scrollOptions8 = document.querySelector("#scrollOptions8");
-  scrollOptions8.addEventListener("input", updatescrollOptions8, false);
-  
-  scrollText = document.querySelector("#scrollText");
-  scrollText.addEventListener("input", updatescrollText, false);
-  scrollText.addEventListener("change", updatescrollText, false);
-
-
-  scrollOverride = document.querySelector("#scrollOverride");
-  scrollOverride.addEventListener("input", updatescrollOverride, false);
-  
-  scrollColor = document.querySelector("#scrollColor");
-  scrollColor.value = defaultscrollColor;
-  scrollColor.addEventListener("input", updatescrollColor, false);
-  scrollColor.addEventListener("change", updatescrollColor, false);
-  
-  scrollColorSettings1 = document.querySelector("#scrollColorSettings1");
-  scrollColorSettings1.addEventListener("input", updatescrollColorSettings, false);
-  scrollColorSettings2 = document.querySelector("#scrollColorSettings2");
-  scrollColorSettings2.addEventListener("input", updatescrollColorSettings, false);
-  
-  
-  
-}
-
-function updateColorPalette(event) {
-ColorPalette = event.target.value; console.log(ColorPalette); $.post("/updatePastelColors", { ColorPalette: ColorPalette });
-}
-function updateColorChangeFrequency(event) {
-ColorChangeFrequency = event.target.value; console.log(ColorChangeFrequency); $.post("/updateColorChangeFrequency", { ColorChangeFrequency: ColorChangeFrequency });
-}
-
-function updatesuspendType(event) {
-suspendType = event.target.value; console.log(suspendType); $.post("/updatesuspendType", { suspendType: suspendType });
-}
-
-function updatesuspendFrequency(event) {
-suspendFrequency = event.target.value; console.log(suspendFrequency); $.post("/updatesuspendFrequency", { suspendFrequency: suspendFrequency });
-}
-
-function updateuseSpotlights(event) {
-useSpotlights = event.target.checked; console.log(useSpotlights); $.post("/updateuseSpotlights", { useSpotlights: useSpotlights });
-}
-
-function updateClockDisplayType(event) {
-ClockDisplayType = event.target.value; console.log(ClockDisplayType); $.post("/updateClockDisplayType", { ClockDisplayType: ClockDisplayType });
-}
-
-
-function updateColonType(event) {
-ColonType = event.target.value; console.log(ColonType); $.post("/updateColonType", { ColonType: ColonType });
-}
-function updateTimezoneSettings(event) {
-TimezoneSetting = event.target.value; console.log(TimezoneSetting); $.post("/updateTimezoneSettings", { TimezoneSetting: TimezoneSetting });
-}
-function updateDSTime(event) {
-DSTime = event.target.checked; console.log(DSTime); $.post("/updateDSTime", { DSTime: DSTime });
-}
-
-function updateHourColor(event) {
-colorHour = event.target.value; console.log(colorHour);$.post("/updateHourColor", hexToRgb(colorHour));
-}
-function updateMinsColor(event) {
-colorMins = event.target.value; console.log(colorMins); $.post("/updateMinsColor", hexToRgb(colorMins));
-}
-function updateColonColor(event) {
-colorColon = event.target.value; console.log(colorColon); $.post("/updateColonColor", hexToRgb(colorColon));
-}
-
-function updateClockColorSettings(event) {
-ClockColorSettings = event.target.value; console.log(ClockColorSettings); $.post("/updateClockColorSettings", { ClockColorSettings: ClockColorSettings });
-}
-
-
-function updateDateDisplayType(event) {
-DateDisplayType = event.target.value; console.log(DateDisplayType); $.post("/updateDateDisplayType", { DateDisplayType: DateDisplayType });
-}
-
-function updatemonthColor(event) {
-monthColor = event.target.value; console.log(monthColor);$.post("/updatemonthColor", hexToRgb(monthColor));
-}
-function updatedayColor(event) {
-dayColor = event.target.value; console.log(dayColor); $.post("/updatedayColor", hexToRgb(dayColor));
-}
-function updateseparatorColor(event) {
-separatorColor = event.target.value; console.log(separatorColor); $.post("/updateseparatorColor", hexToRgb(separatorColor));
-}
-
-function updateDateColorSettings(event) {
-DateColorSettings = event.target.value; console.log(DateColorSettings); $.post("/updateDateColorSettings", { DateColorSettings: DateColorSettings });
-}
-
-
-
-function updateTempType(event) {
-TempType = event.target.value; console.log(TempType); $.post("/updateTempType", { TempType: TempType });
-}
-
-function updateCorrectionSelect(event) {
-CorrectionSelect = event.target.value; console.log(CorrectionSelect); $.post("/updateCorrectionSelect", { CorrectionSelect: CorrectionSelect });
-}
-
-function updateTempDisplayType(event) {
-TempDisplayType = event.target.value; console.log(TempDisplayType); $.post("/updateTempDisplayType", { TempDisplayType: TempDisplayType });
-}
-
-function updateTempColor(event) {
-TempColor = event.target.value; console.log(TempColor);$.post("/updateTempColor", hexToRgb(TempColor));
-}
-function updateTypeColor(event) {
-TypeColor = event.target.value; console.log(TypeColor); $.post("/updateTypeColor", hexToRgb(TypeColor));
-}
-function updateDegreeColor(event) {
-DegreeColor = event.target.value; console.log(DegreeColor); $.post("/updateDegreeColor", hexToRgb(DegreeColor));
-}
-
-function updateTempColorSettings(event) {
-TempColorSettings = event.target.value; console.log(TempColorSettings); $.post("/updateTempColorSettings", { TempColorSettings: TempColorSettings });
-}
-
-
-
-
-function updateHumiDisplayType(event) {
-HumiDisplayType = event.target.value; console.log(HumiDisplayType); $.post("/updateHumiDisplayType", { HumiDisplayType: HumiDisplayType });
-}
-
-function updateHumiColor(event) {
-HumiColor = event.target.value; console.log(HumiColor);$.post("/updateHumiColor", hexToRgb(HumiColor));
-}
-function updateSymbolColor(event) {
-SymbolColor = event.target.value; console.log(SymbolColor); $.post("/updateSymbolColor", hexToRgb(SymbolColor));
-}
-function updateHumiDecimalColor(event) {
-HumiDecimalColor = event.target.value; console.log(HumiDecimalColor); $.post("/updateHumiDecimalColor", hexToRgb(HumiDecimalColor));
-}
-
-function updateHumiColorSettings(event) {
-HumiColorSettings = event.target.value; console.log(HumiColorSettings); $.post("/updateHumiColorSettings", { HumiColorSettings: HumiColorSettings });
-}
-
-function updatealarmCD(event) {
-alarmCD = event.target.checked; console.log(alarmCD); $.post("/updatealarmCD", { alarmCD: alarmCD });
-}
-
-function updatecolorchangeCD(event) {
-colorchangeCD = event.target.checked; console.log(colorchangeCD); $.post("/updatecolorchangeCD", { colorchangeCD: colorchangeCD });
-}
-
-function updatecolorCD(event) {
-colorCD = event.target.value; console.log(colorCD); $.post("/updatecolorCD", hexToRgb(colorCD));
-}
-
-function updatescoreboardColorRight(event) {
-newscoreboardColorRight = event.target.value; console.log(newscoreboardColorRight);$.post("/updatescoreboardColorRight", hexToRgb(newscoreboardColorRight));
-}
-
-function updatescoreboardColorLeft(event) {
-newscoreboardColorLeft = event.target.value; console.log(newscoreboardColorLeft);$.post("/updatescoreboardColorLeft", hexToRgb(newscoreboardColorLeft));
-}
-
-function updaterandomSpectrumMode(event) {
-randomSpectrumMode = event.target.checked; console.log(randomSpectrumMode); $.post("/updaterandomSpectrumMode", { randomSpectrumMode: randomSpectrumMode });
-}
-
-function updatespectrumBackground(event) {
-spectrumBackground = event.target.value; console.log(spectrumBackground); $.post("/updatespectrumBackground", hexToRgb(spectrumBackground));
-}
-
-function updatespectrumColor(event) {
-spectrumColor = event.target.value; console.log(spectrumColor); $.post("/updatespectrumColor", hexToRgb(spectrumColor));
-}
-
-function updatespectrumBackgroundSettings(event) {
-spectrumBackgroundSettings = event.target.value; console.log(spectrumBackgroundSettings); $.post("/updatespectrumBackgroundSettings", { spectrumBackgroundSettings: spectrumBackgroundSettings });
-}
-
-function updatespectrumColorSettings(event) {
-spectrumColorSettings = event.target.value; console.log(spectrumColorSettings); $.post("/updatespectrumColorSettings", { spectrumColorSettings: spectrumColorSettings });
-}
-
-function updaterangeBrightness(event) {
-rangeBrightness = event.target.value; console.log(rangeBrightness); $.post("/updaterangeBrightness", { rangeBrightness: rangeBrightness });
-}
-
-
-function updatespotlightsColor(event) {
-spotlightsColor = event.target.value; console.log(spotlightsColor); $.post("/updatespotlightsColor", hexToRgb(spotlightsColor));
-}
-
-function updatespotlightsColorSettings(event) {
-spotlightsColorSettings = event.target.value; console.log(spotlightsColorSettings); $.post("/updatespotlightsColorSettings", { spotlightsColorSettings: spotlightsColorSettings });
-}
-
-function updatescrollFrequency(event) {
-scrollFrequency = event.target.value; console.log(scrollFrequency); $.post("/updatescrollFrequency", { scrollFrequency: scrollFrequency });
-}
-
-function updatescrollOptions1(event) {
-scrollOptions1 = event.target.checked; console.log(scrollOptions1); $.post("/updatescrollOptions1", { scrollOptions1: scrollOptions1 });
-}
-
-function updatescrollOptions2(event) {
-scrollOptions2 = event.target.checked; console.log(scrollOptions2); $.post("/updatescrollOptions2", { scrollOptions2: scrollOptions2 });
-}
-
-function updatescrollOptions3(event) {
-scrollOptions3 = event.target.checked; console.log(scrollOptions3); $.post("/updatescrollOptions3", { scrollOptions3: scrollOptions3 });
-}
-
-function updatescrollOptions4(event) {
-scrollOptions4 = event.target.checked; console.log(scrollOptions4); $.post("/updatescrollOptions4", { scrollOptions4: scrollOptions4 });
-}
-
-function updatescrollOptions5(event) {
-scrollOptions5 = event.target.checked; console.log(scrollOptions5); $.post("/updatescrollOptions5", { scrollOptions5: scrollOptions5 });
-}
-
-function updatescrollOptions6(event) {
-scrollOptions6 = event.target.checked; console.log(scrollOptions6); $.post("/updatescrollOptions6", { scrollOptions6: scrollOptions6 });
-}
-
-function updatescrollOptions7(event) {
-scrollOptions7 = event.target.checked; console.log(scrollOptions7); $.post("/updatescrollOptions7", { scrollOptions7: scrollOptions7 });
-}
-
-function updatescrollOptions8(event) {
-scrollOptions8 = event.target.checked; console.log(scrollOptions8); $.post("/updatescrollOptions8", { scrollOptions8: scrollOptions8 });
-}
-  
-
-//  text box options go here
-function updatescrollText(event) {
-scrollText = event.target.value; console.log(scrollText); $.post("/updatescrollText", { scrollText: scrollText });
-}
-
-
-function updatescrollOverride(event) {
-scrollOverride = event.target.checked; console.log(scrollOverride); $.post("/updatescrollOverride", { scrollOverride: scrollOverride });
-}
-
-function updatescrollColor(event) {
-scrollColor = event.target.value; console.log(scrollColor); $.post("/updatescrollColor", hexToRgb(scrollColor));
-}
-
-function updatescrollColorSettings(event) {
-scrollColorSettings = event.target.value; console.log(scrollColorSettings); $.post("/updatescrollColorSettings", { scrollColorSettings: scrollColorSettings });
-}
-  
-
-function hexToRgb(hex) {
-  // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
-  var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-  hex = hex.replace(shorthandRegex, function(m, r, g, b) {
-    return r + r + g + g + b + b;
-  });
-
-  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
-}
-
-
-
-function setpreset1() {$.post("/setpreset1");}
-function setpreset2() {$.post("/setpreset2");}
-
-$(document).ready(function () {
-    if ($('#currentDateTime').length) {
-        window.setInterval(showDateTime, 900);
-    }
-
-});
-function showDateTime() {
-    //console.log(1);
-    var currentDateTime = $('#currentDateTime').get(0);
-    currentDateTime.innerHTML = moment().format('MMMM DD YYYY HH:mm:ss');
-}
-
-function setDateTime() {
-//tempyear, tempmonth, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
-    var y = moment().format('YYYY');
-    var n = moment().format('MM');
-    var d = moment().format('DD');
-    var h = moment().format('HH');
-    var m = moment().format('mm');
-    var s = moment().format('ss');
-    var datetime = { year: y, month: n, day: d, hour: h, min: m, sec: s };
-    console.log(datetime);
-    $.post("/setdate", datetime);
-}
-</script>	
-<style type="text/css">
-
-.slider-wrapper {
-  display: inline-block;
-  width: 290px;
-  height: 50px;
-  padding: 0;
-}		
-	
-.yellow-styled {
-            width:155px;
-    border: 0;
-    line-height: 2.5;
-    padding: 0 5px;
-    font-size: 1rem;
-    text-align: center;
-    color: #fff;
-    text-shadow: 1px 1px 1px #000;
-    border-radius: 10px;
-    background-color: rgba(255, 255, 0, 1);
-    background-image: linear-gradient(to top left,
-                                      rgba(0, 0, 0, .2),
-                                      rgba(0, 0, 0, .2) 30%,
-                                      rgba(0, 0, 0, 0));
-    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
-                inset -2px -2px 3px rgba(0, 0, 0, .6);
-}
-
-.ltgreylong-styled {
-            width:315px;
-    border: 0;
-    line-height: 2.5;
-    padding: 0 5px;
-    font-size: 1rem;
-    text-align: center;
-    color: #fff;
-    text-shadow: 1px 1px 1px #000;
-    border-radius: 10px;
-    background-color: rgba(128,128,128, 1);
-    background-image: linear-gradient(to top left,
-                                      rgba(0, 0, 0, .2),
-                                      rgba(0, 0, 0, .2) 30%,
-                                      rgba(0, 0, 0, 0));
-    box-shadow: inset 2px 2px 3px rgba(255, 255, 255, .6),
-                inset -2px -2px 3px rgba(0, 0, 0, .6);
-}
-
-.yellow-styled:hover {
-    background-color: rgba(0, 255, 0, 1);
-}
-
-.ltgreylong-styled:hover {
-    background-color: rgba(0, 255, 0, 1);
-}
-
-.action_btn {
-	width: 300px;
-	margin: 0 auto;
-	display: inline;
-}
-
-.narrow-font {
-  font-family: 'Open Sans Condensed', sans-serif;
-}
-.set-width {
-  width: 290px;
-}
-</style>		
-	
-    <title>Shelf Clock</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="css/main.css">
+  <script type="text/javascript" src="js/main.js"></script>	
+  <title>Shelf Clock</title>
 </head>
-
 <body>
-
-    <nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4">
-        <a class="navbar-brand" href="./index.html">Shelf Clock</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
-            aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarCollapse">
-            <ul class="navbar-nav mr-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="./index.html">Home </a>
-                </li>
-                <li class="nav-item active">
-                    <a class="nav-link" href="./settings.html">Settings <span class="sr-only">(current)</span></a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="./_ac">Setup Wifi</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="./update">Update Firmware</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="./debugpage">Debug Info</a>
-                </li>
+  <nav>
+    <a href="./index.html">Shelf Clock</a>
+    <button title="Expand Navigation">
+      <span></span>
+    </button>
+    <div>
+      <ul>
+        <li><a href="./index.html">Home</a></li>
+        <li><a href="./settings.html" class="active">Settings</a></li>
+        <li><a href="./_ac">Setup Wifi</a></li>
+        <li><a href="./update">Update Firmware</a></li>
+        <li><a href="./debug.html">Debug Info</a></li>
+      </ul>
+    </div>   
+  </nav>
+  <form name="shelfclock-settings">
+    <section>
+      <h2>Global Settings:</h2>
+      <div>
+        <div>
+          <h3>Random Color Palette:</h3>
+          <label><input type="radio" name="colorPalette" value="0"> Major Color Palette</label>
+          <label><input type="radio" name="colorPalette" value="1"> Pastel Color Palette</label>
         </div>
-    </nav>
-
-<div class="row" style="margin: 10px 10px;" "width: 380px;">
-	<div class="col-12">
-		<p><li><strong>Global Settings</strong></p>
-		<div class="row" style="margin: 10px 10px;" "width: 380px;">
-			<div class="card">		
-				<div class="card-body" style="width: 380px;">
-					<form>
-						<div class="w3-col s4" style="margin: 10px 10px;" "width: 380px;">
-							<strong>Random Color Palette:</strong>
-							<br>	
-							<input type="radio" id="colorPalette1" name="colorPalette" value="0"> Major Color Palette
-							<br>
-							<input type="radio" id="colorPalette2" name="colorPalette" value="1"> Pastel Color Palette
-							<br>
-							<br>
-							<strong>Color Change Frequency:</strong>
-							<br>
-							<select name="colorChangeFrequency" id="colorChangeFrequency">
-								<option value="" disabled hidden selected>--Choose an option--</option>
-								<option value="0">Every Second</option>
-								<option value="1">Every Minute</option>
-								<option value="2">Every Hour</option>
-								<option value="3">Every Day</option>
-								<option value="4">Every Week</option>
-								<option value="5">Every Month </option>
-							</select>
-							<br>
-							<br>
-							<strong>Overall Brightness:</strong>
-							<br>	
-							<div class="slider-wrapper">
-								<label for="rangeBrightness" class="float-left">Auto-Dim</label>
-								<label for="rangeBrightness" class="float-right">Max</label>
-								<input type="range" class="form-control-range" id="rangeBrightness" min="10" max="255">
-							</div>
-							<br>
-							<br>
-							<strong>Suspend Display on Silence:</strong>
-							<br>
-							<input type="radio" id="suspendOff" name="suspendType" value="0"> Suspend Disabled
-							<br>
-							<input type="radio" id="digitOff" name="suspendType" value="1"> Suspend Just Digits
-							<br>
-							<input type="radio" id="shelfOff" name="suspendType" value="2"> Suspend All Lights
-							<br>
-							<br>
-							<strong>Suspend after x Minutes of Silence:</strong>
-							<br>		
-							<select name="suspendFrequency" id="suspendFrequency">
-								<option value="1" disabled hidden selected>--Choose an option--</option>
-								<option value="1">1 Minute</option>
-								<option value="5">5 Minutes</option>
-								<option value="10">10 Minutes</option>
-								<option value="15">15 Minutes</option>
-								<option value="30">30 Minutes</option>
-								<option value="45">45 Minutes</option>
-								<option value="60">60 Minutes</option>
-							</select>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-		<br>
-		<p><li><strong>Shelf Spotlight Settings</strong></p>
-		<div class="row" style="margin: 10px 10px;">
-			<div class="card">		
-				<div class="card-body" style="width: 380px;">
-					<form>
-						<div class="w3-col s4">
-							<strong>Shelf Spotlights:</strong>
-							<br>
-							<input type="checkbox" id="useSpotlights"> Use Shelf Spotlights
-							<br>
-							<br>
-							<strong>Color Selection:</strong>
-							<br>	
-							<div>
-								<input type="color" id="spotlightsColor" name="spotlightsColor" value="#c1cc4e">
-								<label for="spotlightsColor">Shelf Spotlights</label>
-							</div>
-							<input type="radio" id="spotlightsColorSettings1" name="spotlightsColorSettings" value="0"> Use Chosen Color
-							<br>
-							<input type="radio" id="spotlightsColorSettings2" name="spotlightsColorSettings" value="1"> Random Color
-							<br>
-							<input type="radio" id="spotlightsColorSettings3" name="spotlightsColorSettings" value="2"> Cycling Color Wheel
-							<br>
-							<input type="radio" id="spotlightsColorSettings4" name="spotlightsColorSettings" value="3"> Cycle All Colors Slow
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-		<br>
-		<p><li><strong>Clock Settings</strong></p>	
-		<div class="row" style="margin: 10px 10px;">
-			<div class="card">		
-				<div class="card-body">
-					<form>
-						<div class="w3-col s4">
-							<strong>Clock Display Type:</strong>
-							<br>
-							<input type="radio" id="centerTime" name="ClockDisplayType" value="0"> Center 3-Digit Times
-							<br>
-							<input type="radio" id="militaryTime" name="ClockDisplayType" value="1"> 24-hour Military Time
-							<br>
-							<input type="radio" id="padZero" name="ClockDisplayType" value="2"> 12-hour Space-Padded
-							<br>
-							<input type="radio" id="blinkingColon" name="ClockDisplayType" value="3"> Blinking Center Light
-							<br>
-							<input type="radio" id="newYearsMode" name="ClockDisplayType" value="4"> New Year's Countdown
-							<br>
-							<br>
-							<strong>Blinking Center Light Options:</strong>
-							<br>	
-							<input type="radio" id="colonType1" name="colonType" value="0"> Use Colon "2<strong>:</strong>53"
-							<br>	
-							<input type="radio" id="colonType2" name="colonType" value="1"> Use Bar "2<strong>|</strong>53"
-							<br>
-							<input type="radio" id="colonType3" name="colonType" value="2"> Use Period "2<strong>.</strong>53"
-						</div>
-						<br>	
-						<strong>Timezone Selection:</strong>
-						<br>		
-						<select name="timezoneSelect" id="timezoneSelect">
+        <div>
+          <h3>Color Change Frequency:</h3>
+          <select name="colorChangeFrequency">
+            <option value="" disabled hidden selected>--Choose an option--</option>
+            <option value="0">Every Second</option>
+            <option value="1">Every Minute</option>
+            <option value="2">Every Hour</option>
+            <option value="3">Every Day</option>
+            <option value="4">Every Week</option>
+            <option value="5">Every Month </option>
+          </select>
+        </div>
+        <div>
+          <h3>Overall Brightness:</h3>
+          <div class="range">
+            <label for="rangeBrightness">Auto-Dim</label>
+            <label for="rangeBrightness">Max</label>
+          </div>   
+          <input type="range" name="rangeBrightness" min="10" max="255">
+        </div>
+        <div>
+          <h3>Suspend Display on Silence:</h3>
+          <label><input type="radio" name="suspendType" value="0"> Suspend Disabled</label>
+          <label><input type="radio" name="suspendType" value="1"> Suspend Just Digits</label>
+          <label><input type="radio" name="suspendType" value="2"> Suspend All Lights</label>
+        </div>
+        <div>
+          <h3>Suspend after x Minutes of Silence:</h3>
+          <select name="suspendFrequency">
+            <option value="1" disabled hidden selected>--Choose an option--</option>
+            <option value="1">1 Minute</option>
+            <option value="5">5 Minutes</option>
+            <option value="10">10 Minutes</option>
+            <option value="15">15 Minutes</option>
+            <option value="30">30 Minutes</option>
+            <option value="45">45 Minutes</option>
+            <option value="60">60 Minutes</option>
+          </select>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Shelf Spotlight Settings</h2>
+      <div>
+        <div>
+          <h3>Shelf Spotlights:</h3>
+          <label><input type="checkbox" name="useSpotlights">Use Shelf Spotlights</label>
+        </div>
+        <div>
+          <h3>Color Selection:</h3>
+          <label><input type="radio" name="spotlightsColorSettings" value="0"> Use Chosen Color <input type="color" name="spotlightsColor" value="#c1cc4e"></label>
+          <label><input type="radio" name="spotlightsColorSettings" value="1"> Random Color</label>
+          <label><input type="radio" name="spotlightsColorSettings" value="2"> Cycling Color Wheel</label>
+          <label><input type="radio" name="spotlightsColorSettings" value="3"> Cycle All Colors Slow</label>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Clock Settings</h2>
+      <div>
+        <div>
+          <h3>Clock Display Type:</h3>
+          <label><input type="radio" name="ClockDisplayType" value="0"> Center 3-Digit Times</label>
+          <label><input type="radio" name="ClockDisplayType" value="1"> 24-hour Military Time</label>
+          <label><input type="radio" name="ClockDisplayType" value="2"> 12-hour Space-Padded</label>
+          <label><input type="radio" name="ClockDisplayType" value="3"> Blinking Center Light</label>
+          <label><input type="radio" name="ClockDisplayType" value="4"> New Year's Countdown</label>
+        </div>
+        <div>
+          <h3>Blinking Center Light Options:</h3>
+          <label><input type="radio" name="colonType" value="0"> Use Colon "2:53"</label>
+          <label><input type="radio" name="colonType" value="1"> Use Bar "2|53"</label>
+          <label><input type="radio" name="colonType" value="2"> Use Period "2.53"</label>
+        </div>
+        <div>
+          <h3>Timezone Selection:</h3>
+          <select name="timezoneSelect">
 							<option value="-28800" disabled hidden selected>--Choose an option--</option>
-							<option value="-43200">(UTC-12) Baker Island</option>
-							<option value="-39600">(UTC-11) Samoa Standard</option>
-							<option value="-36000">(UTC-10) Hawaii</option>
-							<option value="-34200">(UTC-9:30) Marquesas Islands</option>
-							<option value="-32400">(UTC-9) Alaska</option>
-							<option value="-28800">(UTC-8) Pasific</option>
-							<option value="-25200">(UTC-7) Mountain</option>
-							<option value="-21600">(UTC-6) Central</option>
-							<option value="-18000">(UTC-5) Eastern</option>
-							<option value="-16200">(UTC-4:30)</option>
-							<option value="-14400">(UTC-4) Atlantic</option>
-							<option value="-12600">(UTC-3:30) Newfoundland</option>
-							<option value="-10800">(UTC-3) Brasil</option>
-							<option value="-7200">(UTC-2) South Georgia</option>
-							<option value="-3600">(UTC-1) Azores</option>
-							<option value="0">(UTC) London</option>
-							<option value="3600">(UTC+1) Berlin</option>
-							<option value="7200">(UTC+2) Cairo</option>
-							<option value="10800">(UTC+3) Baghdad</option>
-							<option value="12600">(UTC+3:30) Tehran</option>
-							<option value="14400">(UTC+4) Moscow</option>
-							<option value="16200">(UTC+4:30) Kabul</option>
-							<option value="18000">(UTC+5) Karachi</option>
-							<option value="19800">(UTC+5:30) Delhi</option>
-							<option value="20700">(UTC+5:45) Nepal</option>
-							<option value="21600">(UTC+6) Bangladesh</option>
-							<option value="23400">(UTC+6:30) Cocos Islands</option>
-							<option value="25200">(UTC+7) Jakarta</option>
-							<option value="28800">(UTC+8) Perth</option>
-							<option value="31500">(UTC+8:45) Eucla</option>
-							<option value="32400">(UTC+9) Tokyo</option>
-							<option value="34200">(UTC+9:30) Adelaide</option>
-							<option value="36000">(UTC+10) Canberra</option>
-							<option value="37800">(UTC+10:30) Australian Central</option>
-							<option value="39600">(UTC+11) Magadan</option>
-							<option value="41400">(UTC+11:30)</option>
-							<option value="43200">(UTC+12) Auckland</option>
-							<option value="45900">(UTC+12:45) Chatham</option>
-							<option value="46800">(UTC+13) New Zealand</option>
-							<option value="50400">(UTC+14) Line Islands</option>
-						</select>
-						<br>
-						<input type="checkbox" id="DSTime"> Daylight Savings Time
-						<br>	
-						<br>
-						<strong>Color Selection:</strong>
-						<br>	
-						<div>
-							<input type="color" id="colorHour" name="colorHour" value="#ff0000">
-							<label for="colorHour">Hours</label>
-						</div>
-						<div>
-							<input type="color" id="colorColon" name="colorColon" value="#ff0000">
-							<label for="colorColon">Center Lights</label>
-						</div>
-						<div>
-							<input type="color" id="colorMins" name="colorMins" value="#ff0000">
-							<label for="colorMins">Minutes</label>
-						</div>
-						<input type="radio" id="clockColorSettings1" name="clockColorSettings" value="0"> Use Separate Colors for Hours/Minutes
-						<br>
-						<input type="radio" id="clockColorSettings2" name="clockColorSettings" value="1"> Use Hour Color for Minutes
-						<br>
-						<input type="radio" id="clockColorSettings3" name="clockColorSettings" value="2"> Random Colors for Each
-						<br>
-						<input type="radio" id="clockColorSettings4" name="clockColorSettings" value="3"> Same Random Color for All
-						<br>
-						<input type="radio" id="clockColorSettings5" name="clockColorSettings" value="4"> Random Color for All Segments Every Second
-
-					</form>
-				</div>
-			</div>
-		</div>
-		<br>
-		<p><li><strong>Date Settings</strong></p>	
-		<div class="row" style="margin: 10px 10px;">
-			<div class="card">		
-				<div class="card-body">
-					<form>
-						<div class="w3-col s4">
-							<strong>Date Display Type:</strong>
-							<br>
-							<input type="radio" id="militaryDate" name="dateSettings" value="0"> Zero-Padded (MMDD)
-							<br>
-							<input type="radio" id="datePadSpace" name="dateSettings" value="1"> Space-Padded (MMDD)
-							<br>
-							<input type="radio" id="centerDate" name="dateSettings" value="2"> Center 3-Digit Dates (1MDD)
-							<br>
-							<input type="radio" id="dayofWeek" name="dateSettings" value="3"> Just Day of Week (Sun)
-							<br>
-							<input type="radio" id="centerDay" name="dateSettings" value="4"> Just Numeric Day (DD)
-							<br>
-							<input type="radio" id="dateSeparator" name="dateSettings" value="5"> With "." Separator (MM.DD)
-							<br>
-							<input type="radio" id="fourYear" name="dateSettings" value="6"> Just Year (YYYY)
-							<br>	
-							<br>	
-							<strong>Color Selection:</strong>
-							<br>	
-							<div>
-								<input type="color" id="monthColor" name="monthColor" value="#ff0000">
-								<label for="monthColor">Month</label>
-							</div>
-							<div>
-								<input type="color" id="separatorColor" name="separatorColor" value="#ff0000">
-								<label for="separatorColor">Center Separator Light</label>
-							</div>
-							<div>
-								<input type="color" id="dayColor" name="dayColor" value="#ff0000">
-								<label for="dayColor">Day</label>
-							</div>
-							<input type="radio" id="dateColorSettings1" name="dateColorSettings" value="0"> Use Separate Colors for Month/Day
-							<br>
-							<input type="radio" id="dateColorSettings2" name="dateColorSettings" value="1"> Use Month Color for Day
-							<br>
-							<input type="radio" id="dateColorSettings3" name="dateColorSettings" value="2"> Random Colors for Each
-							<br>
-							<input type="radio" id="dateColorSettings4" name="dateColorSettings" value="3"> Same Random Color for All
-							<br>
-							<input type="radio" id="dateColorSettings5" name="dateColorSettings" value="4"> Random Color for All Segments Every Second
-							<br>
-							<br>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-		<br>
-		<p><li><strong>Temperature Settings</strong></p>	
-		<div class="row" style="margin: 10px 10px;">
-			<div class="card">		
-				<div class="card-body">
-					<form>
-						<div class="w3-col s4">
-							<strong>Temperature Type:</strong>
-							<br>
-							<input type="radio" id="tempTypeC" name="tempType" value="36"> Celcius (C)
-							<br>
-							<input type="radio" id="tempTypeF" name="tempType" value="39"> Fahrenheit (F)
-							<br>	
-							<br>	
-							<strong>Temperature Correction:</strong>
-							<br>		
-							<select name="correctionSelect" id="correctionSelect">
-								<option value="0" disabled hidden selected>--Choose an offset--</option>
-								<option value="5">+5 degrees</option>
-								<option value="4">+4 degrees</option>
-								<option value="3">+3 degrees</option>
-								<option value="2">+2 degrees</option>
-								<option value="1">+1 degrees</option>
-								<option value="0">+0 degrees</option>
-								<option value="-1">-1 degrees</option>
-								<option value="-2">-2 degrees</option>
-								<option value="-3">-3 degrees</option>
-								<option value="-4">-4 degrees</option>
-								<option value="-5">-5 degrees</option>
-							</select>
-							<br>
-							<br>
-							<strong>Temperature Display Type:</strong>
-							<br>
-							<input type="radio" id="tempDegreeType" name="tempSettings" value="0"> Temperature with Degree and Type (79°F)
-							<br>
-							<input type="radio" id="tempTypes" name="tempSettings" value="1"> Temperature with just Type (79 F)
-							<br>
-							<input type="radio" id="tempDegree" name="tempSettings" value="2"> Temperature with just Degree (79°)
-							<br>
-							<input type="radio" id="tempDecimal" name="tempSettings" value="3"> Temperature with Decimal (79.9)
-							<br>
-							<input type="radio" id="tempJust" name="tempSettings" value="4"> Just Temperature (79)
-							<br>	
-							<br>	
-							<strong>Color Selection:</strong>
-							<br>	
-							<div>
-								<input type="color" id="tempColor" name="tempColor" value="#ff0000">
-								<label for="tempColor">Temperature</label>
-							</div>
-							<div>
-								<input type="color" id="degreeColor" name="degreeColor" value="#ff0000">
-								<label for="degreeColor">Decimal/Degree</label>
-							</div>
-							<div>
-								<input type="color" id="typeColor" name="typeColor" value="#ff0000">
-								<label for="typeColor">Decimal Temp/Type</label>
-							</div>
-							<input type="radio" id="tempColorSettings1" name="tempColorSettings" value="0"> Use Separate Colors for Temp/Type
-							<br>
-							<input type="radio" id="tempColorSettings2" name="tempColorSettings" value="1"> Use Temp Color for Type
-							<br>
-							<input type="radio" id="tempColorSettings3" name="tempColorSettings" value="2"> Random Colors for Each
-							<br>
-							<input type="radio" id="tempColorSettings4" name="tempColorSettings" value="3"> Same Random Color for All
-							<br>
-							<input type="radio" id="tempColorSettings5" name="tempColorSettings" value="4"> Random Color for All Segments Every Second
-							<br>
-							<br>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-
-		<br>
-		<p><li><strong>Humidity Settings</strong></p>	
-		<div class="row" style="margin: 10px 10px;">
-			<div class="card">		
-				<div class="card-body">
-					<form>
-						<div class="w3-col s4">	
-							<strong>Humidity Display Type:</strong>
-							<br>
-							<input type="radio" id="humiSymbol" name="humiSettings" value="0"> Humidity with Symbol (34 H)
-							<br>
-							<input type="radio" id="humiDecimal" name="humiSettings" value="1"> Humidity with Decimal (34.9)
-							<br>
-							<input type="radio" id="humiJust" name="humiSettings" value="2"> Just Humidity (34)
-							<br>	
-							<br>	
-							<strong>Color Selection:</strong>
-							<br>	
-							<div>
-								<input type="color" id="humiColor" name="humiColor" value="#ff0000">
-								<label for="tempColor">Humidity</label>
-							</div>
-							<div>
-								<input type="color" id="humiDecimalColor" name="humiDecimalColor" value="#ff0000">
-								<label for="humiDecimalColor">Decimal</label>
-							</div>
-							<div>
-								<input type="color" id="symbolColor" name="symbolColor" value="#ff0000">
-								<label for="symbolColor">Symbol</label>
-							</div>
-							<input type="radio" id="humiColorSettings1" name="humiColorSettings" value="0"> Use Separate Colors for Humidity/Symbol
-							<br>
-							<input type="radio" id="humiColorSettings2" name="humiColorSettings" value="1"> Use Humidity Color for Symbol
-							<br>
-							<input type="radio" id="humiColorSettings3" name="humiColorSettings" value="2"> Random Colors for Each
-							<br>
-							<input type="radio" id="humiColorSettings4" name="humiColorSettings" value="3"> Same Random Color for All
-							<br>
-							<input type="radio" id="humiColorSettings5" name="humiColorSettings" value="4"> Random Color for All Segments Every Second
-							<br>
-							<br>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-		<br>
-		<p><li><strong>Timer Settings</strong></p>	
-		<div class="row" style="margin: 10px 10px;">
-			<div class="card">		
-				<div class="card-body" style="width: 380px;">
-					<form>
-						<div class="w3-col s4">	
-							<strong>Timer Options:</strong>
-							<br>
-							<input type="checkbox" id="alarmCD"> Audible Alarm
-							<br>	
-							<input type="checkbox" id="colorchangeCD"> Turn Red for last 10 Seconds
-							<br>	
-							<br>	
-							<strong>Color Selection:</strong>
-							<br>	
-							<div>
-								<input type="color" id="colorCD" name="humiColor" value="#ff0000">
-								<label for="tempColor">Timer Display</label>
-							</div>
-							<br>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-		<br>
-		<p><li><strong>Scoreboard Settings</strong></p>	
-		<div class="row" style="margin: 10px 10px;">
-			<div class="card">		
-				<div class="card-body" style="width: 380px;">
-					<form>
-						<div class="w3-col s4">	
-							<strong>Color Selection:</strong>
-							<br>	
-							<div>
-								<input type="color" id="newscoreboardColorLeft" name="newscoreboardColorLeft" value="#ff0000">
-								<label for="tempColor">Left Scoreboard</label>
-							</div>
-							<div>
-								<input type="color" id="newscoreboardColorRight" name="newscoreboardColorRight" value="#ff0000">
-								<label for="tempColor">Right Scoreboard</label>
-							</div>
-							<br>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-		<br>
-		<p><li><strong>Spectrum Analyzer Settings</strong></p>	
-		<div class="row" style="margin: 10px 10px;">
-			<div class="card">		
-				<div class="card-body" style="width: 380px;">
-					<form>
-						<div class="w3-col s4">	
-							<strong>Spectrum Analyzer Options:</strong>
-							<br>
-							<input type="checkbox" id="randomSpectrumMode"> Random Mode at Scroll Frequency Timer
-							<br>	
-							<br>	
-							<strong>Color Selection:</strong>
-							<br>	
-							<div>
-								<input type="color" id="spectrumBackground" name="spectrumBackground" value="#000000">
-								<label for="spectrumBackground">Background Color</label>
-								<br>	
-								<input type="color" id="spectrumColor" name="spectrumColor" value="#ff0000">
-								<label for="spectrumColor">Segment Color</label>
-							</div>
-
-							<br>	
-							<strong>Background Selection:</strong>
-							<br>	
-							<input type="radio" id="spectrumBackgroundSettings1" name="spectrumBackgroundSettings" value="0"> Use Selected Color
-							<br>
-							<input type="radio" id="spectrumBackgroundSettings2" name="spectrumBackgroundSettings" value="1"> Cycle All Colors Fast
-							<br>
-							<input type="radio" id="spectrumBackgroundSettings3" name="spectrumBackgroundSettings" value="2"> Cycle All Colors Slow
-							<br>
-							<br>
-							<strong>Segment Selection:</strong>
-							<br>	
-							<input type="radio" id="spectrumColorSettings1" name="spectrumColorSettings" value="0"> Use Selected Color
-							<br>	
-							<input type="radio" id="spectrumColorSettings2" name="spectrumColorSettings" value="1"> Use Rainbow Palette
-							<br>
-							<input type="radio" id="spectrumColorSettings4" name="spectrumColorSettings" value="3"> Use Fire Palette
-							<br>
-							<input type="radio" id="spectrumColorSettings5" name="spectrumColorSettings" value="4"> Use Marine Palette
-							<br>
-							<input type="radio" id="spectrumColorSettings6" name="spectrumColorSettings" value="5"> Use Forest Palette
-							<br>
-							<input type="radio" id="spectrumColorSettings3" name="spectrumColorSettings" value="2"> Cycle All Colors Fast
-							<br>
-							<input type="radio" id="spectrumColorSettings7" name="spectrumColorSettings" value="6"> Cycle All Colors Slow
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-
-		<br>
-		<p><li><strong>Scrolling Display Settings</strong></p>	
-		<div class="row" style="margin: 10px 10px;" "width: 380px;">
-			<div class="card">		
-				<div class="card-body" style="width: 380px;">
-					<form>
-						<strong>Scroll Frequency Timer:</strong>
-						<br>		
-						<select name="scrollFrequency" id="scrollFrequency">
-							<option value="1" disabled hidden selected>--Choose an option--</option>
-							<option value="1">Every Minute</option>
-							<option value="2">Every 5 Minutes</option>
-							<option value="3">Every 10 Minutes</option>
-							<option value="4">Every 15 Minutes</option>
-							<option value="5">Every 30 Minutes</option>
-							<option value="6">Every Hour</option>
-						</select>
-						<br>	
-						<br>
-						<strong>Information to Scroll:</strong>
-						<br>
-						<input type="checkbox" id="scrollOptions1"> Military Time (HHMM)
-						<br>
-						<input type="checkbox" id="scrollOptions2"> Day of Week (DOW)
-						<br>
-						<input type="checkbox" id="scrollOptions3"> Today's Date (DD-MM)
-						<br>
-						<input type="checkbox" id="scrollOptions4"> Year (YYYY)
-						<br>
-						<input type="checkbox" id="scrollOptions5"> Temperature (70.4 °F)
-						<br>
-						<input type="checkbox" id="scrollOptions6"> Humidity (47 H)
-						<br>
-						<input type="checkbox" id="scrollOptions7"> Text Message
-						<br>
-						<input type="checkbox" id="scrollOptions8"> IP Address of Clock
-						<br>	
-						<br>
-						<strong>Set Text Message:</strong>
-						<br>
-						<div style="margin: 10px 10px;" "width: 290px;">
-								<input type="text" id="scrollText" name="scrollText" placeholder="dAdS ArE tHE bESt"  minlength="2" maxlength="255" size="33"class="narrow-font set-width" >
-						</div>
-						<br>	
-						<br>
-						<strong>Scroll Options:</strong>
-						<br>
-						<input type="checkbox" id="scrollOverride"> Override Existing Mode to Display
-						<br>	
-						<br>	
-						<strong>Color Selection:</strong>
-						<br>	
-						<div>
-							<input type="color" id="scrollColor" name="scrollColor" value="#ffffff">
-							<label for="scrollColor">Scrolling Text</label>
-						</div>
-						<input type="radio" id="scrollColorSettings1" name="scrollColorSettings" value="0"> Use Selected Color
-						<br>
-						<input type="radio" id="scrollColorSettings2" name="scrollColorSettings" value="1"> Same Random Color for All
-						<br>
-					</form>
-				</div>
-			</div>
-		</div>
-
-		<br>	
-		<div class="row" style="margin: 10px 10px;">
-			<div class="card">		
-				<div class="card-body" style="width: 380px;">
-					<form>
-						<div style="text-align: center;">
-							<strong>Save Current Values to Preset</strong>
-						</div>
-						<br>
-						<div class="w3-col s4">
-							<form>
-								<input type="button" class="favorite yellow-styled" value="Preset 1" onclick="setpreset1()">
-								<input type="button" class="favorite yellow-styled" value="Preset B" onclick="setpreset2()">
-							</form>
-							<br>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-
-		<br>	
-		<div class="row" style="margin: 10px 10px;">
-            <div class="card">
-                <div class="card-body" style="width: 380px;">
-						<div style="text-align: center;">
-							<strong>Manually Set Date/Time</strong>
-						<br>
-							<label>(Date/Time below will auto-populate)  </label>
-                        </div>
-                    <div class="form-group"  style="width:315px;">        
-                        <div class="alert alert-primary" role="primary" id="currentDateTime">
-                            
-                        </div>
-                        
-                        
-                    </div>                   
-                    <button type="button" class="favorite ltgreylong-styled" onclick="setDateTime()">Update Date/Time</button>
-
-                </div>
-            </div>  
-            </div>  
-	</div>
-</div>
-
-
+							<option value="-36000">(GMT-10:00) Hawaii</option>
+							<option value="-32400">(GMT-09:00) Alaska</option>
+							<option value="-28800">(GMT-08:00) Pacific Time</option>
+							<option value="-25200">(GMT-07:00) Mountain Time</option>
+							<option value="-21600">(GMT-06:00) Central Time</option>
+							<option value="-18000">(GMT-05:00) Eastern Time</option>
+							<option value="-14400">(GMT-04:00) Atlantic Time</option>
+					</select>
+          <label><input type="checkbox" name="DSTime"> Daylight Savings Time</label>
+        </div>
+        <div>
+          <h3>Color Selection:</h3>
+          <label> 
+            <input type="radio" name="clockColorSettings" value="0"> Use Separate Colors for Hours/Minutes
+              <div>
+                  <label><input type="color" name="colorHour" value="#ff0000"> Hours</label>
+                  <label><input type="color" name="colorColon" value="#ff0000"> Center Lights</label>
+                  <label><input type="color" name="colorMins" value="#ff0000"> Minutes</label>
+              </div>
+          </label>
+          <label><input type="radio" name="clockColorSettings" value="1"> Use Hour Color for Minutes</label>
+          <label><input type="radio" name="clockColorSettings" value="2"> Random Colors for Each</label>
+          <label><input type="radio" name="clockColorSettings" value="3"> Same Random Color for All</label>
+          <label><input type="radio" name="clockColorSettings" value="4"> Random Color for All Segments Every Second</label>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Date Settings</h2>
+      <div>
+        <div>
+          <h3>Date Display Type:</h3>
+          <label><input type="radio" name="dateSettings" value="0"> Zero-Padded (MMDD)</label>
+          <label><input type="radio" name="dateSettings" value="1"> Space-Padded (MMDD)</label>
+          <label><input type="radio" name="dateSettings" value="2"> Center 3-Digit Dates (1MDD)</label>
+          <label><input type="radio" name="dateSettings" value="3"> Just Day of Week (Sun)</label>
+          <label><input type="radio" name="dateSettings" value="4"> Just Numeric Day (DD)</label>
+          <label><input type="radio" name="dateSettings" value="5"> With "." Separator (MM.DD)</label>
+          <label><input type="radio" name="dateSettings" value="6"> Just Year (YYYY)</label>
+        </div>
+        <div>
+          <h3>Color Selection:</h3>
+          <label>
+            <input type="radio" name="dateColorSettings" value="0"> Use Separate Colors for Month/Day
+            <div>
+              <label><input type="color" name="monthColor" value="#ff0000"> Month</label>
+              <label><input type="color" name="separatorColor" value="#ff0000"> Center Separator Light</label>
+              <label><input type="color" name="dayColor" value="#ff0000"> Day</label>
+            </div>
+          </label>
+          <label><input type="radio" name="dateColorSettings" value="1"> Use Month Color for Day</label>
+          <label><input type="radio" name="dateColorSettings" value="2"> Random Colors for Each</label>
+          <label><input type="radio" name="dateColorSettings" value="3"> Same Random Color for All</label>
+          <label><input type="radio" name="dateColorSettings" value="4"> Random Color for All Segments Every Second</label>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Temperature Settings</h2>
+      <div>
+        <div>
+          <h3>Temperature Type:</h3>
+          <label><input type="radio" name="tempType" value="36"> Celcius (C)</label>
+          <label><input type="radio" name="tempType" value="39"> Fahrenheit (F)</label>
+        </div>
+        <div>
+          <h3>Indoor Temperature Correction:</h3>
+          <select name="correctionSelect">
+            <option value="0" disabled hidden selected>--Choose an offset--</option>
+            <option value="5">+5 degrees</option>
+            <option value="4">+4 degrees</option>
+            <option value="3">+3 degrees</option>
+            <option value="2">+2 degrees</option>
+            <option value="1">+1 degrees</option>
+            <option value="0">+0 degrees</option>
+            <option value="-1">-1 degrees</option>
+            <option value="-2">-2 degrees</option>
+            <option value="-3">-3 degrees</option>
+            <option value="-4">-4 degrees</option>
+            <option value="-5">-5 degrees</option>
+          </select>
+        </div>
+        <div>
+          <h3>Temperature Display Type:</h3>
+          <label><input type="radio" name="tempSettings" value="0"> Temperature with Degree and Type (79°F)</label>
+          <label><input type="radio" name="tempSettings" value="1"> Temperature with just Type (79 F)</label>
+          <label><input type="radio" name="tempSettings" value="2"> Temperature with just Degree (79°)</label>
+          <label><input type="radio" name="tempSettings" value="3"> Temperature with Decimal (79.9)</label>
+          <label><input type="radio" name="tempSettings" value="4"> Just Temperature (79)</label>
+        </div>
+        <div>
+          <h3>Color Selection:</h3>
+          <label><input type="radio" name="tempColorSettings" value="0"> Use Separate Colors for Temp/Type
+            <div>
+              <label><input type="color" name="tempColor" value="#ff0000"> Temperature</label>
+              <label><input type="color" name="degreeColor" value="#ff0000"> Decimal/Degree</label>
+              <label><input type="color" name="typeColor" value="#ff0000"> Decimal Temp/Type</label>
+            </div>
+          </label>
+          <label><input type="radio" name="tempColorSettings" value="1"> Use Temp Color for Type</label>
+          <label><input type="radio" name="tempColorSettings" value="2"> Random Colors for Each</label>
+          <label><input type="radio" name="tempColorSettings" value="3"> Same Random Color for All</label>
+          <label><input type="radio" name="tempColorSettings" value="4"> Random Color for All Segments Every Second</label>
+        </div>
+        <div>
+            <h3>Outdoor Temperature</h3>
+            <label><input type="checkbox" name="temperature_outdoor_enable" disabled>Enable Outdoor Temperature</label>
+            <span class="smaller weathercheckbox">Disabled until weather api is set (<a href="#outdoor">see below</a>).</span>
+            
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Humidity Settings</h2>
+      <div>
+        <div>
+          <h3>Humidity Display Type:</h3>
+          <label><input type="radio" name="humiSettings" value="0"> Humidity with Symbol (34 H)</label>
+          <label><input type="radio" name="humiSettings" value="1"> Humidity with Decimal (34.9)</label>
+          <label><input type="radio" name="humiSettings" value="2"> Just Humidity (34)</label>
+        </div>
+        <div>
+          <h3>Color Selection:</h3>
+          <label><input type="radio" name="humiColorSettings" value="0"> Use Separate Colors for Humidity/Symbol
+            <div>
+              <label><input type="color" name="humiColor" value="#ff0000"> Humidity</label>
+              <label><input type="color" name="humiDecimalColor" value="#ff0000"> Decimal</label>
+              <label><input type="color" name="symbolColor" value="#ff0000"> Symbol</label>
+            </div>
+          </label>
+          <label><input type="radio" name="humiColorSettings" value="1"> Use Humidity Color for Symbol</label>
+          <label><input type="radio" name="humiColorSettings" value="2"> Random Colors for Each</label>
+          <label><input type="radio" name="humiColorSettings" value="3"> Same Random Color for All</label>
+          <label><input type="radio" name="humiColorSettings" value="4"> Random Color for All Segments Every Second</label>
+        </div>
+        <div>
+          <h3>Outdoor Humidity</h3>
+          <label><input type="checkbox" name="humidity_outdoor_enable" disabled>Enable Outdoor Humidity</label>
+          <span class="smaller weathercheckbox">Disabled until weather api is set (<a href="#outdoor">see below</a>).</span>
+      </div>
+      </div>
+    </section>
+    <section>
+      <h2>Timer Settings</h2>
+      <div>
+        <div>
+          <h3>Timer Options:</h3>
+          <label><input type="checkbox" name="alarmCD"> Audible Alarm</label>
+          <label><input type="checkbox" name="colorchangeCD"> Turn Red for last 10 Seconds</label>
+        </div>
+        <div>
+          <h3>Color Selection:</h3>
+          <label><input type="color" name="colorCD" value="#ff0000"> Timer Display</label>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Scoreboard Settings</h2>
+      <div>
+        <div>
+          <h3>Color Selection:</h3>
+          <label><input type="color" name="newscoreboardColorLeft" value="#ff0000"> Left Scoreboard</label>
+          <label><input type="color" name="newscoreboardColorRight" value="#ff0000"> Right Scoreboard</label>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Spectrum Analyzer Settings</h2>
+      <div>
+        <div>
+          <h3>Spectrum Analyzer Options:</h3>
+          <label><input type="checkbox" name="randomSpectrumMode"> Random Mode at Scroll Frequency Timer</label>
+        </div>
+        <div>
+          <h3>Color Selection:</h3>
+          <label><input type="color" name="spectrumBackground" value="#000000"> Background Color</label>
+          <label><input type="color" name="spectrumColor" value="#ff0000"> Segment Color</label>
+        </div>
+        <div>
+          <h3>Background Selection:</h3>
+          <label><input type="radio" name="spectrumBackgroundSettings" value="0"> Use Selected Color</label>
+          <label><input type="radio" name="spectrumBackgroundSettings" value="1"> Cycle All Colors Fast</label>
+          <label><input type="radio" name="spectrumBackgroundSettings" value="2"> Cycle All Colors Slow</label>
+        </div>
+        <div>
+          <h3>Segment Selection:</h3>
+          <label><input type="radio" name="spectrumColorSettings" value="0"> Use Selected Color</label>
+          <label><input type="radio" name="spectrumColorSettings" value="1"> Use Rainbow Palette</label>
+          <label><input type="radio" name="spectrumColorSettings" value="3"> Use Fire Palette</label>
+          <label><input type="radio" name="spectrumColorSettings" value="4"> Use Marine Palette</label>
+          <label><input type="radio" name="spectrumColorSettings" value="5"> Use Forest Palette</label>
+          <label><input type="radio" name="spectrumColorSettings" value="2"> Cycle All Colors Fast</label>
+          <label><input type="radio" name="spectrumColorSettings" value="6"> Cycle All Colors Slow</label>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>Scrolling Display Settings</h2>
+      <div>
+        <div>
+          <h3>Scroll Frequency Timer:</h3>
+          <select name="scrollFrequency" >
+            <option value="1" disabled hidden selected>--Choose an option--</option>
+            <option value="1">Every Minute</option>
+            <option value="2">Every 5 Minutes</option>
+            <option value="3">Every 10 Minutes</option>
+            <option value="4">Every 15 Minutes</option>
+            <option value="5">Every 30 Minutes</option>
+            <option value="6">Every Hour</option>
+          </select>
+        </div>
+        <div>
+          <h3>Information to Scroll:</h3>
+          <label><input type="checkbox" name="scrollOptions1"> Military Time (HHMM)</label>
+          <label><input type="checkbox" name="scrollOptions2"> Day of Week (DOW)</label>
+          <label><input type="checkbox" name="scrollOptions3"> Today's Date (DD-MM)</label>
+          <label><input type="checkbox" name="scrollOptions4"> Year (YYYY)</label>
+          <label><input type="checkbox" name="scrollOptions5"> Temperature (70.4 °F)</label>
+          <label><input type="checkbox" name="scrollOptions6"> Humidity (47 H)</label>
+          <label><input type="checkbox" name="scrollOptions7"> <input type="text" name="scrollText" placeholder="dAdS ArE tHE bESt" minlength="2" maxlength="255"></label>
+          <label><input type="checkbox" name="scrollOptions8"> IP Address of Clock</label>
+        </div>
+        <div>
+          <h3>Scroll Options:</h3>
+          <label><input type="checkbox" name="scrollOverride"> Override Existing Mode to Display</label>
+        </div>
+        <div>
+          <h3>Color Selection:</h3>
+          <label><input type="radio" name="scrollColorSettings" value="0"> Use Selected Color <input type="color" name="scrollColor" value="#ffffff"></label>
+					<label><input type="radio" name="scrollColorSettings" value="1"> Same Random Color for All</label>
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2 id="outdoor">Outdoor Weather API</h2>
+      <div>
+        <div>
+          <h3>Api Key</h3>
+          <label><input type="text" name="weatherapi_apikey"><button type="button" name="clearapikey">Clear key</button></label>
+          <span class="smaller">openweathermap.org for free api key.</span>
+        </div>
+        <div>
+          <h3>Location</h3>
+          <label><input type="numeric" name="weatherapi_latitude"> Latitude</label>
+          <label><input type="numeric" name="weatherapi_longitude"> Longitude</label>
+        </div>
+        <div>
+          <label><button name="weatherapi_save" type="button">Save</button> <span class="smaller weatherapi_save"></span></label>
+        </div>
+      </div>
+      
+    </section>
+    <section>
+      <div class="button-wrapper yellow">
+        <h3>Save Current Values to Preset</h3>
+        <div>
+          <input type="button" data-param="setpreset1" value="Preset 1">
+				  <input type="button" data-param="setpreset2" value="Preset 2">
+        </div>
+      </div>
+    </section>
+    <section>
+        <div class="datetime-wrapper grey">
+          <h3>Manually Set Date/Time</h3>
+          <span>(Date/Time below will auto-populate)</span>
+          <div class="datetime">Loading...</div>
+          <input type="button" name="setdatetime" value="Update Date/Time">
+        </div>
+    </section>
+  </form>
 </body>
-
 </html>
