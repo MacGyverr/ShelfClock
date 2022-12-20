@@ -176,7 +176,7 @@
           <label><input type="radio" name="tempType" value="39"> Fahrenheit (F)</label>
         </div>
         <div>
-          <h3>Temperature Correction:</h3>
+          <h3>Indoor Temperature Correction:</h3>
           <select name="correctionSelect">
             <option value="0" disabled hidden selected>--Choose an offset--</option>
             <option value="5">+5 degrees</option>
@@ -214,6 +214,12 @@
           <label><input type="radio" name="tempColorSettings" value="3"> Same Random Color for All</label>
           <label><input type="radio" name="tempColorSettings" value="4"> Random Color for All Segments Every Second</label>
         </div>
+        <div>
+            <h3>Outdoor Temperature</h3>
+            <label><input type="checkbox" name="temperature_outdoor_enable" disabled>Enable Outdoor Temperature</label>
+            <span class="smaller weathercheckbox">Disabled until weather api is set (<a href="#outdoor">see below</a>).</span>
+            
+        </div>
       </div>
     </section>
     <section>
@@ -239,6 +245,11 @@
           <label><input type="radio" name="humiColorSettings" value="3"> Same Random Color for All</label>
           <label><input type="radio" name="humiColorSettings" value="4"> Random Color for All Segments Every Second</label>
         </div>
+        <div>
+          <h3>Outdoor Humidity</h3>
+          <label><input type="checkbox" name="humidity_outdoor_enable" disabled>Enable Outdoor Humidity</label>
+          <span class="smaller weathercheckbox">Disabled until weather api is set (<a href="#outdoor">see below</a>).</span>
+      </div>
       </div>
     </section>
     <section>
@@ -331,6 +342,25 @@
 					<label><input type="radio" name="scrollColorSettings" value="1"> Same Random Color for All</label>
         </div>
       </div>
+    </section>
+    <section>
+      <h2 id="outdoor">Outdoor Weather API</h2>
+      <div>
+        <div>
+          <h3>Api Key</h3>
+          <label><input type="text" name="weatherapi_apikey"><button type="button" name="clearapikey">Clear key</button></label>
+          <span class="smaller">openweathermap.org for free api key.</span>
+        </div>
+        <div>
+          <h3>Location</h3>
+          <label><input type="numeric" name="weatherapi_latitude"> Latitude</label>
+          <label><input type="numeric" name="weatherapi_longitude"> Longitude</label>
+        </div>
+        <div>
+          <label><button name="weatherapi_save" type="button">Save</button> <span class="smaller weatherapi_save"></span></label>
+        </div>
+      </div>
+      
     </section>
     <section>
       <div class="button-wrapper yellow">

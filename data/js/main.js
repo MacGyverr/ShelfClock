@@ -255,6 +255,93 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }, 1000);
         }
+
+        /* test api */
+        document.querySelector("button[name='weatherapi_save']").addEventListener('click', async event => {
+            let msgElement = document.querySelector(".weatherapi_save");
+            msgElement.classList.remove('error');
+            msgElement.innerHTML = "";
+
+            let apikey = document.querySelector("input[name='weatherapi_apikey']").value;
+            if (apikey.trim().length === 0) {
+                msgElement.classList.add('error');
+                msgElement.innerHTML = "Missing Api Key";
+                return;
+            }
+            
+            let lat = document.querySelector("input[name='weatherapi_latitude']").value;
+            if (lat.trim().length === 0) {
+                msgElement.classList.add('error');
+                msgElement.innerHTML = "Missing Latitude (Press Get Location Button)";
+                return;
+            }
+
+            let long = document.querySelector("input[name='weatherapi_longitude']").value;
+            if (long.trim().length === 0) {
+                msgElement.classList.add('error');
+                msgElement.innerHTML = "Missing Longitude (Press Get Location Button)";
+                return;
+            }
+
+            let units = (document.querySelector("input[name='tempType']:checked").value === "36") ? "metric" : "imperial";
+            let unit = (units === "metric") ? "C" : "F";
+            let apiUrl = `http://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${long}&APPID=${apikey}&units=${units}`;
+            msgElement.innerHTML = "Fetching temp...";
+            let response = await fetch(apiUrl);
+            if (response.ok) {
+                let data = await response.json();
+                msgElement.innerHTML = `${data['main']['temp']}&deg;${unit} and ${data['main']['humidity']}% humidity`;
+                
+                let body = {
+                    weatherapi: {
+                        'apikey': apikey,
+                        'latitude': lat,
+                        'longitude': long
+                    }
+                }
+                await fetch(`${url}/updateanything`, {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+
+                msgElement.innerHTML += " Saved!!!";
+
+                document.querySelectorAll("[name='temperature_outdoor_enable'], [name='humidity_outdoor_enable']").forEach(element => {
+                    element.removeAttribute('disabled');
+                });
+
+                document.querySelectorAll(".weathercheckbox").forEach(element => {
+                    element.setAttribute('hidden', true);
+                });
+
+            } else {
+                let error = await response.json();
+                msgElement.innerHTML = error.message;
+                msgElement.classList.add('error');              
+                console.error(response);
+            }
+        });
+
+        document.querySelector("[name='clearapikey']").addEventListener('click', async event => {
+            let body = {
+                weatherapi: {
+                    'apikey': ''
+                }
+            }
+            await fetch(`${url}/updateanything`, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+
+            document.querySelector("input[name='weatherapi_apikey']").value = '';
+            document.querySelectorAll("[name='temperature_outdoor_enable'], [name='humidity_outdoor_enable']").forEach(element => {
+                element.setAttribute('disabled', true);
+            });
+
+            document.querySelectorAll(".weathercheckbox").forEach(element => {
+                element.removeAttribute('hidden');
+            });
+        })
     }
 
     /* Debug Page */
@@ -288,6 +375,12 @@ async function loadSettings() {
                 setValue(directValueSelectors[key], value);
             } else if (key in checkboxSelectors) {
                 setCheckbox(checkboxSelectors[key], value)
+            } else if (key === 'weatherapi') {
+                setWeatherAPI(key, value);
+            } else if (key === 'temperature') {
+                setObjectAPI(key, value);
+            } else if (key === 'humidity') {
+                setObjectAPI(key, value);
             } else {
                 console.log(`key is not found ${key}`);
             }
@@ -298,7 +391,7 @@ async function loadSettings() {
 /* load debug */
 async function loadDebug() {
     let add = document.querySelector(".debug-items")
-    let response = await fetch(`${url}/getsettings`);
+    let response = await fetch(`${url}/getdebug`);
     if (response.ok) {
         let settings = await response.json();
         for (let [key, value] of Object.entries(settings)) {
@@ -310,6 +403,42 @@ async function loadDebug() {
 }
 
 /* set form elements */
+async function setObjectAPI(objkey, obj) {
+    for (let [key, value] of Object.entries(obj)) {
+        let element = document.querySelector(`[name='${objkey}_${key}']`);
+        console.log(objkey, obj, `[name='${objkey}_${key}']`);
+        element.checked = value
+        element.addEventListener('click', async event => {
+            let body = {};
+            body[objkey] = {};
+            body[objkey][key] = event.target.checked;
+
+            await fetch(`${url}/updateanything`, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+        });
+    }
+}
+
+async function setWeatherAPI(objkey, obj) {
+    let enableOutdoorCheckBoxs = true;
+    for (let [key, value] of Object.entries(obj)) {
+        enableOutdoorCheckBoxs &= (value.trim().length > 0);
+        document.querySelector(`[name='${objkey}_${key}']`).value = value
+    }
+
+    if (enableOutdoorCheckBoxs) {
+        document.querySelectorAll("[name='temperature_outdoor_enable'], [name='humidity_outdoor_enable']").forEach(element => {
+            element.removeAttribute('disabled');
+        });
+
+        document.querySelectorAll(".weathercheckbox").forEach(element => {
+            element.setAttribute('hidden', true);
+        });
+    }
+}
+
 async function setCheckbox(selectorName, value) {
    document.querySelector(`[name='${selectorName}']`).checked = value;
 }

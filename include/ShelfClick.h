@@ -2,11 +2,18 @@
 #include "WString.h";
 #include <FastLED.h>;
 
-struct TemperatureConfig {
-    bool outdoor_enable;// = true;
-    char outdoor_lat[15];// = 47.698560;
-    char outdoor_long[15];// = -122.101970;
-    char outdoor_apikey[50];// = "680e541ac65981bd1835f7728a185c47";
+struct Temperature {
+    bool outdoor_enable; // = true;  
+};
+
+struct Humidity {
+    bool outdoor_enable; // = true
+};
+
+struct WeatherAPI {
+    char latitude[15];// = 47.698560;
+    char longitude[15];// = -122.101970;
+    char apikey[50];// = "680e541ac65981bd1835f7728a185c47";
 };
 
 void loadWebPageHandlers();
@@ -50,4 +57,3 @@ void changeMatrixpattern();
 void updaterain();
 void Task1code(void * parameter);
 void getRemoteWeather();
-void loadTemperatureConfig(String, TemperatureConfig &);

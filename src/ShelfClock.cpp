@@ -88,7 +88,10 @@ int getSlower = 180;
 int daysUptime = 0;
 int averageAudioInput = 0;
 float outdoorTemp = -500;
-struct TemperatureConfig tempConfig;
+float outdoorHumidity = -1;
+struct Temperature temperature;
+struct Humidity humidity;
+struct WeatherAPI weatherapi;
 
 struct tm timeinfo; 
 CRGB LEDs[NUM_LEDS];
@@ -608,9 +611,9 @@ void Task1code(void * parameter) {
 }
 
 void getRemoteWeather() {
-  if (WiFi.status() == WL_CONNECTED && tempConfig.outdoor_enable && tempConfig.outdoor_apikey && tempConfig.outdoor_lat && tempConfig.outdoor_long) {
+  if (WiFi.status() == WL_CONNECTED && weatherapi.apikey && weatherapi.latitude && weatherapi.longitude) {
     HTTPClient http;
-    String serverPath = String("http://api.openweathermap.org/data/2.5/weather?lat=") + tempConfig.outdoor_lat + String("&lon=") + tempConfig.outdoor_long + String("&APPID=") + tempConfig.outdoor_apikey + String("&units=imperial");
+    String serverPath = String("http://api.openweathermap.org/data/2.5/weather?lat=") + weatherapi.latitude + String("&lon=") + weatherapi.longitude + String("&APPID=") + weatherapi.apikey + String("&units=imperial");
     Serial.println(serverPath);
 
     http.begin(serverPath.c_str());
@@ -625,6 +628,7 @@ void getRemoteWeather() {
 
       JsonObject main = payload["main"].as<JsonObject>();
       outdoorTemp = main["temp"].as<String>().toFloat();
+      outdoorHumidity = main["humidity"].as<String>().toFloat();
 
     } else {
       Serial.print("Error code: ");
@@ -998,6 +1002,7 @@ void displayDateMode() {  //main date function
 } // end of update date
 
 void displayTemperatureMode() {   //miain temp function
+  static int countFlip = 1;
   currentMode = 0;
   float h = dht.readHumidity();        // read humidity
   float sensorTemp = dht.readTemperature();     // read temperature
@@ -1010,6 +1015,17 @@ void displayTemperatureMode() {   //miain temp function
   if (temperatureSymbol == 39) {  correctedTemp = ((sensorTemp * 1.8000) + 32) + temperatureCorrection; }
   byte t1 = 0;
   byte t2 = 0;
+
+  if (temperature.outdoor_enable == true) {
+    if (countFlip > 5) {
+      correctedTemp = outdoorTemp;
+    }
+    if (countFlip > 9) {
+      countFlip = 0;
+    }
+    countFlip++;
+  }
+
   int tempDecimal = correctedTemp * 10;
   if (correctedTemp >= 100) {
     int tempHundred = correctedTemp / 10;
@@ -1092,6 +1108,7 @@ void displayTemperatureMode() {   //miain temp function
 
 
 void displayHumidityMode() {   //main humidity function
+  static int countFlip = 1;
   currentMode = 0;
   float sensorHumi = dht.readHumidity();        // read humidity
   float t = dht.readTemperature();     // read temperature
@@ -1102,6 +1119,17 @@ void displayHumidityMode() {   //main humidity function
   }
   byte t1 = 0;
   byte t2 = 0;
+
+  if (humidity.outdoor_enable == true) {
+    if (countFlip > 5) {
+      sensorHumi = outdoorHumidity;
+    }
+    if (countFlip > 9) {
+      countFlip = 0;
+    }
+    countFlip++;
+  }
+
   int humiDecimal = sensorHumi * 10;
   if (sensorHumi >= 100) {
     int humiHundred = sensorHumi / 10;
@@ -1199,9 +1227,16 @@ void displayScrollMode(){   //scrollmode for displaying clock things not just te
     sprintf(strTime, "%.2d%.2d    ", hour, mins);  //1111
     sprintf(strDate, "%.2d-%.2d    ", mont, mday);  //10-22
     sprintf(strYear, "%d    ", year);  //2021
-    sprintf(strTemp, "In: %.1f^F    ", correctedTemp );  //98_6 ^F
-    sprintf(strOutdoorTemp, "Out: %.1f^F    ", outdoorTemp);
-    sprintf(strHumitidy, "%.0fH    ", h);  //48_6 H
+    if (temperature.outdoor_enable == true && outdoorTemp != -500) {
+      sprintf(strTemp, "%.1f : %.1f^F     ", correctedTemp, outdoorTemp);
+    } else {
+      sprintf(strTemp, "%.1f^F    ", correctedTemp );  //98_6 ^F
+    }
+    if (humidity.outdoor_enable == true && outdoorHumidity != -1) {
+      sprintf(strHumitidy, "%.0f : %.0fH    ", h, outdoorHumidity);  //48_6 H
+    } else {
+      sprintf(strHumitidy, "%.0fH    ", h);  //48_6 H
+    }
     sprintf(strIPaddy, "%s", WiFi.localIP().toString().c_str());  //192_168_0_10
     strcpy(processedText, " ");
     if (scrollOptions1 == 1)    {strcat(processedText, strTime);}
@@ -1209,7 +1244,6 @@ void displayScrollMode(){   //scrollmode for displaying clock things not just te
     if (scrollOptions3 == 1)    {strcat(processedText, strDate);}
     if (scrollOptions4 == 1)    {strcat(processedText, strYear);}
     if (scrollOptions5 == 1)    {strcat(processedText, strTemp);}
-    if (scrollOptions5 == 1 && outdoorTemp != -500)    {strcat(processedText, strOutdoorTemp);}
     if (scrollOptions6 == 1)    {strcat(processedText, strHumitidy);}
     if (scrollOptions7 == 1)    {strcat(processedText, scrollText.c_str()); strcat(processedText, "    ");}
     if (scrollOptions8 == 1)    {strcat(processedText, strIPaddy);}
@@ -1611,8 +1645,6 @@ void scroll(String IncomingString) {    //main scrolling function
 } //end of scroll function
 
 
-
-
 void printLocalTime() {  //what could this do
   DateTime now = rtc.now();
   char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
@@ -1833,9 +1865,6 @@ void BlinkDots() {  //displays the 2 dots in the middle of the time (colon)
   dotsOn = !dotsOn;  
 }//end of shelf and gaps
 
-
-
-
 void happyNewYear() {  
   CRGB color = CRGB::Red; 
   allBlank();
@@ -1855,13 +1884,10 @@ void happyNewYear() {
     FastLED.show();
     colorWheelPosition++;
     server.handleClient();   
-       }
-    if (!breakOutSet) {scroll("HAPPy nEW yEAr");}
+  }
+  if (!breakOutSet) {scroll("HAPPy nEW yEAr");}
   allBlank();
 }
-
-
-
 
 void Chase() {   //lightshow chase mode
   int chaseMode = random(0, 7);
@@ -2224,6 +2250,13 @@ void Cylon() {
 
 void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   preferences.begin("shelfclock", false);
+
+  /* Temporary until this is cleared from all clock devices */
+  /* once cleared we can rename temperature2 to temperature */
+  if(preferences.isKey("temperature")) {
+    preferences.remove("temperature");
+  }
+
   gmtOffset_sec = preferences.getLong("gmtOffset_sec", -28800);
   DSTime = preferences.getBool("DSTime", 0);
   cd_r_val = preferences.getInt("cd_r_val", 0);
@@ -2322,26 +2355,14 @@ void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   lightshowMode = preferences.getInt("lightshowMode", 0);
   suspendFrequency = preferences.getInt("suspendFreq", 1);
   suspendType = preferences.getInt("suspendType", 0);
+  preferences.getBytes("temperature2", &temperature, preferences.getBytesLength("temperature2"));
+  preferences.getBytes("humidity", &humidity, preferences.getBytesLength("humidity"));
+  preferences.getBytes("weatherapi", &weatherapi, preferences.getBytesLength("weatherapi"));
 
-  Serial.println("-----------");
-  Serial.println(tempConfig.outdoor_enable);
-  Serial.println(tempConfig.outdoor_lat);
-  Serial.println(tempConfig.outdoor_long);
-  Serial.println(tempConfig.outdoor_apikey);
-  Serial.println("-----------");
-
-
-  preferences.getBytes("temperature", &tempConfig, preferences.getBytesLength("temperature"));
-
-  Serial.println("-----------");
-  Serial.println(tempConfig.outdoor_enable);
-  Serial.println(tempConfig.outdoor_lat);
-  Serial.println(tempConfig.outdoor_long);
-  Serial.println(tempConfig.outdoor_apikey);
-  Serial.println("-----------");
 
   //   ssid = preferences.getChar("ssid");
   //    password = preferences.getChar("password");
+
 }
 
 void getpreset1(){
@@ -2764,7 +2785,7 @@ void loadWebPageHandlers() {
   });
 
   server.on("/getsettings", []() {
-    DynamicJsonDocument json(1500);
+    DynamicJsonDocument json(2000);
     String output;
     char spotlightcolor[8];
     char colorHour[8], colorMin[8], colorColon[8];
@@ -2863,6 +2884,13 @@ void loadWebPageHandlers() {
     json["scrollColor"] = scrollingColor;
 
     json["scrollColorSettings"] = scrollColorSettings;
+
+    json["weatherapi"]["latitude"] = weatherapi.latitude;
+    json["weatherapi"]["longitude"] = weatherapi.longitude;
+    json["weatherapi"]["apikey"] = weatherapi.apikey;
+
+    json["humidity"]["outdoor_enable"] = humidity.outdoor_enable;
+    json["temperature"]["outdoor_enable"] = temperature.outdoor_enable;
      
     serializeJson(json, output);
     server.send(200, "application/json", output);
@@ -3526,14 +3554,26 @@ void loadWebPageHandlers() {
         preferences.putInt("realtimeMode", realtimeMode);
       }
 
-      // outdoor temperature
-      if (!json["temperature"].isNull()) {
-        preferences.getBytes("temperature", &tempConfig, preferences.getBytesLength("temperature"));        
-        tempConfig.outdoor_enable = json["temperature"]["outdoor_enable"].isNull() ? tempConfig.outdoor_enable : json["temperature"]["outdoor_enable"];
-        if (!json["temperature"]["outdoor_lat"].isNull()) strncpy(tempConfig.outdoor_lat, json["temperature"]["outdoor_lat"], sizeof(tempConfig.outdoor_lat));
-        if (!json["temperature"]["outdoor_long"].isNull()) strncpy(tempConfig.outdoor_long, json["temperature"]["outdoor_long"], sizeof(tempConfig.outdoor_long));
-        if (!json["temperature"]["outdoor_apikey"].isNull()) strncpy(tempConfig.outdoor_apikey, json["temperature"]["outdoor_apikey"], sizeof(tempConfig.outdoor_apikey));
+      // outdoor weather api
+      if (!json["weatherapi"].isNull()) {       
+        if (!json["weatherapi"]["latitude"].isNull()) strncpy(weatherapi.latitude, json["weatherapi"]["latitude"], sizeof(weatherapi.latitude));
+        if (!json["weatherapi"]["longitude"].isNull()) strncpy(weatherapi.longitude, json["weatherapi"]["longitude"], sizeof(weatherapi.longitude));
+        if (!json["weatherapi"]["apikey"].isNull()) strncpy(weatherapi.apikey, json["weatherapi"]["apikey"], sizeof(weatherapi.apikey));
+        preferences.putBytes("weatherapi", &weatherapi, sizeof(weatherapi));
       }
+
+      // humidity
+      if (!json["humidity"].isNull()) {
+        if (!json["humidity"]["outdoor_enable"].isNull()) humidity.outdoor_enable = json["humidity"]["outdoor_enable"];
+        preferences.putBytes("humidity", &humidity, sizeof(humidity));
+      }
+
+      // temperature
+      if (!json["temperature"].isNull()) {
+        if (!json["temperature"]["outdoor_enable"].isNull()) temperature.outdoor_enable = json["temperature"]["outdoor_enable"];
+        preferences.putBytes("temperature2", &temperature, sizeof(temperature));
+      }
+
       server.send(200, "text/json", "{\"result\":\"ok\"}");
     } 
     server.send(401);
@@ -3573,7 +3613,7 @@ void loadWebPageHandlers() {
     json["DHT11 C Temp"] = sensorTemp;
     json["DHT11 F Temp"] = (sensorTemp * 1.8000) + 32;
     json["DHT11 Humidity"] = humidTemp;
-    json["WiFi IP"] = WiFi.localIP().toString().c_str();
+    json["WiFi IP"] = WiFi.localIP().toString();
     json["analogRead(PHOTORESISTER_PIN)"] = analogRead(PHOTORESISTER_PIN);
     json["analogRead(MIC_IN_PIN)"] = analogRead(MIC_IN_PIN);
     json["digitalRead(AUDIO_GATE_PIN)"] = digitalRead(AUDIO_GATE_PIN);
@@ -3695,6 +3735,7 @@ void loadWebPageHandlers() {
     json["temperatureSymbol"] = temperatureSymbol;
     json["useSpotlights"] = useSpotlights;
     json["useAudibleAlarm"] = useAudibleAlarm;
+    json["outdoortemp"] = outdoorTemp;
 
     serializeJson(json, output);
     server.send(200, "application/json", output);

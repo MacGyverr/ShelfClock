@@ -1,3 +1,7 @@
+html{
+    scroll-behavior:smooth
+}
+
 body {
     margin: 0;
     font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
@@ -262,6 +266,22 @@ section > div > div input[type='checkbox'] {
 .button-wrapper .scoreboard {
     margin-top: 0;
     row-gap: 0.1rem;
+}
+
+.smaller {
+    font-size: 0.8rem;
+}
+
+.error {
+    color: red;
+}
+
+.weatherapi_save {
+    margin-left: .5rem;
+}
+
+button[name='clearapikey'] {
+    margin-left: 5px;
 }
 
 @media screen and (min-width: 767px) {
