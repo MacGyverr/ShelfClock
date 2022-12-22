@@ -14,6 +14,7 @@
 #include <AutoConnect.h>
 #include <ArduinoJson.h>
 #include "../include/ShelfClick.h"
+#include "../lib/Sounds/Sounds.h"
 
 
 #define LED_TYPE  WS2812B
@@ -86,12 +87,14 @@ int foodSpot = random(36);  //food spot
 int snakeWaiting = 0;  //waiting
 int getSlower = 180;
 int daysUptime = 0;
+int hoursUptime = 0;
 int averageAudioInput = 0;
 float outdoorTemp = -500;
 float outdoorHumidity = -1;
 struct Temperature temperature;
 struct Humidity humidity;
 struct WeatherAPI weatherapi;
+struct Time timeconfig;
 
 struct tm timeinfo; 
 CRGB LEDs[NUM_LEDS];
@@ -435,6 +438,12 @@ byte numbers[] = {
    };
 
 TaskHandle_t Task1;
+QueueHandle_t jobQueue;
+Sounds sounds;
+bool quarterHour = true;
+bool halfHour = true;
+bool threeQuarterHour = true;
+bool wholeHour = true;
 
 void setup() {
   Serial.begin(115200);
@@ -585,26 +594,33 @@ void setup() {
 
   //init rtttl (functions that play the alarms)
   pinMode(BUZZER_PIN, OUTPUT);
-  rtttl::begin(BUZZER_PIN, smb_under);  //play mario sound and set initial brightness level
+  rtttl::begin(BUZZER_PIN, sounds.getStartUpSong());  //play mario sound and set initial brightness level
   while( !rtttl::done() ){GetBrightnessLevel(); rtttl::play();}
 
-
+  jobQueue = xQueueCreate(30, sizeof(String));
   xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 0, &Task1, 0);
+
 }    //end of Setup()
 
 void Task1code(void * parameter) {
   unsigned long lastTime = 0;
-  unsigned long timerDelay = 300000;  //5 seconds  600000 10 min
-
+  unsigned long weatherTimerDelay = 300000;  //5 seconds  600000 10 min
   getRemoteWeather();
 
   while(true) {
-    if ((millis() - lastTime) > timerDelay) {
-      Serial.print("loop() running on core ");
-      Serial.println(xPortGetCoreID());
+    String job;
+    if (xQueueReceive(jobQueue, &job, (TickType_t)10)) {
+      const char * song = sounds.getSongByName(job.c_str());
+      if (song) {
+        rtttl::begin(BUZZER_PIN, sounds.getSongByName(job.c_str()));
+        while( !rtttl::done()) { 
+          rtttl::play();  
+        }
+      }
+    } 
 
+    if ((millis() - lastTime) > weatherTimerDelay) {
       getRemoteWeather();
-
       lastTime = millis();
     }  
   }
@@ -667,7 +683,45 @@ void loop(){
     int currentTimeDay = timeinfo.tm_mday;
     int currentTimeWeek = ((timeinfo.tm_yday + 7 - (timeinfo.tm_wday ? (timeinfo.tm_wday - 1) : 6)) / 7);
     int currentTimeMonth = timeinfo.tm_mon;
-    
+
+    if (currentTimeMin == 0 && timeconfig.chime_hour && wholeHour) {
+      wholeHour = false;
+      quarterHour = true;
+      String song = "westminhour";
+      xQueueSend(jobQueue, &song, (TickType_t)0);
+
+      // Makes sure the bongs are between 1 and 12. 
+      int numberofChimes = currentTimeHour;
+      if (numberofChimes == 0) numberofChimes = 12;
+      else if (numberofChimes > 12) numberofChimes -= 12;
+
+      for(int i = 0; i < numberofChimes; i++) {
+        String song = "westminbong";
+        xQueueSend(jobQueue, &song, (TickType_t)0);
+      }
+    }
+
+    if (currentTimeMin == 15 && timeconfig.chime_fifteen_minute && quarterHour) {
+      quarterHour = false;
+      halfHour = true;
+      String song = "westmin15";
+      xQueueSend(jobQueue, &song, (TickType_t)0);
+    }
+
+    if (currentTimeMin == 30 && timeconfig.chime_thirty_minute && halfHour) {
+      halfHour = false;
+      threeQuarterHour = true;
+      String song = "westmin30";
+      xQueueSend(jobQueue, &song, (TickType_t)0);
+    }
+
+    if (currentTimeMin == 45 && timeconfig.chime_fortyfive_minute && threeQuarterHour) {
+      threeQuarterHour = false;
+      wholeHour = true;
+      String song = "westmin45";
+      xQueueSend(jobQueue, &song, (TickType_t)0);
+    }
+
     checkSleepTimer();  //time to sleep?
 
     if ((currentTimeHour == 23 && currentTimeMin == 11 && timeinfo.tm_sec == 0 && clockDisplayType != 1) || (currentTimeHour == 11 && currentTimeMin == 11 && timeinfo.tm_sec == 0)) { scroll("MAkE A WISH"); }  //at 1111 make a wish
@@ -703,6 +757,7 @@ void loop(){
     if (abs(currentTimeHour - previousTimeHour) >= 1) { //run every hour
       previousTimeHour = currentTimeHour; 
       randomHourPassed = 1;
+      hoursUptime += 1;
       if (scrollFrequency == 6 && (suspendType == 0 || isAsleep == 0) && scrollOverride == 1 && ((clockMode != 11) && (clockMode != 1) && (clockMode != 4))) {displayScrollMode();}
       if (scrollFrequency == 6 && randomSpectrumMode == 1 && clockMode == 9) {allBlank(); spectrumMode = random(11);}
       } //end of run every hour
@@ -1443,27 +1498,7 @@ void endCountdown() {  //countdown timer has reached 0, sound alarm and flash En
     if(!getLocalTime(&timeinfo)){ Serial.println("Failed to obtain time"); }
     int mday = timeinfo.tm_mday;
     int mont = timeinfo.tm_mon + 1;
-    int whatisit = random(20);
-    rtttl::begin(BUZZER_PIN, finalcount);  //play finalcountdown 10 out of 20 times randomly
-    if (whatisit == 1) {rtttl::begin(BUZZER_PIN, puffs);}
-    if (whatisit == 2) {rtttl::begin(BUZZER_PIN, adams);}
-    if (whatisit == 3) {rtttl::begin(BUZZER_PIN, burgertime);}
-    if (whatisit == 4) {rtttl::begin(BUZZER_PIN, rickroll2);}
-    if (whatisit == 5) {rtttl::begin(BUZZER_PIN, melody);}
-    if (whatisit == 6) {rtttl::begin(BUZZER_PIN, rickroll);}
-    if (whatisit == 7) {rtttl::begin(BUZZER_PIN, mario);}
-    if (whatisit == 8) {rtttl::begin(BUZZER_PIN, mspacman);}
-    if (whatisit == 9) {rtttl::begin(BUZZER_PIN, xmen);}
-    if (whatisit == 10) {rtttl::begin(BUZZER_PIN, galaga);}
-    if (mday == 22 && mont == 10) {rtttl::begin(BUZZER_PIN, birthday);}
-    if (mday == 7 && mont == 5) {rtttl::begin(BUZZER_PIN, mandy);}
-    if (mday == 18 && mont == 5) {rtttl::begin(BUZZER_PIN, macgyver);}
-    if (mday == 18 && mont == 3) {rtttl::begin(BUZZER_PIN, aniver);}
-    if (mday == 4 && mont == 5) {rtttl::begin(BUZZER_PIN, starwars);}
-    if (mday == 25 && mont == 12) {rtttl::begin(BUZZER_PIN, xmas);}
-    if (mday == 8 && mont == 9) {rtttl::begin(BUZZER_PIN, startrek);}
-    if (mday == 5 && mont == 5) {rtttl::begin(BUZZER_PIN, cinco);}
-    if (mday == 31 && mont == 10) {rtttl::begin(BUZZER_PIN, halloween);}
+    rtttl::begin(BUZZER_PIN, sounds.getSongForAlarm(mday, mont));
     while( !rtttl::done() && !breakOutSet) {   //play song and flash lights
         rtttl::play();
         color = colorWheel((205 / 50 + colorWheelPosition) % 256);
@@ -2251,12 +2286,6 @@ void Cylon() {
 void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   preferences.begin("shelfclock", false);
 
-  /* Temporary until this is cleared from all clock devices */
-  /* once cleared we can rename temperature2 to temperature */
-  if(preferences.isKey("temperature")) {
-    preferences.remove("temperature");
-  }
-
   gmtOffset_sec = preferences.getLong("gmtOffset_sec", -28800);
   DSTime = preferences.getBool("DSTime", 0);
   cd_r_val = preferences.getInt("cd_r_val", 0);
@@ -2355,14 +2384,14 @@ void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   lightshowMode = preferences.getInt("lightshowMode", 0);
   suspendFrequency = preferences.getInt("suspendFreq", 1);
   suspendType = preferences.getInt("suspendType", 0);
-  preferences.getBytes("temperature2", &temperature, preferences.getBytesLength("temperature2"));
+  preferences.getBytes("temperature", &temperature, preferences.getBytesLength("temperature"));
   preferences.getBytes("humidity", &humidity, preferences.getBytesLength("humidity"));
   preferences.getBytes("weatherapi", &weatherapi, preferences.getBytesLength("weatherapi"));
+  preferences.getBytes("timeconfig", &timeconfig, preferences.getBytesLength("timeconfig"));
 
 
   //   ssid = preferences.getChar("ssid");
   //    password = preferences.getChar("password");
-
 }
 
 void getpreset1(){
@@ -2891,6 +2920,11 @@ void loadWebPageHandlers() {
 
     json["humidity"]["outdoor_enable"] = humidity.outdoor_enable;
     json["temperature"]["outdoor_enable"] = temperature.outdoor_enable;
+
+    json["timeconfig"]["chime_fifteen_minute"] = timeconfig.chime_fifteen_minute;
+    json["timeconfig"]["chime_thirty_minute"] = timeconfig.chime_thirty_minute;
+    json["timeconfig"]["chime_fortyfive_minute"] = timeconfig.chime_fortyfive_minute;
+    json["timeconfig"]["chime_hour"] = timeconfig.chime_hour;
      
     serializeJson(json, output);
     server.send(200, "application/json", output);
@@ -3571,7 +3605,22 @@ void loadWebPageHandlers() {
       // temperature
       if (!json["temperature"].isNull()) {
         if (!json["temperature"]["outdoor_enable"].isNull()) temperature.outdoor_enable = json["temperature"]["outdoor_enable"];
-        preferences.putBytes("temperature2", &temperature, sizeof(temperature));
+        preferences.putBytes("temperature", &temperature, sizeof(temperature));
+      }
+
+      // play music
+      if (!json["song"].isNull()) {
+        String song = json["song"].as<String>();
+        xQueueSend(jobQueue, &song, (TickType_t)0);
+      }
+
+      // Time
+      if (!json["timeconfig"].isNull()) {
+        if (!json["timeconfig"]["chime_fifteen_minute"].isNull()) timeconfig.chime_fifteen_minute = json["timeconfig"]["chime_fifteen_minute"];
+        if (!json["timeconfig"]["chime_thirty_minute"].isNull()) timeconfig.chime_thirty_minute = json["timeconfig"]["chime_thirty_minute"];
+        if (!json["timeconfig"]["chime_fortyfive_minute"].isNull()) timeconfig.chime_fortyfive_minute = json["timeconfig"]["chime_fortyfive_minute"];
+        if (!json["timeconfig"]["chime_hour"].isNull()) timeconfig.chime_hour = json["timeconfig"]["chime_hour"];
+        preferences.putBytes("timeconfig", &timeconfig, sizeof(timeconfig));
       }
 
       server.send(200, "text/json", "{\"result\":\"ok\"}");
@@ -3642,6 +3691,7 @@ void loadWebPageHandlers() {
     json["dateDisplayType"] = dateDisplayType;
     json["daylightOffset_sec"] = daylightOffset_sec;
     json["daysUptime"] = daysUptime;
+    json["hoursUptime"] = hoursUptime;
     json["decay_check"] = decay_check;
     json["decay"] = decay;
     json["DHT_PIN"] = DHT_PIN;

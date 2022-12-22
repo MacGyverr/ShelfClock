@@ -381,6 +381,8 @@ async function loadSettings() {
                 setObjectAPI(key, value);
             } else if (key === 'humidity') {
                 setObjectAPI(key, value);
+            } else if (key === 'timeconfig') {
+                setObjectAPI(key, value);
             } else {
                 console.log(`key is not found ${key}`);
             }
