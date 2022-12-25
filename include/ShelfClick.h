@@ -21,6 +21,7 @@ struct Time {
     bool chime_thirty_minute = true;
     bool chime_fortyfive_minute = true;
     bool chime_hour = true;
+    bool chime_while_sleep = true;
 };
 
 void loadWebPageHandlers();

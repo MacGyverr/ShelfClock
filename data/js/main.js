@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function () {
         /* get all */
         loadSettings();
 
-        for (let [key, value] of Object.entries({...radioButtons, ...dropDownSelectors, ...{'rangeBrightness': 'rangeBrightness'}})) {
+        for (let [key, value] of Object.entries({...radioButtons, ...c, ...{'rangeBrightness': 'rangeBrightness'}})) {
             document.querySelectorAll(`[name='${value}`).forEach((element) => {
                 element.addEventListener("change", async function(event) {
                     let body = {};
@@ -358,6 +358,23 @@ async function loadHome() {
         let data = await response.json();
         document.querySelector("[name='left']").value = data.scoreboardLeft;
         document.querySelector("[name='right']").value = data.scoreboardRight;
+
+        let add = document.querySelector("[name='song']");
+        for (let [key, value] of Object.entries(data.listOfSong)) {
+            let element = document.createElement("option");
+            element.value = key;
+            element.innerHTML = value;
+            add.appendChild(element);
+        }
+
+        document.querySelector("[name='play-song']").addEventListener('click', async event => {
+            let body = {};
+            body['song'] = document.querySelector("[name='song']").value;
+            await fetch(`${url}/updateanything`, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+        });
     }
 }
 

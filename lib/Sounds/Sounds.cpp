@@ -1,7 +1,21 @@
 #include <Sounds.h>
+#include <ArduinoJson.h>
 
 const char *  Sounds::getStartUpSong() {
     return songs.smb_under;
+}
+
+const char * Sounds::getSpecialHourChime(int day, int month) {
+    if (month == 9 && day == 7) return songs.birthday;
+    if (month == 8 && day == 13) return songs.birthday;
+    if (month == 3 && day == 19) return songs.birthday;
+    if (month == 5 && day == 4) return songs.starwars;
+    if (month == 12 && day == 25) return songs.xmas;
+    if (month == 5 && day == 5) return songs.cinco;
+    if (month == 10 && day == 31) return songs.halloween;
+    if (month == 12 && day == 31) return songs.wonderfulworld;
+    if (month == 1 && day == 1) return songs.auldlang;
+    return nullptr;
 }
 
 const char * Sounds::getSongForAlarm(int day, int month) {
@@ -12,6 +26,8 @@ const char * Sounds::getSongForAlarm(int day, int month) {
     if (month == 12 && day == 25) return songs.xmas;
     if (month == 5 && day == 5) return songs.cinco;
     if (month == 10 && day == 31) return songs.halloween;
+    if (month == 12 && day == 31) return songs.wonderfulworld;
+    if (month == 1 && day == 1) return songs.auldlang;
 
     int rand = random(20);
     switch (rand) {
@@ -58,5 +74,38 @@ const char * Sounds::getSongByName(const char* song) {
     else if (strncmp("westmin45", song, 20) == 0) return songs.westmin45;
     else if (strncmp("westminhour", song, 20) == 0) return songs.westminhour;
     else if (strncmp("westminbong", song, 20) == 0) return songs.westminbong;
+    else if (strncmp("wonderfulworld", song, 20) == 0) return songs.wonderfulworld;
     return nullptr;
+}
+
+DynamicJsonDocument Sounds::getListOfSongs() {
+    DynamicJsonDocument json(2500);
+
+    json["rickroll2"] = "Together Forever";
+    json["auldlang"] = "Auld Lang Syne";
+    json["startrek"] = "Star Trek";
+    json["starwars"] = "Star Wars";
+    json["birthday"] = "Happy Birthday";
+    json["rickroll"] = "Never Gonna Give You Up";
+    json["cinco"] = "Macarena";
+    json["xmas"] = "Wish You a Merry Christmas";
+    json["macgyver"] = "MacGyver Theme";
+    json["takeonme"] = "Take On Me";
+    json["melody"] = "Nokia Theme";
+    json["halloween"] = "Halloween";
+    json["mandy"] = "Mandy";
+    json["burgertime"] = "BurgerTime";
+    json["tron"] = "Tron";
+    json["mario"] = "Mario";
+    json["smb_under"] = "Super Mario Brothers Underground";
+    json["finalcount"] = "Final Count Down";
+    json["adams"] = "Adams Family";
+    json["mspacman"] = "Ms PacMan";
+    json["galaga"] = "Galaga";
+    json["xmen"] = "Xmen";
+    json["beethoven"] = "Beethoven - Fur Elise";
+    json["puffs"] = "PowerPuffs";
+    json["wonderfulworld"] = "Wonderful World";
+
+    return json;
 }

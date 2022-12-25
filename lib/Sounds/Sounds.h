@@ -1,5 +1,5 @@
 #include <NonBlockingRtttl.h>
-#include <map>
+#include <ArduinoJson.h>
 
 class Sounds {
 
@@ -34,11 +34,14 @@ class Sounds {
             const char * westmin45 = "westmin-45:d=4,o=6,b=120:g#,e,f#,2b4!,b3,f#,g#,2e!,g#,f#,e,2b4!";
             const char * westminhour = "westmin-hour:d=4,o=6,b=120:e,g#,f#,2b4!,e,f#,g#,2e!,g#,e,f#,2b4!,b4,f#,g#,2e!";
             const char * westminbong = "westmin-bong:d=4,o=6,b=220:1e3!";
-        } songs;
+            const char * wonderfulworld = "WonderfulWorld:d=4,o=5,b=110:32p,8c.,8e,f.,8a,2c.6,d6,16d6,16d6,2c.6,8a#.,8a#,16a#,8a.,8a.,8a,8g.,8g,8g,16g,f.,8f,16f,8f.,8f.,8f,2f.,8f.,16f,8e.,8f.,8g,1a,8c.,8e,f.,8a,2c.6,d6,16d6,16d6,c.6,8f,a#.,8a#,16a#,a.,8a,g.,16g,16g,f.,16f,16f,8f.,8f.,8f,2f.,16f,16f,8e,8f.,8g.,1f";
+         } songs;
+
 
     public:
         const char * getStartUpSong();
         const char * getSongByName(const char *);
         const char * getSongForAlarm(int, int);
-
+        const char * getSpecialHourChime(int, int);
+        DynamicJsonDocument getListOfSongs();
 };
