@@ -583,8 +583,9 @@ void Task1code(void * parameter) {
     String job;
     if (xQueueReceive(jobQueue, &job, (TickType_t)10)) {
       const char * song = sounds.getSongByName(job.c_str());
+      Serial.println(song);
       if (song) {
-        rtttl::begin(BUZZER_PIN, sounds.getSongByName(job.c_str()));
+        rtttl::begin(BUZZER_PIN, song);
         while( !rtttl::done()) { 
           rtttl::play();  
         }
@@ -658,10 +659,10 @@ void loop(){
 
     if (isAsleep == 0 || timeconfig.chime_while_sleep == true) {
       if (currentTimeMin == 0 && timeconfig.chime_hour && wholeHour) {
-        String specialSong = sounds.getSpecialHourChime(currentTimeDay, currentTimeMonth + 1);
-        if (specialSong == nullptr || currentTimeHour % 2 != 0) {
-          wholeHour = false;
-          quarterHour = true;
+        wholeHour = false;
+        quarterHour = true;
+        String specialSong = String(sounds.getSpecialHourChime(currentTimeDay, currentTimeMonth + 1));
+        if (specialSong.equals("") || currentTimeHour % 2 != 0) {
           String song = "westminhour";
           xQueueSend(jobQueue, &song, (TickType_t)0);
 
@@ -1688,24 +1689,24 @@ void printLocalTime() {  //what could this do
 }
 
 
-
-
 void checkSleepTimer(){  //controls suspend mode
-  if (suspendType != 0) {sleepTimerCurrent++;}  //sleep enabled? add one to timer
-  //if (digitalRead(AUDIO_GATE_PIN)==HIGH) {sleepTimerCurrent = 0; isAsleep = 0;}   //sound sensor went off (while checking this function)? wake up
-  int audio_input1 = analogRead(MIC_IN_PIN); 
-  if (audio_input1 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-  int audio_input2 = analogRead(MIC_IN_PIN); 
-  if (audio_input2 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-  int audio_input3 = analogRead(MIC_IN_PIN); 
-  if (audio_input3 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-  int audio_input4 = analogRead(MIC_IN_PIN); 
-  if (audio_input4 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-  int audio_input5 = analogRead(MIC_IN_PIN); 
-  if (audio_input5 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-  averageAudioInput = (audio_input1 + audio_input2 + audio_input3 + audio_input4 + audio_input5) / 5;
-  if (averageAudioInput > 50) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-  if ((suspendType != 0) && sleepTimerCurrent >= (suspendFrequency * 60)) {sleepTimerCurrent = 0; isAsleep = 1; allBlank(); }  //sleep enabled, been some amount of time, go to sleep
+  if(!rtttl::isPlaying()) {  // don't allow chimes to keep it awake. 
+    if (suspendType != 0) {sleepTimerCurrent++;}  //sleep enabled? add one to timer
+    //if (digitalRead(AUDIO_GATE_PIN)==HIGH) {sleepTimerCurrent = 0; isAsleep = 0;}   //sound sensor went off (while checking this function)? wake up
+    int audio_input1 = analogRead(MIC_IN_PIN); 
+    if (audio_input1 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+    int audio_input2 = analogRead(MIC_IN_PIN); 
+    if (audio_input2 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+    int audio_input3 = analogRead(MIC_IN_PIN); 
+    if (audio_input3 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+    int audio_input4 = analogRead(MIC_IN_PIN); 
+    if (audio_input4 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+    int audio_input5 = analogRead(MIC_IN_PIN); 
+    if (audio_input5 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+    averageAudioInput = (audio_input1 + audio_input2 + audio_input3 + audio_input4 + audio_input5) / 5;
+    if (averageAudioInput > 50) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+    if ((suspendType != 0) && sleepTimerCurrent >= (suspendFrequency * 60)) {sleepTimerCurrent = 0; isAsleep = 1; allBlank(); }  //sleep enabled, been some amount of time, go to sleep
+  }
 }
 
 

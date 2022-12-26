@@ -42,6 +42,6 @@ class Sounds {
         const char * getStartUpSong();
         const char * getSongByName(const char *);
         const char * getSongForAlarm(int, int);
-        const char * getSpecialHourChime(int, int);
+        String getSpecialHourChime(int, int);
         DynamicJsonDocument getListOfSongs();
 };

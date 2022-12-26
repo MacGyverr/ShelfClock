@@ -5,17 +5,17 @@ const char *  Sounds::getStartUpSong() {
     return songs.smb_under;
 }
 
-const char * Sounds::getSpecialHourChime(int day, int month) {
-    if (month == 9 && day == 7) return songs.birthday;
-    if (month == 8 && day == 13) return songs.birthday;
-    if (month == 3 && day == 19) return songs.birthday;
-    if (month == 5 && day == 4) return songs.starwars;
-    if (month == 12 && day == 25) return songs.xmas;
-    if (month == 5 && day == 5) return songs.cinco;
-    if (month == 10 && day == 31) return songs.halloween;
-    if (month == 12 && day == 31) return songs.wonderfulworld;
-    if (month == 1 && day == 1) return songs.auldlang;
-    return nullptr;
+String Sounds::getSpecialHourChime(int day, int month) {
+    if (month == 9 && day == 7) return "birthday";
+    if (month == 8 && day == 13) return "birthday";
+    if (month == 3 && day == 19) return "birthday";
+    if (month == 5 && day == 4) return "starwars";
+    if (month == 12 && day == 25) return "xmas";
+    if (month == 5 && day == 5) return "cinco";
+    if (month == 10 && day == 31) return "halloween";
+    if (month == 12 && day == 31) return "wonderfulworld";
+    if (month == 1 && day == 1) return "auldlang";
+    return "";
 }
 
 const char * Sounds::getSongForAlarm(int day, int month) {
