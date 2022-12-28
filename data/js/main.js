@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function () {
         /* get all */
         loadSettings();
 
-        for (let [key, value] of Object.entries({...radioButtons, ...c, ...{'rangeBrightness': 'rangeBrightness'}})) {
+        for (let [key, value] of Object.entries({...radioButtons, ...dropDownSelectors, ...{'rangeBrightness': 'rangeBrightness'}})) {
             document.querySelectorAll(`[name='${value}`).forEach((element) => {
                 element.addEventListener("change", async function(event) {
                     let body = {};
