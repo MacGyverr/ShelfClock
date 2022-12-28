@@ -464,6 +464,7 @@ void setup() {
   Config.portalTimeout = 20000; // Sets timeout value for the captive portal 
   Config.retainPortal = true; // Retains the portal function after timed-out 
   Config.autoRise = true; // False for disabling the captive portal
+  Config.reconnectInterval = 6;
   Portal.config(Config);      
 
   Serial.println();
