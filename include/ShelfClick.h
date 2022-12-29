@@ -16,6 +16,14 @@ struct WeatherAPI {
     char apikey[50];// = "680e541ac65981bd1835f7728a185c47";
 };
 
+struct Time {
+    bool chime_fifteen_minute = true;
+    bool chime_thirty_minute = true;
+    bool chime_fortyfive_minute = true;
+    bool chime_hour = true;
+    bool chime_while_sleep = true;
+};
+
 void loadWebPageHandlers();
 void loadSetupSettings();
 void fakeClock(int);

@@ -358,6 +358,23 @@ async function loadHome() {
         let data = await response.json();
         document.querySelector("[name='left']").value = data.scoreboardLeft;
         document.querySelector("[name='right']").value = data.scoreboardRight;
+
+        let add = document.querySelector("[name='song']");
+        for (let [key, value] of Object.entries(data.listOfSong)) {
+            let element = document.createElement("option");
+            element.value = key;
+            element.innerHTML = value;
+            add.appendChild(element);
+        }
+
+        document.querySelector("[name='play-song']").addEventListener('click', async event => {
+            let body = {};
+            body['song'] = document.querySelector("[name='song']").value;
+            await fetch(`${url}/updateanything`, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+        });
     }
 }
 
@@ -380,6 +397,8 @@ async function loadSettings() {
             } else if (key === 'temperature') {
                 setObjectAPI(key, value);
             } else if (key === 'humidity') {
+                setObjectAPI(key, value);
+            } else if (key === 'timeconfig') {
                 setObjectAPI(key, value);
             } else {
                 console.log(`key is not found ${key}`);
