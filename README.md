@@ -1,9 +1,11 @@
 
 
-This is an updated fork from MacGyverr https://github.com/MacGyverr/ShelfClock. I left his comments below as they are mostly still valid.
-
-
-I'm using Visual Studio Code with PlatformIO instead of Audrino IDE. 
+This is an updated platformIO-based fork with updates from ryanrk, he has fixed the nasty code I kludged together for the web interface and has added the ability to use internet based weather and some alarm/chime features. 
+It includes the user requested timezone options.
+It also includes rjackr's selectable number-of-LEDs-per-digit MOD.
+https://github.com/ryanrk/ShelfClock
+https://github.com/rjackr/ShelfClock
+It's using Visual Studio Code with PlatformIO instead of Arduino IDE. 
 
 <br>
 

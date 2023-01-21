@@ -27,7 +27,6 @@
 #define LED_PIN 2             // led control pin
 #define PHOTORESISTER_PIN 36  // select the analog input pin for the photoresistor
 #define MILLI_AMPS 2400 
-//#define NUM_LEDS  350
 #define NUMBER_OF_DIGITS 7 //4 real, 3 fake
 #define LEDS_PER_SEGMENT 7
 #define SEGMENTS_PER_NUMBER 7
