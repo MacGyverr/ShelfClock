@@ -16,6 +16,9 @@
 
 #define LED_TYPE  WS2812B
 #define COLOR_ORDER GRB
+#define SEGMENTS_PER_NUMBER 7 // this can never change unless you redesign all display routines
+#define NUMBER_OF_DIGITS 7    // 7 = 4 real + 3 fake,  this should be always 7 unless you redesign all display routines
+#define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
 #define DHTTYPE DHT11         // DHT 11 tempsensor
 #define MIC_IN_PIN 34         // Use 34 for mic input
 #define AUDIO_GATE_PIN 15     // for sound gate input trigger
@@ -24,19 +27,25 @@
 #define LED_PIN 2             // led control pin
 #define PHOTORESISTER_PIN 36  // select the analog input pin for the photoresistor
 #define MILLI_AMPS 2400 
-#define NUMBER_OF_DIGITS 7 //4 real, 3 fake
-#define LEDS_PER_SEGMENT 7
-#define SEGMENTS_PER_NUMBER 7
+#define LEDS_PER_SEGMENT 7    // can be 1 to 10 LEDS per segment
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
-#define SPECTRUM_PIXELS  37  //times 7 to get all 258 leds
+#define PHOTO_SAMPLES 15      //number of samples to take from the photoresister
 #define SEGMENTS_LEDS (SPECTRUM_PIXELS * LEDS_PER_SEGMENT)  // Number leds in all segments
 #define SPOT_LEDS (NUMBER_OF_DIGITS * 2)        // Number of Spotlight leds
 #define NUM_LEDS  (SEGMENTS_LEDS + SPOT_LEDS)   // Number of all leds
 
-#define PHOTO_SAMPLES 15  //number of samples to take from the photoresister
-
-#if LEDS_PER_SEGMENT == 6
+#if LEDS_PER_SEGMENT == 1
+#define seg(n) n*LEDS_PER_SEGMENT
+#elif LEDS_PER_SEGMENT == 2
+#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1
+#elif LEDS_PER_SEGMENT == 3
+#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2
+#elif LEDS_PER_SEGMENT == 4
+#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3
+#elif LEDS_PER_SEGMENT == 5
+#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4
+#elif LEDS_PER_SEGMENT == 6
 #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5
 #elif LEDS_PER_SEGMENT == 7
 #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6
@@ -44,6 +53,8 @@
 #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7
 #elif LEDS_PER_SEGMENT == 9
 #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7, n*LEDS_PER_SEGMENT+8
+#elif LEDS_PER_SEGMENT == 10
+#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7, n*LEDS_PER_SEGMENT+8, n*LEDS_PER_SEGMENT+9
 #else
  #error "Not supported Leds per segment. You need to add definition of seg(n) with needed number of elements according to formula above"
 #endif
