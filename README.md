@@ -1,10 +1,15 @@
 
 
 This is an updated platformIO-based fork with updates from ryanrk, he has fixed the nasty code I kludged together for the web interface and has added the ability to use internet based weather and some alarm/chime features. 
+<br>
 It includes the user requested timezone options.
+<br>
 It also includes rjackr's selectable number-of-LEDs-per-digit MOD.
+<br>
 https://github.com/ryanrk/ShelfClock
+<br>
 https://github.com/rjackr/ShelfClock
+<br>
 It's using Visual Studio Code with PlatformIO instead of Arduino IDE. 
 
 <br>
