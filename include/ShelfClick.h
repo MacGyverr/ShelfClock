@@ -1,6 +1,6 @@
-#include "Arduino.h";
-#include "WString.h";
-#include <FastLED.h>;
+#include "Arduino.h"
+#include "WString.h"
+#include <FastLED.h>
 
 struct Temperature {
     bool outdoor_enable; // = true;  

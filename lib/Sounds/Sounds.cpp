@@ -6,10 +6,8 @@ const char *  Sounds::getStartUpSong() {
 }
 
 String Sounds::getSpecialHourChime(int day, int month) {
-    if (month == 9 && day == 7) return "birthday";
-    if (month == 8 && day == 13) return "birthday";
-    if (month == 3 && day == 19) return "birthday";
     if (month == 5 && day == 4) return "starwars";
+    if (month == 9 && day == 8) return "startrek";
     if (month == 12 && day == 25) return "xmas";
     if (month == 5 && day == 5) return "cinco";
     if (month == 10 && day == 31) return "halloween";
@@ -19,10 +17,8 @@ String Sounds::getSpecialHourChime(int day, int month) {
 }
 
 const char * Sounds::getSongForAlarm(int day, int month) {
-    if (month == 9 && day == 7) return songs.birthday;
-    if (month == 8 && day == 13) return songs.birthday;
-    if (month == 3 && day == 19) return songs.birthday;
     if (month == 5 && day == 4) return songs.starwars;
+    if (month == 9 && day == 8) return songs.startrek;
     if (month == 12 && day == 25) return songs.xmas;
     if (month == 5 && day == 5) return songs.cinco;
     if (month == 10 && day == 31) return songs.halloween;
