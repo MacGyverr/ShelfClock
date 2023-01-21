@@ -1024,7 +1024,7 @@ void displayTemperatureMode() {   //miain temp function
     displayNumber(t4,1,typeColor); 
     if (tempColorSettings == 4 && pastelColors == 0){ degreeColor = CHSV(random(0, 255), 255, 255); }
     if (tempColorSettings == 4 && pastelColors == 1){ degreeColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-    for (int i=84; i<91; i++) { LEDs[i] = degreeColor;}  //period goes here
+    for (int i=(12*LEDS_PER_SEGMENT); i<(13*LEDS_PER_SEGMENT); i++) { LEDs[i] = degreeColor;}  //period goes here
   }
   if ((tempDisplayType == 3) && (correctedTemp >= 100)) {   //3-Temperature with Decimal (79.9) over 100
     displayNumber(t2,5,tempColor);
