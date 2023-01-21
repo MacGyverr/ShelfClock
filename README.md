@@ -1,10 +1,20 @@
+
+
+This is an updated fork from MacGyverr https://github.com/MacGyverr/ShelfClock. I left his comments below as they are mostly still valid.
+
+
+I'm using Visual Studio Code with PlatformIO instead of Audrino IDE. 
+
+<br>
+
+---
+  
+<br>
 This is a clock that is a remix from an idea I saw on Youtube once. The code here resembles nothing of what the idea was based on. (at https://github.com/DIY-Machines/DigitalClockSmartShelving)
 A lot of feature ideas came from https://github.com/helpquick/7-Segment-WiFi-Clock
 
 It has lots of features, (most even work correctly) those include:
-Clock Mode
-Date Mode
-Temperature Mode
+Clock ModeTemperature Mode
 Humidity Mode
 Various Lightshow Modes
 Various Music Visualizer Modes

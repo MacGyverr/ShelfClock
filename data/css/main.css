@@ -1,0 +1,307 @@
+html{
+    scroll-behavior:smooth
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol","Noto Color Emoji";
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #212529;
+    text-align: left;
+    background-color: #fff;
+}
+
+nav {
+    overflow: hidden;
+    background-color: #343a40;
+    padding: .5rem 1rem;
+    margin-bottom: 2.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    height: 2.5rem;
+    transition: all .5s ease-in-out;
+}
+
+/* brand button */
+nav > a {
+    display: inline-block;
+    padding-top: .3125rem;
+    padding-bottom: .3125rem;
+    padding-left: 0;
+    margin-right: 1rem;
+    font-size: 1.25rem;
+    line-height: inherit;
+    white-space: nowrap;
+    color: white;
+    text-decoration: none;
+}
+
+nav a.active {
+    color: white;
+}
+
+/* toggle button */
+nav button {
+    padding: .25rem .75rem;
+    font-size: 1.25rem;
+    line-height: 1;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: .25rem;
+    color: rgba(255,255,255,.5);
+    border-color: rgba(255,255,255,.1);
+    cursor: pointer;
+}
+
+nav button:focus {
+    outline: 5px auto -webkit-focus-ring-color;
+}
+
+nav button span {
+    display: inline-block;
+    width: 1.5em;
+    height: 1.5em;
+    vertical-align: middle;
+    content: "";
+    background: no-repeat center center;
+    background-size: 100% 100%;
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(255,255,255, 0.5)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 8h24M4 16h24M4 24h24'/%3E%3C/svg%3E");
+}
+
+/* nav links */
+nav.show {
+    height: 15rem;
+}
+
+nav div {
+    flex-basis: 100%;
+}
+
+nav div a {
+    float: left;
+    display: block;
+    color: rgba(255,255,255,.5);
+    text-align: center;
+    text-decoration: none;
+    padding: .5rem 0;
+}
+
+nav div a:hover {
+    color: rgba(255,255,255,.75);
+}
+
+nav div ul {
+    display: flex;
+    flex-direction: column;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+section {
+    margin: 0 2rem;
+    max-width: 26rem;
+}
+
+section h2 {
+    font-size: 1rem;
+}
+
+section h3 {
+    font-size: 1rem;
+    margin-bottom: 0;
+}
+
+section > div {
+    border: 1px solid rgba(0,0,0,.125);
+    border-radius: .25rem;
+    padding: 1rem 1.9rem 0 1.9rem;
+    margin-bottom: 3rem;
+    min-width: 15.5rem;
+}
+
+section > div > div {
+    margin-bottom: 1.7rem;  
+}
+
+section > div > div label {
+    display: block;
+}
+
+section > div > div label input {
+    margin: 0;
+}
+
+section > div > div label div {
+    display: flex;
+    flex-direction: column;
+    padding-left: 1.2rem;
+}
+
+section > div > div select {
+    font-size: inherit;
+}
+
+section > div > div .range {
+    display: flex;
+    justify-content: space-between;
+}
+
+section > div > div input[type='range'] {
+    width: 100%;
+}
+
+section > div > div input[type='checkbox'] {
+    margin-right: 0.3rem;
+}
+
+.button-wrapper h3 {
+    text-align: center;
+    margin: 0;
+}
+
+.button-wrapper div {
+    margin: 1.7rem 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    row-gap: 1rem;
+    column-gap: .25rem;
+    justify-content: space-between;
+    justify-items: center;
+}
+
+.button-wrapper div.grid-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+    justify-items: center;
+    margin-top: 0.5rem;
+    row-gap: 0.5rem;
+}
+
+.button-wrapper input[type='number'] {
+    width: 100%;
+    font-size: 1rem;
+    padding: .5rem 0;
+    text-align: center;
+    width: 4rem;
+}
+
+.button-wrapper input[type='button']:hover, .datetime-wrapper button:hover {
+    background-color: rgba(0, 255, 0, 1);   
+}
+
+.datetime-wrapper {
+    text-align: center;
+    padding-bottom: 2rem;
+}
+
+.datetime-wrapper div {
+    margin: 1.3rem 0;
+    color: #004085;
+    background-color: #cce5ff;
+    border-color: #b8daff;
+    position: relative;
+    padding: .75rem 1.25rem;
+    border: 1px solid transparent;
+    border-radius: .25rem;
+}
+
+.datetime-wrapper input[type='button'], .button-wrapper input[type='button'] {
+    width: 100%;
+    border: 0;
+    line-height: 2.5;
+    padding: 0 0.5rem;
+    font-size: 1rem;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 1px #000;
+    border-radius: .75rem;
+    cursor: pointer;
+    background-image: linear-gradient(to top left, rgba(0, 0, 0, .2), rgba(0, 0, 0, .2) 30%, rgba(0, 0, 0, 0));
+    box-shadow: inset 2px 2px 3px rgb(255 255 255 / 60%), inset -2px -2px 3px rgb(0 0 0 / 60%);
+}
+
+.datetime-wrapper input[type='button']:active, .button-wrapper input[type='button']:active {
+    box-shadow: inset -2px -2px 3px rgba(255, 255, 255, .6), inset 2px 2px 3px rgba(0, 0, 0, .6);
+}
+
+.button-wrapper .small-top-margin {
+    margin-top: 0.5rem;
+}
+
+.yellow input[type='button'], input.yellow {
+    background-color: rgba(255, 255, 0, 1);
+}
+
+.grey input[type='button'], input.grey {
+    background-color: rgba(128,128,128, 1);
+}
+
+.blue input[type='button'], input.blue {
+    background-color: rgba(0, 0, 220, 1);
+}
+
+.red input[type='button'], input.red {
+    background-color: rgba(220, 0, 0, 1);
+}
+
+.dark-purple input[type='button'], input.dark-purple {
+    background-color: rgb(81, 62, 132);
+}
+
+.purple input[type='button'], input.purple {
+    background-color: rgba(128, 0, 255, 1);
+}
+
+.green input[type='button'], input.green {
+    background-color: rgb(106, 163, 36);
+}
+
+.orange input[type='button'], input.orange {
+    background-color: rgba(255, 128, 0, 1);
+}
+
+.button-wrapper .scoreboard {
+    margin-top: 0;
+    row-gap: 0.1rem;
+}
+
+.smaller {
+    font-size: 0.8rem;
+}
+
+.error {
+    color: red;
+}
+
+.weatherapi_save {
+    margin-left: .5rem;
+}
+
+button[name='clearapikey'] {
+    margin-left: 5px;
+}
+
+@media screen and (min-width: 767px) {
+    nav {
+        justify-content: flex-start;
+    }
+
+    nav button {
+        display: none;
+    }
+    nav div {
+        flex-basis: unset;
+    }
+
+    nav div a {
+        padding-right: .5rem;
+        padding-left: .5rem;
+    }
+
+    nav div ul {
+        flex-direction: row;
+    }
+}
