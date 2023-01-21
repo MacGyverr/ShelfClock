@@ -1,0 +1,13 @@
+37 - Lid-diffuser.STL
+37 - LED Mount.STL
+36 - Scaffolding.STL
+1 - Scaffolding - Arduino Housing.STL
+10 - Sleeve1-Bottom & Sides.STL
+7 - Sleeve2-Top with Light.STL
+12 - Sleeve3-Vertical Middle.STL
+7 - Sleeve4-Middle with Light.STL
+1 - Sleeve5-For Ardunio.STL or Sleeve5-For Ardunio with Mic-hole.STL
+1 - Back-Cover.STL
+1 - Back-Cover-plug.STL
+1 - Arduino-Mount Insert.STL
+1 - Corner Stand-off Legs.STL
