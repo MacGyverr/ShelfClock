@@ -1,3 +1,15 @@
+
+There is a newer VS Code and PlatformIO-based version of this code available but it hasn't been fully tested on all the hardware by me yet. <br>(I no longer have the original hardware, so my test rig is missing the LEDs and the audio circuit, but it compiles and seems to work blind via the web interface correctly)<br>
+It's located here if you want to give it a try.<br>
+https://github.com/MacGyverr/ShelfClock/tree/new-vscode-version
+
+
+<br>
+
+---
+  
+<br>
+
 <br>
 This is a clock that is a remix from an idea I saw on Youtube once. The code here resembles nothing of what the idea was based on. (at https://github.com/DIY-Machines/DigitalClockSmartShelving)
 A lot of feature ideas came from https://github.com/helpquick/7-Segment-WiFi-Clock
