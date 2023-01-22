@@ -35,6 +35,9 @@ class Sounds {
             const char * westminhour = "westmin-hour:d=4,o=6,b=120:e,g#,f#,2b4!,e,f#,g#,2e!,g#,e,f#,2b4!,b4,f#,g#,2e!";
             const char * westminbong = "westmin-bong:d=4,o=6,b=220:1e3!";
             const char * wonderfulworld = "WonderfulWorld:d=4,o=5,b=110:32p,8c.,8e,f.,8a,2c.6,d6,16d6,16d6,2c.6,8a#.,8a#,16a#,8a.,8a.,8a,8g.,8g,8g,16g,f.,8f,16f,8f.,8f.,8f,2f.,8f.,16f,8e.,8f.,8g,1a,8c.,8e,f.,8a,2c.6,d6,16d6,16d6,c.6,8f,a#.,8a#,16a#,a.,8a,g.,16g,16g,f.,16f,16f,8f.,8f.,8f,2f.,16f,16f,8e,8f.,8g.,1f";
+            const char * tetris1 = "tetris1:d=4,o=5,b=160:e6,8b,8c6,8d6,16e6,16d6,8c6,8b,a,8a,8c6,e6,8d6,8c6,b,8b,8c6,d6,e6,c6,a,2a,8p,d6,8f6,a6,8g6,8f6,e6,8e6,8c6,e6,8d6,8c6,b,8b,8c6,d6,e6,c6,a,a";
+            const char * tetris2 = "tetris2:d=4,o=5,b=160:d6,32p,c.6,32p,8a,8c6,8a#,16a,16g,f,c,8a,8c6,8g,8a,f,c,d,8d,8e,8g,8f,8e,8d,c,c,c";
+            const char * tetris3 = "tetris3:d=4,o=5,b=63:d#6,b,c#6,a#,16b,16g#,16a#,16b,16b,16g#,16a#,16b,c#6,g,d#6,16p,16g#,16a#,16b,c#6,16p,16b,16a#,g#,g,g#,16f,16g,16g#,16a#,8d#.6,32d#6,32p,32d#6,32p,32d#6,32p,16d6,16d#6,8f.6,16d6,8a#,8p,8f#6,8d#6,8f#,8g#,a#.,16p,16a#,8d#.6,16f6,16f#6,16f6,16d#6,16a#,8g#.,16b,8d#6,16f6,16d#6,8a#.,16b,16a#,16g#,16f,16f#,d#";
          } songs;
 
 

@@ -37,6 +37,9 @@ const char * Sounds::getSongForAlarm(int day, int month) {
         case 8: return songs.mspacman;
         case 9: return songs.xmen;
         case 10: return songs.galaga;
+        case 11: return songs.tetris1;
+        case 12: return songs.tetris2;
+        case 13: return songs.tetris3;
         default: return songs.finalcount;
     }
 }
@@ -71,6 +74,9 @@ const char * Sounds::getSongByName(const char* song) {
     else if (strncmp("westminhour", song, 20) == 0) return songs.westminhour;
     else if (strncmp("westminbong", song, 20) == 0) return songs.westminbong;
     else if (strncmp("wonderfulworld", song, 20) == 0) return songs.wonderfulworld;
+    else if (strncmp("tetris1", song, 20) == 0) return songs.tetris1;
+    else if (strncmp("tetris2", song, 20) == 0) return songs.tetris2;
+    else if (strncmp("tetris3", song, 20) == 0) return songs.tetris3;
     return nullptr;
 }
 
@@ -102,6 +108,9 @@ DynamicJsonDocument Sounds::getListOfSongs() {
     json["beethoven"] = "Beethoven - Fur Elise";
     json["puffs"] = "PowerPuffs";
     json["wonderfulworld"] = "Wonderful World";
+    json["tetris1"] = "Tetris 1";
+    json["tetris2"] = "Tetris 2";
+    json["tetris3"] = "Tetris 3";
 
     return json;
 }

@@ -13,6 +13,7 @@
 #include "RTClib.h"
 #include <AutoConnect.h>
 #include <ArduinoJson.h>
+#include <MultiMap.h>
 #include "../include/ShelfClick.h"
 #include "../lib/Sounds/Sounds.h"
 
@@ -33,7 +34,8 @@
 #define LEDS_PER_SEGMENT 7    // can be 1 to 10 LEDS per segment
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
-#define PHOTO_SAMPLES 15      //number of samples to take from the photoresister
+#define PHOTO_SAMPLES 2      //number of samples to take from the photoresister
+#define PHOTO_SIZE 5
 #define SEGMENTS_LEDS (SPECTRUM_PIXELS * LEDS_PER_SEGMENT)  // Number leds in all segments
 #define SPOT_LEDS (NUMBER_OF_DIGITS * 2)        // Number of Spotlight leds
 #define NUM_LEDS  (SEGMENTS_LEDS + SPOT_LEDS)   // Number of all leds
@@ -84,6 +86,8 @@ long post_react = 0; // OLD SPIKE CONVERSION
 const int colorWheelSpeed = 3;
 int sleepTimerCurrent = 0;
 int isAsleep = 0;
+int photo_in[PHOTO_SIZE] = {   0, 150, 1180, 2170, 4095};
+int photo_out[PHOTO_SIZE] = {255, 160,   40,   14,    2};
 int photoresisterReadings[PHOTO_SAMPLES];      // the readings from the analog input
 int readIndex = 0;              // the index of the current reading
 int lightSensorValue = 255;
@@ -742,7 +746,7 @@ void loop(){
     if (abs(currentTimeMin - previousTimeMin) >= 1) { //run every minute
       previousTimeMin = currentTimeMin; 
       randomMinPassed = 1; 
-      GetBrightnessLevel(); 
+     // GetBrightnessLevel(); 
       if (scrollFrequency == 1 && (suspendType == 0 || isAsleep == 0) && scrollOverride == 1 && ((clockMode != 11) && (clockMode != 1) && (clockMode != 4))) {displayScrollMode();}
       if (scrollFrequency == 1 && randomSpectrumMode == 1 && clockMode == 9) {allBlank(); spectrumMode = random(11);}
       } //end of run every minute
@@ -789,8 +793,8 @@ void loop(){
     if (abs(currentTimeMonth - previousTimeMonth) >= 1) { previousTimeMonth = currentTimeMonth; randomMonthPassed = 1;}
 
     if (realtimeMode == 0) {    //give autodim sensors some CPU time, update display
-       GetBrightnessLevel();        
-       FastLED.show();
+       //GetBrightnessLevel();        
+       //FastLED.show();
     }
     //give the various clock modes CPU time every 1 seconds
     if ((suspendType == 0 || isAsleep == 0) && clockMode == 0) {
@@ -888,6 +892,7 @@ void displayTimeMode() {  //main clock function
       displayNumber(h2,4,hourColor);
       displayNumber(m1,2,minColor);
       displayNumber(m2,0,minColor); 
+	  BlinkDots();
   }
   if (clockDisplayType == 0) {  //center set and hour is less than 1 and no 0 is set, default
   if (h1 > 0) {
@@ -911,6 +916,7 @@ void displayTimeMode() {  //main clock function
       displayNumber(h2,4,hourColor);
       displayNumber(m1,2,minColor);
       displayNumber(m2,0,minColor); 
+	  BlinkDots();
   }
 
   if (clockDisplayType == 4) {     //New Year Countdown
@@ -1691,6 +1697,8 @@ void scroll(String IncomingString) {    //main scrolling function
       }    //slow down on non-padded parts with web server polls
     } 
   }
+  allBlank();
+  allBlank();
 } //end of scroll function
 
 
@@ -1758,8 +1766,9 @@ void GetBrightnessLevel() {   //samples the photoresister and set brightness
      sumBrightness += photoresisterReadings[i];  // add all the current readings together
     }
  //   Serial.println(analogRead(PHOTORESISTER_PIN));
-   // lightSensorValue = 255 - (((sumBrightness / PHOTO_SAMPLES) * (215)) / 4095);  //linear conversion of 0-4095 to 255 to 40, after getting the average of the readings
-  lightSensorValue = 275 - (((sumBrightness / PHOTO_SAMPLES) * (245)) / 4095);  //linear conversion of 0-4095 to 305 to 10 (a little brighter), after getting the average of the readings
+   lightSensorValue = multiMap<int>(sumBrightness / PHOTO_SAMPLES, photo_in, photo_out, PHOTO_SIZE);
+  //lightSensorValue = 255 - (((sumBrightness / PHOTO_SAMPLES) * (254)) / 4095);  //linear conversion of 0-4095 to 255 to 40, after getting the average of the readings
+  //lightSensorValue = 275 - (((sumBrightness / PHOTO_SAMPLES) * (245)) / 4095);  //linear conversion of 0-4095 to 305 to 10 (a little brighter), after getting the average of the readings
   if (lightSensorValue > 255) {lightSensorValue = 255;} //constrain brightness
     if (brightness != 10) {  //if not set to auto-dim just use user set brightness
       FastLED.setBrightness(brightness);
@@ -1821,6 +1830,7 @@ void allBlank() {   //clears all non-shelf LEDs to black
   randomDayPassed = 1;
   randomWeekPassed = 1;
   randomMonthPassed = 1;
+  GetBrightnessLevel();
 }  // end of all-blank
 
 
@@ -1872,8 +1882,8 @@ void ShelfDownLights() {  //turns on the drop lights on the underside of each sh
  } else {  //or turn them all off
   for (int i=SEGMENTS_LEDS; i<NUM_LEDS; i++) {
     LEDs[i] = CRGB::Black;
-    FastLED.show();
   }
+  FastLED.show();
  }
  
 }//end of ShelfDownLights 
@@ -1887,29 +1897,60 @@ void BlinkDots() {  //displays the 2 dots in the middle of the time (colon)
     if (((ClockColorSettings == 2) || (ClockColorSettings == 4)) && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255));}
     if (ClockColorSettings == 3 && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { colonColor = hourColor;}
     if (colonType == 0) {
-      if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
-      if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
-      if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
-      if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
+      if (clockDisplayType == 1 || clockDisplayType == 2) {     //12 24-hour Military Time
+        if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
+        if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
+        for (int i=17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2; i<17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
+        if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
+        if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
+        for (int i=19*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2; i<19*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}        
+      }
+      else {
+        if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
+        if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
+        for (int i=25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
+        if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
+        if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
+        for (int i=20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
+      }
     }
     if (colonType == 1) {
-      if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
-      if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=25*LEDS_PER_SEGMENT; i<26*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
-      if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
-      if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
+      if (clockDisplayType == 1 || clockDisplayType == 2) {     //12 24-hour Military Time
+        if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
+        if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
+        for (int i=17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+2; i++) { LEDs[i] = colonColor;}
+        if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
+        if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
+        for (int i=19*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<19*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+2; i++) { LEDs[i] = colonColor;}        
+      }
+      else {
+        if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
+        if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
+        for (int i=25*LEDS_PER_SEGMENT; i<26*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
+        if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
+        if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
+        for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
+      }
     }
     if (colonType == 2) {
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
+      if (clockDisplayType == 1 || clockDisplayType == 2) {     //12 24-hour Military Time
+        for (int i=17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2; i<17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
+      }
+      else {
+	      for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
+      }
     }
   } else {
-    for (int i=25*LEDS_PER_SEGMENT; i<26*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
-    for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
+    if (clockDisplayType == 1 || clockDisplayType == 2) {     //12 24-hour Military Time
+      for (int i=17*LEDS_PER_SEGMENT; i<18*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
+      for (int i=19*LEDS_PER_SEGMENT; i<20*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
+    }
+    else {
+	    for (int i=25*LEDS_PER_SEGMENT; i<26*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
+	    for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
+    }
   }
   dotsOn = !dotsOn;  
 }//end of shelf and gaps
@@ -3490,6 +3531,7 @@ void loadWebPageHandlers() {
         realtimeMode = 0;   
         preferences.putInt("realtimeMode", realtimeMode);  
         printLocalTime(); 
+        breakOutSet = 1;
       }
 
       // DateMode
@@ -3542,14 +3584,14 @@ void loadWebPageHandlers() {
       // loadpreset1
       if (!json["loadPreset1"].isNull()) {
         getpreset1();   
-        GetBrightnessLevel();        
+        //GetBrightnessLevel();        
         allBlank(); 
       }
 
       // loadpreset2
       if (!json["loadPreset2"].isNull()) {
         getpreset2();   
-        GetBrightnessLevel();        
+        //GetBrightnessLevel();        
         allBlank();  
       }
 
@@ -3741,18 +3783,18 @@ void loadWebPageHandlers() {
     json["PHOTO_SAMPLES"] = PHOTO_SAMPLES;
     json["photoresisterReadings[0]"] = photoresisterReadings[0];
     json["photoresisterReadings[1]"] = photoresisterReadings[1];
-    json["photoresisterReadings[2]"] = photoresisterReadings[2];
-    json["photoresisterReadings[3]"] = photoresisterReadings[3];
-    json["photoresisterReadings[4]"] = photoresisterReadings[4];
-    json["photoresisterReadings[5]"] = photoresisterReadings[5];
-    json["photoresisterReadings[6]"] = photoresisterReadings[6];
-    json["photoresisterReadings[7]"] = photoresisterReadings[7];
-    json["photoresisterReadings[8]"] = photoresisterReadings[8];
-    json["photoresisterReadings[9]"] = photoresisterReadings[9];
-    json["photoresisterReadings[10]"] = photoresisterReadings[10];
-    json["photoresisterReadings[11]"] = photoresisterReadings[11];
-    json["photoresisterReadings[12]"] = photoresisterReadings[12];
-    json["photoresisterReadings[13]"] = photoresisterReadings[13];
+    //json["photoresisterReadings[2]"] = photoresisterReadings[2];
+    //json["photoresisterReadings[3]"] = photoresisterReadings[3];
+    //json["photoresisterReadings[4]"] = photoresisterReadings[4];
+    //json["photoresisterReadings[5]"] = photoresisterReadings[5];
+    //json["photoresisterReadings[6]"] = photoresisterReadings[6];
+    //json["photoresisterReadings[7]"] = photoresisterReadings[7];
+    //json["photoresisterReadings[8]"] = photoresisterReadings[8];
+    //json["photoresisterReadings[9]"] = photoresisterReadings[9];
+    //json["photoresisterReadings[10]"] = photoresisterReadings[10];
+    //json["photoresisterReadings[11]"] = photoresisterReadings[11];
+    //json["photoresisterReadings[12]"] = photoresisterReadings[12];
+    //json["photoresisterReadings[13]"] = photoresisterReadings[13];
     json["PHOTORESISTER_PIN"] = PHOTORESISTER_PIN;
     json["post_react"] = post_react;
     json["pre_react"] = pre_react;
