@@ -16,7 +16,11 @@ A lot of feature ideas came from https://github.com/helpquick/7-Segment-WiFi-Clo
 
 It has lots of features, (most even work correctly) those include:
 <br>
-Clock ModeTemperature Mode
+Clock Mode
+<br>
+Temperature Mode
+<br>
+Date Mode
 <br>
 Humidity Mode
 <br>
