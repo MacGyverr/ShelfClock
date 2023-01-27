@@ -125,6 +125,7 @@ int snakeWaiting = 0;  //waiting
 int getSlower = 180;
 int daysUptime = 0;
 int hoursUptime = 0;
+int minutesUptime = 0;
 int averageAudioInput = 0;
 float outdoorTemp = -500;
 float outdoorHumidity = -1;
@@ -606,7 +607,7 @@ void setup() {
   rtttl::begin(BUZZER_PIN, sounds.getStartUpSong());  //play mario sound and set initial brightness level
   while( !rtttl::done() ){GetBrightnessLevel(); rtttl::play();}
 
-  jobQueue = xQueueCreate(30, sizeof(String));
+  jobQueue = xQueueCreate(30, sizeof(String *));
   xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 0, &Task1, 0);
 
 }    //end of Setup()
@@ -617,9 +618,9 @@ void Task1code(void * parameter) {
   getRemoteWeather();
 
   while(true) {
-    String job;
+    String *job;
     if (xQueueReceive(jobQueue, &job, (TickType_t)10)) {
-      const char * song = sounds.getSongByName(job.c_str());
+      const char * song = sounds.getSongByName(job->c_str());
       Serial.println(song);
       if (song) {
         rtttl::begin(BUZZER_PIN, song);
@@ -627,6 +628,7 @@ void Task1code(void * parameter) {
           rtttl::play();  
         }
       }
+      delete job;
     } 
 
     if ((millis() - lastTime) > weatherTimerDelay) {
@@ -698,9 +700,9 @@ void loop(){
       if (currentTimeMin == 0 && timeconfig.chime_hour && wholeHour) {
         wholeHour = false;
         quarterHour = true;
-        String specialSong = String(sounds.getSpecialHourChime(currentTimeDay, currentTimeMonth + 1));
-        if (specialSong.equals("") || currentTimeHour % 2 != 0) {
-          String song = "westminhour";
+        String *specialSong = new String(sounds.getSpecialHourChime(currentTimeDay, currentTimeMonth + 1));
+        if (specialSong->equals("") || currentTimeHour % 2 != 0) {
+          String *song = new String("westminhour");
           xQueueSend(jobQueue, &song, (TickType_t)0);
 
           // Makes sure the bongs are between 1 and 12. 
@@ -709,7 +711,7 @@ void loop(){
           else if (numberofChimes > 12) numberofChimes -= 12;
 
           for(int i = 0; i < numberofChimes; i++) {
-            String song = "westminbong";
+            String *song = new String("westminbong");
             xQueueSend(jobQueue, &song, (TickType_t)0);
           }
         } else {
@@ -720,21 +722,21 @@ void loop(){
       if (currentTimeMin == 15 && timeconfig.chime_fifteen_minute && quarterHour) {
         quarterHour = false;
         halfHour = true;
-        String song = "westmin15";
+        String *song = new String("westmin15");
         xQueueSend(jobQueue, &song, (TickType_t)0);
       }
 
       if (currentTimeMin == 30 && timeconfig.chime_thirty_minute && halfHour) {
         halfHour = false;
         threeQuarterHour = true;
-        String song = "westmin30";
+        String *song = new String("westmin30");
         xQueueSend(jobQueue, &song, (TickType_t)0);
       }
 
       if (currentTimeMin == 45 && timeconfig.chime_fortyfive_minute && threeQuarterHour) {
         threeQuarterHour = false;
         wholeHour = true;
-        String song = "westmin45";
+        String *song = new String("westmin45");
         xQueueSend(jobQueue, &song, (TickType_t)0);
       }
     }
@@ -745,7 +747,8 @@ void loop(){
  
     if (abs(currentTimeMin - previousTimeMin) >= 1) { //run every minute
       previousTimeMin = currentTimeMin; 
-      randomMinPassed = 1; 
+      randomMinPassed = 1;
+      minutesUptime += 1; 
      // GetBrightnessLevel(); 
       if (scrollFrequency == 1 && (suspendType == 0 || isAsleep == 0) && scrollOverride == 1 && ((clockMode != 11) && (clockMode != 1) && (clockMode != 4))) {displayScrollMode();}
       if (scrollFrequency == 1 && randomSpectrumMode == 1 && clockMode == 9) {allBlank(); spectrumMode = random(11);}
@@ -3669,7 +3672,7 @@ void loadWebPageHandlers() {
 
       // play music
       if (!json["song"].isNull()) {
-        String song = json["song"].as<String>();
+        String *song = new String(json["song"].as<String>());
         xQueueSend(jobQueue, &song, (TickType_t)0);
       }
 
@@ -3752,6 +3755,7 @@ void loadWebPageHandlers() {
     json["daylightOffset_sec"] = daylightOffset_sec;
     json["daysUptime"] = daysUptime;
     json["hoursUptime"] = hoursUptime;
+	json["minutesUptime"] = minutesUptime;
     json["decay_check"] = decay_check;
     json["decay"] = decay;
     json["DHT_PIN"] = DHT_PIN;
