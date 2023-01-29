@@ -11,9 +11,6 @@ struct Humidity {
 };
 
 struct WeatherAPI {
-    char latitude[15];// = 47.698560;
-    char longitude[15];// = -122.101970;
-    char apikey[50];// = "680e541ac65981bd1835f7728a185c47";
     char latitude[15];
     char longitude[15];
     char apikey[50];
