@@ -16,6 +16,9 @@
 #include <MultiMap.h>
 #include "../include/ShelfClick.h"
 #include "../lib/Sounds/Sounds.h"
+#include <driver/adc.h>
+#include <arduinoFFT.h>				// Don't forget to change CPU Frequency to 240MHz in Arduino board settings
+#include <soc/adc_channel.h>
 
 
 #define LED_TYPE  WS2812B
@@ -24,8 +27,9 @@
 #define NUMBER_OF_DIGITS 7    // 7 = 4 real + 3 fake,  this should be always 7 unless you redesign all display routines
 #define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
 #define DHTTYPE DHT11         // DHT 11 tempsensor
-#define MIC_IN_PIN 34         // Use 34 for mic input
+#define ENVELOPE_IN_PIN 34    // Use 34 for envelope pin input
 #define AUDIO_GATE_PIN 15     // for sound gate input trigger
+#define AUDIO_IN_PIN    32    // Analog audio in (audio pin)
 #define BUZZER_PIN 16         // peizo speaker
 #define DHT_PIN 18            // temp sensor pin
 #define LED_PIN 2             // led control pin
@@ -39,31 +43,11 @@
 #define SEGMENTS_LEDS (SPECTRUM_PIXELS * LEDS_PER_SEGMENT)  // Number leds in all segments
 #define SPOT_LEDS (NUMBER_OF_DIGITS * 2)        // Number of Spotlight leds
 #define NUM_LEDS  (SEGMENTS_LEDS + SPOT_LEDS)   // Number of all leds
-
-#if LEDS_PER_SEGMENT == 1
-#define seg(n) n*LEDS_PER_SEGMENT
-#elif LEDS_PER_SEGMENT == 2
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1
-#elif LEDS_PER_SEGMENT == 3
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2
-#elif LEDS_PER_SEGMENT == 4
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3
-#elif LEDS_PER_SEGMENT == 5
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4
-#elif LEDS_PER_SEGMENT == 6
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5
-#elif LEDS_PER_SEGMENT == 7
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6
-#elif LEDS_PER_SEGMENT == 8
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7
-#elif LEDS_PER_SEGMENT == 9
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7, n*LEDS_PER_SEGMENT+8
-#elif LEDS_PER_SEGMENT == 10
-#define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7, n*LEDS_PER_SEGMENT+8, n*LEDS_PER_SEGMENT+9
-#else
- #error "Not supported Leds per segment. You need to add definition of seg(n) with needed number of elements according to formula above"
-#endif
-
+#define SAMPLES         512          // Must be a power of 2
+#define SAMPLING_FREQ   40000         // Hz, must be 40000 or less due to ADC conversion time. Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
+#define NUM_BANDS       8            // To change this, you will need to change the bunch of if statements describing the mapping from bins to bands
+#define NOISE           500           // Used as a crude noise filter, values below this are ignored
+#define TOP            (LEDS_PER_SEGMENT * 2)                // Don't allow the bars to go offscreen
 #define digit0 seg(0), seg(1), seg(2), seg(3), seg(4), seg(5), seg(6)
 #define fdigit1 seg(2), seg(7), seg(10), seg(15), seg(8), seg(3), seg(9)
 #define digit2 seg(10), seg(11), seg(12), seg(13), seg(14), seg(15), seg(16)
@@ -71,6 +55,106 @@
 #define digit4 seg(20), seg(21), seg(22), seg(23), seg(24), seg(25), seg(26)
 #define fdigit5 seg(22), seg(27), seg(30), seg(35), seg(28), seg(23), seg(29)
 #define digit6 seg(30), seg(31), seg(32), seg(33), seg(34), seg(35), seg(36)
+
+
+#if LEDS_PER_SEGMENT == 1
+ #define seg(n) n*LEDS_PER_SEGMENT
+ #define nseg(n) n*LEDS_PER_SEGMENT
+#elif LEDS_PER_SEGMENT == 2
+ #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1
+ #define nseg(n) n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT
+#elif LEDS_PER_SEGMENT == 3
+ #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2
+ #define nseg(n) n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT
+#elif LEDS_PER_SEGMENT == 4
+ #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3
+ #define nseg(n) n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT
+#elif LEDS_PER_SEGMENT == 5
+ #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4
+ #define nseg(n) n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT
+#elif LEDS_PER_SEGMENT == 6
+ #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5
+ #define nseg(n) n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT
+#elif LEDS_PER_SEGMENT == 7
+ #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6
+ #define nseg(n) n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT
+#elif LEDS_PER_SEGMENT == 8
+ #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7
+ #define nseg(n) n*LEDS_PER_SEGMENT+7, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT
+#elif LEDS_PER_SEGMENT == 9
+ #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7, n*LEDS_PER_SEGMENT+8
+ #define nseg(n) n*LEDS_PER_SEGMENT+8, n*LEDS_PER_SEGMENT+7, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT
+#elif LEDS_PER_SEGMENT == 10
+ #define seg(n) n*LEDS_PER_SEGMENT, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+7, n*LEDS_PER_SEGMENT+8, n*LEDS_PER_SEGMENT+9
+ #define nseg(n) n*LEDS_PER_SEGMENT+9, n*LEDS_PER_SEGMENT+8, n*LEDS_PER_SEGMENT+7, n*LEDS_PER_SEGMENT+6, n*LEDS_PER_SEGMENT+5, n*LEDS_PER_SEGMENT+4, n*LEDS_PER_SEGMENT+3, n*LEDS_PER_SEGMENT+2, n*LEDS_PER_SEGMENT+1, n*LEDS_PER_SEGMENT
+#else
+ #error "Not supported Leds per segment. You need to add definition of seg(n) with needed number of elements according to formula above"
+#endif
+
+/*
+b     b     b     b     b     b     b     b
+a     a     a     a     a     a     a     a
+r     r     r     r     r     r     r     r
+0     1     2     3     4     5     6     7
+  34    28    24    18    14     8     4
+ →→→ →→→  →→→ →→→ →→→ →→→  →→→
+↑     ↓     ↑     ↓     ↑     ↓     ↑     ↓
+↑33   ↓35   ↑23   ↓25   ↑13   ↓15   ↑3    ↓5
+↑     ↓     ↑     ↓     ↑     ↓     ↑     ↓
+↑ 36  ↓ 29  ↑ 26  ↓ 19  ↑ 16  ↓   9 ↑  6  ↓
+ ←←← ←←←  ←←← ←←← ←←← ←←←  ←←←
+↑     ↓     ↑     ↓     ↑     ↓     ↑     ↓
+↑32   ↓30   ↑22   ↓20   ↑12   ↓10   ↑2    ↓0
+↑     ↓     ↑     ↓     ↑     ↓     ↑     ↓
+↑ 31  ↓ 27  ↑ 21  ↓ 17  ↑ 11  ↓  7  ↑  1  ↓
+ ←←← ←←←  ←←← ←←← ←←← ←←←  ←←←
+*/
+#define bar0 seg(32), seg(33)
+#define bar1 nseg(30), nseg(35)
+#define bar2 seg(22), seg(23)
+#define bar3 nseg(20), nseg(25)
+#define bar4 seg(12), seg(13)
+#define bar5 nseg(10), nseg(15)
+#define bar6 seg(2), seg(3)
+#define bar7 nseg(0), nseg(5)
+const uint16_t ANALYZER[(NUMBER_OF_DIGITS+1)*LEDS_PER_SEGMENT*2] = {bar0, bar1, bar2, bar3, bar4, bar5, bar6, bar7};
+
+
+// Sampling and FFT stuff
+unsigned int sampling_period_us;
+byte peak[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};              // The length of these arrays must be >= NUM_BANDS
+int oldBarHeights[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+int bandValues[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+double vReal[SAMPLES];
+double vImag[SAMPLES];
+unsigned long newTime;
+long Amplitude = 1000;
+arduinoFFT FFT = arduinoFFT(vReal, vImag, SAMPLES, SAMPLING_FREQ);
+DEFINE_GRADIENT_PALETTE( purple_gp ) {
+  0,   0, 212, 255,   //blue
+255, 179,   0, 255 }; //purple
+DEFINE_GRADIENT_PALETTE( outrun_gp ) {
+  0, 141,   0, 100,   //purple
+127, 255, 192,   0,   //yellow
+255,   0,   5, 255 };  //blue
+DEFINE_GRADIENT_PALETTE( greenblue_gp ) {
+  0,   0, 255,  60,   //green
+ 64,   0, 236, 255,   //cyan
+128,   0,   5, 255,   //blue
+192,   0, 236, 255,   //cyan
+255,   0, 255,  60 }; //green
+DEFINE_GRADIENT_PALETTE( redyellow_gp ) {
+  0,   200, 200,  200,   //white
+ 64,   255, 218,    0,   //yellow
+128,   231,   0,    0,   //red
+192,   255, 218,    0,   //yellow
+255,   200, 200,  200 }; //white
+CRGBPalette16 purplePal = purple_gp;
+CRGBPalette16 outrunPal = outrun_gp;
+CRGBPalette16 greenbluePal = greenblue_gp;
+CRGBPalette16 heatPal = redyellow_gp;
+uint8_t colorTimer = 0;
+int buttonPushCounter = 0;
 
 const char* host = "shelfclock";
 const int   daylightOffset_sec = 3600;
@@ -87,7 +171,7 @@ const int colorWheelSpeed = 3;
 int sleepTimerCurrent = 0;
 int isAsleep = 0;
 int photo_in[PHOTO_SIZE] = {   0, 150, 1180, 2170, 4095};
-int photo_out[PHOTO_SIZE] = {255, 160,   40,   14,    2};
+int photo_out[PHOTO_SIZE] = {255, 160,   40,   14,    4};
 int photoresisterReadings[PHOTO_SAMPLES];      // the readings from the analog input
 int readIndex = 0;              // the index of the current reading
 int lightSensorValue = 255;
@@ -202,7 +286,7 @@ byte b16_val = 255;
 byte r17_val = 0;  //spectrum analyzer background
 byte g17_val = 0;
 byte b17_val = 0;
-byte clockMode = 0;   // Clock modes: 0=Clock, 1=Countdown, 2=Temperature, 3=Scoreboard, 4=Stopwatch, 5=Lightshow, 6=Rainbows/Scroll, 7=Date, 8=Humidity, 9=Spectrum, 10=Display Off
+byte clockMode = 11;   // Clock modes: 0=Clock, 1=Countdown, 2=Temperature, 3=Scoreboard, 4=Stopwatch, 5=Lightshow, 6=Rainbows/Scroll, 7=Date, 8=Humidity, 9=Spectrum, 10=Display Off
 byte clockDisplayType = 3; //0-Center Times, 1-24-hour Military Time, 2-12-hour Space-Padded, 3-Blinking Center Light
 byte dateDisplayType = 5; //0-Zero-Padded (MMDD), 1-Space-Padded (MMDD), 2-Center Dates (1MDD), 3-Just Day of Week (Sun), 4-Just Numeric Day (DD), 5-With "." Separator (MM.DD), 6-Just Year (YYYY)
 byte tempDisplayType = 0; //0-Temperature with Degree and Type (79°F), 1-Temperature with just Type (79 F), 2-Temperature with just Degree (79°), 3-Temperature with Decimal (79.9), 4-Just Temperature (79)
@@ -229,7 +313,7 @@ int realtimeMode = 0;
 int spotlightsColorSettings = 0;
 bool useSpotlights = 1;
 int scrollColorSettings = 0;
-bool scrollOverride = 1;
+bool scrollOverride = 0;
 bool scrollOptions1 = 0;   //Military Time (HHMM)
 bool scrollOptions2 = 0;   //Day of Week (DOW)
 bool scrollOptions3 = 0;   //Today's Date (DD-MM)
@@ -237,7 +321,7 @@ bool scrollOptions4 = 0;   //Year (YYYY)
 bool scrollOptions5 = 0;   //Temperature (70 °F)
 bool scrollOptions6 = 0;   //Humidity (47 H)
 bool scrollOptions7 = 0;   //Text Message
-bool scrollOptions8 = 0;   //IP Address of Clock
+bool scrollOptions8 = 1;   //IP Address of Clock
 int scrollFrequency = 1;
 int lightshowMode = 0;
 byte randomSpectrumMode = 0;
@@ -270,14 +354,7 @@ CRGB lightchaseColorTwo = CRGB::Red;
 CRGB oldsnakecolor = CRGB::Green;
 CRGB spotcolor = CHSV(random(0, 255), 255, 255);
 
-  const uint16_t FAKE_LEDs[FAKE_NUM_LEDS] = {digit0, fdigit1, digit2, fdigit3, digit4, fdigit5, digit6};
-																																																				 
-																																																							 
-																																																											 
-																																																														   
-																																																														   
-																																																															
-
+const uint16_t FAKE_LEDs[FAKE_NUM_LEDS] = {digit0, fdigit1, digit2, fdigit3, digit4, fdigit5, digit6};
 //fake LED layout for spectrum (from the middle out)
 const uint16_t FAKE_LEDs_C_BMUP[SEGMENTS_LEDS] = {seg(17), seg(11), seg(21), seg(12), seg(20), seg(19), seg(27), seg(7), seg(22), seg(10), seg(26), seg(16), seg(25), seg(13), seg(18), seg(1), seg(31), seg(2), seg(30), seg(9), seg(29), seg(15), seg(23), seg(14), seg(24), seg(0), seg(32), seg(6), seg(36), seg(3), seg(35), seg(8), seg(28), seg(5), seg(33), seg(4), seg(34)};
 //fake LED layout for spectrum (bfrom the outside in)
@@ -456,7 +533,7 @@ bool wholeHour = true;
 
 void setup() {
   Serial.begin(115200);
-
+  sampling_period_us = round(1000000 * (1.0 / SAMPLING_FREQ));
   loadWebPageHandlers();  //load about 900 webpage handlers from the bottom of this sketch
 
   // Initialize SPIFFS 
@@ -483,7 +560,11 @@ void setup() {
 
   //init audio gate inpute detection
   pinMode(AUDIO_GATE_PIN, INPUT_PULLUP);
-  pinMode(MIC_IN_PIN, INPUT);  //setup microphone
+  pinMode(ENVELOPE_IN_PIN, INPUT);  //setup microphone
+
+  // setup analog read to avoid spikes
+  adc1_config_width(ADC_WIDTH_12Bit);
+  adc1_config_channel_atten(ADC1_GPIO32_CHANNEL, ADC_ATTEN_DB_11);
 
   // init temp & humidity sensor
   Serial.println(F("DHTxx test!"));
@@ -505,7 +586,7 @@ void setup() {
   Portal.config(Config);      
 
   Serial.println();
-  WiFi.hostname("shelfclock"); //set hostname
+  WiFi.hostname(host); //set hostname
 
   // setup AutoConnect to control WiFi
   if (Portal.begin()) {
@@ -1329,7 +1410,6 @@ void displayScrollMode(){   //scrollmode for displaying clock things not just te
     }
 }
 
-
 void displayCountdownMode() {     //main countdown function
   if (countdownMilliSeconds == 0 && endCountDownMillis == 0) 
     return;
@@ -1441,73 +1521,314 @@ void displayRealtimeMode(){   //main RealtimeModes function, always is running
   if ( (suspendType == 0 || isAsleep == 0) && clockMode == 5 && lightshowMode == 7) {EVERY_N_MILLISECONDS(150) {Cylon(); FastLED.show();}}
 }//end of RealtimeModes
 
+void rainbowBars(int band, int barHeight) {
+  int xStart = LEDS_PER_SEGMENT * 2 * band;
+    for (int y = 0; y < TOP; y++) {
+      if ( barHeight >= y)  
+        LEDs[ANALYZER[xStart + y]] = CHSV(band * (255 / NUM_BANDS), 255, 255);
+      else
+        LEDs[ANALYZER[xStart + y]] = CRGB::Black;  
+    }
+}
+
+void purpleBars(int band, int barHeight) {
+  int xStart = LEDS_PER_SEGMENT * 2 * band;
+    for (int y = 0; y < TOP; y++) {
+      if ( barHeight >= y)  
+        LEDs[ANALYZER[xStart + y]] = ColorFromPalette(purplePal, y * (255 / (barHeight + 1)));
+      else
+        LEDs[ANALYZER[xStart + y]] = CRGB::Black;  
+    }
+}
+
+void changingBars(int band, int barHeight) {
+  int xStart = LEDS_PER_SEGMENT * 2 * band;
+    for (int y = 0; y < TOP; y++) {
+      if ( barHeight >= y)  
+        LEDs[ANALYZER[xStart + y]] = CHSV(y * (255 / (LEDS_PER_SEGMENT*2)) + colorTimer, 255, 255);
+      else
+        LEDs[ANALYZER[xStart + y]] = CRGB::Black;  
+    }
+}
+
+void centerBars(int band, int barHeight) {
+  int xStart = LEDS_PER_SEGMENT * 2 * band;
+  if (barHeight % 2 == 0) barHeight--;
+  int yStart = ((LEDS_PER_SEGMENT * 2 - barHeight) / 2 );
+    for (int y = yStart; y <= (yStart+barHeight); y++) {
+	  int colorIndex = constrain((y - yStart) * (255 / barHeight), 0, 255);
+      //if ( barHeight >= y)  
+        LEDs[ANALYZER[xStart + y]] = ColorFromPalette(heatPal, colorIndex);
+      //else
+        //LEDs[ANALYZER[xStart + y]] = CRGB::Black;  
+    }
+}
+
+void whitePeak(int band) {
+  int xStart = LEDS_PER_SEGMENT * 2 * band;
+  int peakHeight = peak[band];
+  LEDs[ANALYZER[xStart + peakHeight]] = CHSV(0,0,255);  
+}
+
+void outrunPeak(int band) {
+  int xStart = LEDS_PER_SEGMENT * 2 * band;
+  int peakHeight = peak[band];
+  LEDs[ANALYZER[xStart + peakHeight]] = ColorFromPalette(outrunPal, peakHeight * (255 / (LEDS_PER_SEGMENT * 2)));  
+}
+
+void waterfall(int band) {
+  int xStart = LEDS_PER_SEGMENT * 2 * band;
+  //double highestBandValue = 60000;        // Set this to calibrate your waterfall
+  // Move bar up
+  for (int y = (LEDS_PER_SEGMENT * 2)-1; y >= 1; y--) {
+    LEDs[ANALYZER[xStart + y]] = LEDs[ANALYZER[xStart + y-1]];
+  }
+  // Draw bottom point
+  LEDs[ANALYZER[xStart]] = CHSV(constrain(map(bandValues[band], 0,Amplitude*TOP, 160,0), 0,160), 255, 255);  
+}
+
 void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-FastLED-Music-Visualizer/blob/master/music_visualizer.ino
   currentMode = 0;
-  const TProgmemRGBPalette16 FireColors = {0xFFFFCC, 0xFFFF99, 0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
-  const TProgmemRGBPalette16 FireColors2 = {0xFFFF99, 0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
-  const TProgmemRGBPalette16 FireColors3 = {0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
-  int audio_input = analogRead(MIC_IN_PIN); // ADD x2 HERE FOR MORE SENSITIVITY  
-  if (audio_input > 0) {
-    pre_react = ((long)SPECTRUM_PIXELS * (long)audio_input) / 1023L; // TRANSLATE AUDIO LEVEL TO NUMBER OF LEDs
-    if (pre_react > react) // ONLY ADJUST LEVEL OF LED IF LEVEL HIGHER THAN CURRENT LEVEL
-      react = pre_react;
-   }
-  for(int i = SPECTRUM_PIXELS - 1; i >= 0; i--) {
-    int fake =  i * LEDS_PER_SEGMENT;
-    int fireChoice = random(4);
-    if (i < react)
-    for (byte s=0; s<LEDS_PER_SEGMENT; s++ ){              // 7 LEDs per segment
-      if (spectrumColorSettings == 0) { spectrumColor = CRGB(r15_val, g15_val, b15_val); }
-      if (spectrumColorSettings == 1) { spectrumColor = CHSV((255/SPECTRUM_PIXELS)*i, 255, 255);}
-      if (spectrumColorSettings == 2) { spectrumColor = colorWheel((i * 256 / 50 + colorWheelPosition) % 256);}
-      if (spectrumColorSettings == 3 && fireChoice >= 2) { spectrumColor = ColorFromPalette( FireColors, (255/SPECTRUM_PIXELS)*i, 255, LINEARBLEND);}
-      if (spectrumColorSettings == 3 && fireChoice == 0) { spectrumColor = ColorFromPalette( FireColors2, (255/SPECTRUM_PIXELS)*i, 255, LINEARBLEND);}
-      if (spectrumColorSettings == 3 && fireChoice == 1) { spectrumColor = ColorFromPalette( FireColors3, (255/SPECTRUM_PIXELS)*i, 255, LINEARBLEND);}
-      if (spectrumColorSettings == 4) { spectrumColor = ColorFromPalette( OceanColors_p, (255/SPECTRUM_PIXELS)*i, 255, LINEARBLEND);}
-      if (spectrumColorSettings == 5) { spectrumColor = ColorFromPalette( ForestColors_p, (255/SPECTRUM_PIXELS)*i, 255, LINEARBLEND);}
-      if (spectrumColorSettings == 6) { spectrumColor = colorWheel2(((255) + colorWheelPositionTwo) % 256);}
-      if (spectrumMode == 0) {LEDs[FAKE_LEDs_C_BMUP[s+((fake))]] = spectrumColor;}
-      if (spectrumMode == 1) {LEDs[FAKE_LEDs_C_CMOT[s+((fake))]] = spectrumColor;}
-      if (spectrumMode == 2) {LEDs[FAKE_LEDs_C_BLTR[s+((fake))]] = spectrumColor;}
-      if (spectrumMode == 3) {LEDs[FAKE_LEDs_C_TLBR[s+((fake))]] = spectrumColor;}
-      if (spectrumMode == 4) {LEDs[FAKE_LEDs_C_VERT[s+((fake))]] = spectrumColor;}
-      if (spectrumMode == 5) {LEDs[FAKE_LEDs_C_TMDN[s+((fake))]] = spectrumColor;}
-      if (spectrumMode == 6) {LEDs[FAKE_LEDs_C_CSIN[s+((fake))]] = spectrumColor;}
-      if (spectrumMode == 7) {LEDs[FAKE_LEDs_C_BRTL[s+((fake))]] = spectrumColor;}
-      if (spectrumMode == 8) {LEDs[FAKE_LEDs_C_TRBL[s+((fake))]] = spectrumColor;}
-      if (spectrumMode == 9) {LEDs[FAKE_LEDs_C_OUTS[s+((fake))]] = spectrumColor;}
-      if (spectrumMode == 10) {LEDs[FAKE_LEDs_C_VERT2[s+((fake))]] = spectrumColor;}
-      if (spectrumMode == 11) {LEDs[FAKE_LEDs_C_OUTS2[s+((fake))]] = spectrumColor;}
+  if (spectrumMode < 12) {
+	  const TProgmemRGBPalette16 FireColors = {0xFFFFCC, 0xFFFF99, 0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
+	  const TProgmemRGBPalette16 FireColors2 = {0xFFFF99, 0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
+	  const TProgmemRGBPalette16 FireColors3 = {0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
+	  int audio_input = analogRead(ENVELOPE_IN_PIN); // ADD x2 HERE FOR MORE SENSITIVITY  
+	  if (audio_input > 0) {
+		pre_react = ((long)SPECTRUM_PIXELS * (long)audio_input) / 1023L; // TRANSLATE AUDIO LEVEL TO NUMBER OF LEDs
+		if (pre_react > react) // ONLY ADJUST LEVEL OF LED IF LEVEL HIGHER THAN CURRENT LEVEL
+		  react = pre_react;
+	   }
+	  for(int i = SPECTRUM_PIXELS - 1; i >= 0; i--) {
+      int fake =  i * LEDS_PER_SEGMENT;
+      int fireChoice = random(4);
+      if (i < react)
+      for (byte s=0; s<LEDS_PER_SEGMENT; s++ ){              // 7 LEDs per segment
+        if (spectrumColorSettings == 0) { spectrumColor = CRGB(r15_val, g15_val, b15_val); }
+        if (spectrumColorSettings == 1) { spectrumColor = CHSV((255/SPECTRUM_PIXELS)*i, 255, 255);}
+        if (spectrumColorSettings == 2) { spectrumColor = colorWheel((i * 256 / 50 + colorWheelPosition) % 256);}
+        if (spectrumColorSettings == 3 && fireChoice >= 2) { spectrumColor = ColorFromPalette( FireColors, (255/SPECTRUM_PIXELS)*i, 255, LINEARBLEND);}
+        if (spectrumColorSettings == 3 && fireChoice == 0) { spectrumColor = ColorFromPalette( FireColors2, (255/SPECTRUM_PIXELS)*i, 255, LINEARBLEND);}
+        if (spectrumColorSettings == 3 && fireChoice == 1) { spectrumColor = ColorFromPalette( FireColors3, (255/SPECTRUM_PIXELS)*i, 255, LINEARBLEND);}
+        if (spectrumColorSettings == 4) { spectrumColor = ColorFromPalette( OceanColors_p, (255/SPECTRUM_PIXELS)*i, 255, LINEARBLEND);}
+        if (spectrumColorSettings == 5) { spectrumColor = ColorFromPalette( ForestColors_p, (255/SPECTRUM_PIXELS)*i, 255, LINEARBLEND);}
+        if (spectrumColorSettings == 6) { spectrumColor = colorWheel2(((255) + colorWheelPositionTwo) % 256);}
+        if (spectrumMode == 0) {LEDs[FAKE_LEDs_C_BMUP[s+((fake))]] = spectrumColor;}
+        if (spectrumMode == 1) {LEDs[FAKE_LEDs_C_CMOT[s+((fake))]] = spectrumColor;}
+        if (spectrumMode == 2) {LEDs[FAKE_LEDs_C_BLTR[s+((fake))]] = spectrumColor;}
+        if (spectrumMode == 3) {LEDs[FAKE_LEDs_C_TLBR[s+((fake))]] = spectrumColor;}
+        if (spectrumMode == 4) {LEDs[FAKE_LEDs_C_VERT[s+((fake))]] = spectrumColor;}
+        if (spectrumMode == 5) {LEDs[FAKE_LEDs_C_TMDN[s+((fake))]] = spectrumColor;}
+        if (spectrumMode == 6) {LEDs[FAKE_LEDs_C_CSIN[s+((fake))]] = spectrumColor;}
+        if (spectrumMode == 7) {LEDs[FAKE_LEDs_C_BRTL[s+((fake))]] = spectrumColor;}
+        if (spectrumMode == 8) {LEDs[FAKE_LEDs_C_TRBL[s+((fake))]] = spectrumColor;}
+        if (spectrumMode == 9) {LEDs[FAKE_LEDs_C_OUTS[s+((fake))]] = spectrumColor;}
+        if (spectrumMode == 10) {LEDs[FAKE_LEDs_C_VERT2[s+((fake))]] = spectrumColor;}
+        if (spectrumMode == 11) {LEDs[FAKE_LEDs_C_OUTS2[s+((fake))]] = spectrumColor;}
+      }
+      else
+      for (byte s=0; s<LEDS_PER_SEGMENT; s++ ){              // 7 LEDs per segment
+        if (spectrumBackgroundSettings == 0) { spectrumBackground = CRGB(r17_val, g17_val, b17_val); }
+        if (spectrumBackgroundSettings == 1) { spectrumBackground = colorWheel((i * 256 / 50 + colorWheelPosition) % 256);}
+        if (spectrumBackgroundSettings == 2) { spectrumBackground = colorWheel2(((255) + colorWheelPositionTwo) % 256);}
+        if (spectrumMode == 0) {LEDs[FAKE_LEDs_C_BMUP[s+((fake))]] = spectrumBackground;}
+        if (spectrumMode == 1) {LEDs[FAKE_LEDs_C_CMOT[s+((fake))]] = spectrumBackground;}
+        if (spectrumMode == 2) {LEDs[FAKE_LEDs_C_BLTR[s+((fake))]] = spectrumBackground;}
+        if (spectrumMode == 3) {LEDs[FAKE_LEDs_C_TLBR[s+((fake))]] = spectrumBackground;}
+        if (spectrumMode == 4) {LEDs[FAKE_LEDs_C_VERT[s+((fake))]] = spectrumBackground;}
+        if (spectrumMode == 5) {LEDs[FAKE_LEDs_C_TMDN[s+((fake))]] = spectrumBackground;}
+        if (spectrumMode == 6) {LEDs[FAKE_LEDs_C_CSIN[s+((fake))]] = spectrumBackground;}
+        if (spectrumMode == 7) {LEDs[FAKE_LEDs_C_BRTL[s+((fake))]] = spectrumBackground;}
+        if (spectrumMode == 8) {LEDs[FAKE_LEDs_C_TRBL[s+((fake))]] = spectrumBackground;}
+        if (spectrumMode == 9) {LEDs[FAKE_LEDs_C_OUTS[s+((fake))]] = spectrumBackground;}
+        if (spectrumMode == 10) {LEDs[FAKE_LEDs_C_VERT2[s+((fake))]] = spectrumBackground;}
+        if (spectrumMode == 11) {LEDs[FAKE_LEDs_C_OUTS2[s+((fake))]] = spectrumBackground;}
+      }    
+	  }
+	  FastLED.show();                              // Increment the Hue to get the Rainbow
+	  colorWheelPosition = colorWheelPosition - colorWheelSpeed; // SPEED OF COLOR WHEEL
+	  if (colorWheelPosition < 0) // RESET COLOR WHEEL
+		colorWheelPosition = 255;
+	  decay_check++;
+	  if (decay_check > decay) {
+      decay_check = 0;
+      if (react > 0)
+        react--;
+	  }
+	}// end spectrumMode < 12
+  else {
+    if (buttonPushCounter != 5) {
+      // clear analyzer;
+      for (int x=0; x < ((NUMBER_OF_DIGITS+1) *(LEDS_PER_SEGMENT*2)); x++) {
+        LEDs[ANALYZER[x]] = CRGB::Black;
+      }
     }
-    else
-    for (byte s=0; s<LEDS_PER_SEGMENT; s++ ){              // 7 LEDs per segment
-      if (spectrumBackgroundSettings == 0) { spectrumBackground = CRGB(r17_val, g17_val, b17_val); }
-      if (spectrumBackgroundSettings == 1) { spectrumBackground = colorWheel((i * 256 / 50 + colorWheelPosition) % 256);}
-      if (spectrumBackgroundSettings == 2) { spectrumBackground = colorWheel2(((255) + colorWheelPositionTwo) % 256);}
-      if (spectrumMode == 0) {LEDs[FAKE_LEDs_C_BMUP[s+((fake))]] = spectrumBackground;}
-      if (spectrumMode == 1) {LEDs[FAKE_LEDs_C_CMOT[s+((fake))]] = spectrumBackground;}
-      if (spectrumMode == 2) {LEDs[FAKE_LEDs_C_BLTR[s+((fake))]] = spectrumBackground;}
-      if (spectrumMode == 3) {LEDs[FAKE_LEDs_C_TLBR[s+((fake))]] = spectrumBackground;}
-      if (spectrumMode == 4) {LEDs[FAKE_LEDs_C_VERT[s+((fake))]] = spectrumBackground;}
-      if (spectrumMode == 5) {LEDs[FAKE_LEDs_C_TMDN[s+((fake))]] = spectrumBackground;}
-      if (spectrumMode == 6) {LEDs[FAKE_LEDs_C_CSIN[s+((fake))]] = spectrumBackground;}
-      if (spectrumMode == 7) {LEDs[FAKE_LEDs_C_BRTL[s+((fake))]] = spectrumBackground;}
-      if (spectrumMode == 8) {LEDs[FAKE_LEDs_C_TRBL[s+((fake))]] = spectrumBackground;}
-      if (spectrumMode == 9) {LEDs[FAKE_LEDs_C_OUTS[s+((fake))]] = spectrumBackground;}
-      if (spectrumMode == 10) {LEDs[FAKE_LEDs_C_VERT2[s+((fake))]] = spectrumBackground;}
-      if (spectrumMode == 11) {LEDs[FAKE_LEDs_C_OUTS2[s+((fake))]] = spectrumBackground;}
-    }    
+
+    // Reset bandValues[]
+    for (int i = 0; i<NUM_BANDS; i++){
+      bandValues[i] = 0;
+    }
+
+    // Sample the audio pin
+    for (int i = 0; i < SAMPLES; i++) {
+      newTime = micros();
+      //vReal[i] = analogRead(AUDIO_IN_PIN); // A conversion takes about 9.7uS on an ESP32
+      vReal[i] = adc1_get_raw(ADC1_GPIO32_CHANNEL);
+      vImag[i] = 0;
+      while ((micros() - newTime) < sampling_period_us) { /* chill */ }
+    }
+
+    // Remove spikes
+    for (int i = 1; i < SAMPLES-1; i++) {
+      if (vReal[i] > 4093)
+        if (vReal[i+1] > 4093) {
+          if (i < (SAMPLES-2))
+            vReal[i] = (vReal[i-1] + vReal[i+2]) / 2;
+          else
+            vReal[i] = vReal[i-1];
+        }
+        else 
+          vReal[i] = (vReal[i-1] + vReal[i+1]) / 2;
+    }
+
+	/*long maxr = 0;
+	long minr = 4085;
+    for (int i = 0; i < SAMPLES; i++) {
+		if (maxr < vReal[i]) maxr = vReal[i];
+		if (minr > vReal[i]) minr = vReal[i];
+	}*/
+
+	//char buffer[15];
+  /*for (int i = 0; i < SAMPLES; i++) {
+    sprintf(buffer, "%d\r\n", (int)vReal[i]);
+    prn(buffer);
   }
-  FastLED.show();                              // Increment the Hue to get the Rainbow
-  colorWheelPosition = colorWheelPosition - colorWheelSpeed; // SPEED OF COLOR WHEEL
-  if (colorWheelPosition < 0) // RESET COLOR WHEEL
-    colorWheelPosition = 255;
-  decay_check++;
-  if (decay_check > decay) {
-    decay_check = 0;
-    if (react > 0)
-      react--;
-  }
+  prn("0\r\n");*/
+
+    // Compute FFT
+    FFT.DCRemoval();
+    FFT.Windowing(FFT_WIN_TYP_HAMMING, FFT_FORWARD);
+    FFT.Compute(FFT_FORWARD);
+    FFT.ComplexToMagnitude();
+
+    // Analyse FFT results
+    for (int i = 2; i < (SAMPLES/2); i++){       // Don't use sample 0 and only first SAMPLES/2 are usable. Each array element represents a frequency bin and its value the amplitude.
+      if (vReal[i] > NOISE) {                    // Add a crude noise filter
+
+        //8 bands, 12kHz top band
+        if ( i<=3 )       bandValues[0]  += (int)vReal[i];
+        else if ( i<=6 )  bandValues[1]  += (int)vReal[i];
+        else if ( i<=13 ) bandValues[2]  += (int)vReal[i];
+        else if ( i<=27 ) bandValues[3]  += (int)vReal[i];
+        else if ( i<=55 ) bandValues[4]  += (int)vReal[i];
+        else if ( i<=112) bandValues[5]  += (int)vReal[i];
+        else if ( i<=229) bandValues[6]  += (int)vReal[i];
+        else bandValues[7]  += (int)vReal[i];
+
+      }
+    }
+
+    // Process the FFT data into bar heights
+    for (byte band = 0; band < NUM_BANDS; band++) {
+
+      // Scale the bars for the display
+      int barHeight = bandValues[band] / Amplitude;
+      if (barHeight > TOP) {
+        Amplitude += ((barHeight - TOP) /8);
+        //sprintf(buffer, "%d %d %d\r\n", Amplitude, band, (barHeight - TOP));
+        //prn(buffer);
+        barHeight = TOP;
+      }
+
+      // Small amount of averaging between frames
+      barHeight = ((oldBarHeights[band] * 1) + barHeight) / 2;
+
+      // Move peak up
+      if (barHeight > peak[band]) {
+        peak[band] = min(TOP, barHeight);
+      }
+
+      if (spectrumMode < 12 + 6)
+		    buttonPushCounter = spectrumMode - 12;
+
+      // Draw bars
+      switch (buttonPushCounter) {
+        case 0:
+          rainbowBars(band, barHeight);
+          break;
+        case 1:
+          // No bars on this one
+          break;
+        case 2:
+          purpleBars(band, barHeight);
+          break;
+        case 3:
+          centerBars(band, barHeight);
+          break;
+        case 4:
+          changingBars(band, barHeight);
+          break;
+        case 5:
+          waterfall(band);
+          break;
+      }
+
+      // Draw peaks
+      switch (buttonPushCounter) {
+        case 0:
+          whitePeak(band);
+          break;
+        case 1:
+          outrunPeak(band);
+          break;
+        case 2:
+          whitePeak(band);
+          break;
+        case 3:
+          // No peaks
+          break;
+        case 4:
+          // No peaks
+          break;
+        case 5:
+          // No peaks
+          break;
+      }
+
+      // Save oldBarHeights for averaging later
+      oldBarHeights[band] = barHeight;
+    }
+
+    // Decay peak
+    EVERY_N_MILLISECONDS(60) {
+      for (byte band = 0; band < NUM_BANDS; band++)
+        if (peak[band] > 0) peak[band] -= 1;
+    }
+
+    // Used in some of the patterns
+    EVERY_N_MILLISECONDS(10) {
+      colorTimer++;
+    }
+
+    EVERY_N_SECONDS(1) {
+      if (Amplitude > 500) {
+        Amplitude -= (Amplitude /150);
+        //sprintf(buffer, "%d 0\r\n", Amplitude);
+        //prn(buffer);
+      }
+     /* int audio_input = analogRead(ENVELOPE_IN_PIN);
+      char buffer[15];
+      sprintf(buffer, "%d %d  ", Amplitude, audio_input);
+      prn(buffer);*/
+    }
+
+    EVERY_N_SECONDS(10) {
+		// Auto Switch mode
+      if (spectrumMode >= 12 + 6) buttonPushCounter = (buttonPushCounter + 1) % 6;
+    }
+
+    FastLED.show();
+  } // end else spectrumMode > 12
 }
 
 void endCountdown() {  //countdown timer has reached 0, sound alarm and flash End for 30 seconds
@@ -1738,15 +2059,15 @@ void checkSleepTimer(){  //controls suspend mode
   if(!rtttl::isPlaying()) {  // don't allow chimes to keep it awake. 
     if (suspendType != 0) {sleepTimerCurrent++;}  //sleep enabled? add one to timer
     //if (digitalRead(AUDIO_GATE_PIN)==HIGH) {sleepTimerCurrent = 0; isAsleep = 0;}   //sound sensor went off (while checking this function)? wake up
-    int audio_input1 = analogRead(MIC_IN_PIN); 
+    int audio_input1 = analogRead(ENVELOPE_IN_PIN); 
     if (audio_input1 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-    int audio_input2 = analogRead(MIC_IN_PIN); 
+    int audio_input2 = analogRead(ENVELOPE_IN_PIN); 
     if (audio_input2 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-    int audio_input3 = analogRead(MIC_IN_PIN); 
+    int audio_input3 = analogRead(ENVELOPE_IN_PIN); 
     if (audio_input3 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-    int audio_input4 = analogRead(MIC_IN_PIN); 
+    int audio_input4 = analogRead(ENVELOPE_IN_PIN); 
     if (audio_input4 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-    int audio_input5 = analogRead(MIC_IN_PIN); 
+    int audio_input5 = analogRead(ENVELOPE_IN_PIN); 
     if (audio_input5 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
     averageAudioInput = (audio_input1 + audio_input2 + audio_input3 + audio_input4 + audio_input5) / 5;
     if (averageAudioInput > 50) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
@@ -2034,7 +2355,7 @@ void Chase() {   //lightshow chase mode
 
  
 void Twinkles() {
-  int audio_input = analogRead(MIC_IN_PIN); 
+  int audio_input = analogRead(ENVELOPE_IN_PIN); 
   int Level = map(audio_input, 100, 2000, 50, 210);
   if (audio_input < 100){  Level = 50;  }
   if (audio_input > 2000){  Level = 210;  }
@@ -2135,7 +2456,7 @@ void updateMatrix() {
 
 
 void blueRain() {
-    int audio_input = analogRead(MIC_IN_PIN); 
+    int audio_input = analogRead(ENVELOPE_IN_PIN); 
   int Level = map(audio_input, 100, 2000, 0, 400);
   if (audio_input < 100){  Level = 0;  }
   if (audio_input > 2000){  Level = 400;  }
@@ -2297,7 +2618,7 @@ void Snake() {  //real random snake mode with random food changing its color
   if (snakePosition == 36 && snakeLastDirection == 2 && move == 0)  {if (pickOne == 1) {snakeLastDirection = 1; snakePosition = 32; move = 1;} else {snakePosition = 31; move = 1;}}
   if (snakePosition == foodSpot) { oldsnakecolor = spotcolor;  snakeWaiting = 1; foodSpot = 40;}  //did snake find the food, change snake color
   if (snakeWaiting > 0) {snakeWaiting = snakeWaiting + 1;} //counting while waiting
-  int audio_input = analogRead(MIC_IN_PIN); 
+  int audio_input = analogRead(ENVELOPE_IN_PIN); 
   int Level = map(audio_input, 100, 2000, 1, 10);
   if (audio_input < 100){  Level = 1;  }
   if (audio_input > 2000){  Level = 10;  }
@@ -2403,7 +2724,7 @@ void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   r17_val = preferences.getInt("r17_val", 0);
   g17_val = preferences.getInt("g17_val", 0);
   b17_val = preferences.getInt("b17_val", 0);
-  clockMode = preferences.getInt("clockMode", 0);
+  clockMode = preferences.getInt("clockMode", 11);
   pastelColors = preferences.getInt("pastelColors", 0);
   temperatureSymbol = preferences.getInt("temperatureSym", 39);
   ClockColorSettings = preferences.getInt("ClockColorSet", 0);
@@ -2430,7 +2751,7 @@ void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   scrollColorSettings = preferences.getInt("scrollColorSet", 0);
   scrollFrequency = preferences.getInt("scrollFreq", 1);
   randomSpectrumMode = preferences.getBool("randSpecMode", 0);
-  scrollOverride = preferences.getBool("scrollOverride", 1);
+  scrollOverride = preferences.getBool("scrollOverride", 0);
   scrollOptions1 = preferences.getBool("scrollOptions1", 0);
   scrollOptions2 = preferences.getBool("scrollOptions2", 0);
   scrollOptions3 = preferences.getBool("scrollOptions3", 0);
@@ -2438,7 +2759,7 @@ void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   scrollOptions5 = preferences.getBool("scrollOptions5", 0);
   scrollOptions6 = preferences.getBool("scrollOptions6", 0);
   scrollOptions7 = preferences.getBool("scrollOptions7", 0);
-  scrollOptions8 = preferences.getBool("scrollOptions8", 0);
+  scrollOptions8 = preferences.getBool("scrollOptions8", 1);
   lightshowMode = preferences.getInt("lightshowMode", 0);
   suspendFrequency = preferences.getInt("suspendFreq", 1);
   suspendType = preferences.getInt("suspendType", 0);
@@ -3727,7 +4048,7 @@ void loadWebPageHandlers() {
     json["DHT11 Humidity"] = humidTemp;
     json["WiFi IP"] = WiFi.localIP().toString();
     json["analogRead(PHOTORESISTER_PIN)"] = analogRead(PHOTORESISTER_PIN);
-    json["analogRead(MIC_IN_PIN)"] = analogRead(MIC_IN_PIN);
+    json["analogRead(ENVELOPE_IN_PIN)"] = analogRead(ENVELOPE_IN_PIN);
     json["digitalRead(AUDIO_GATE_PIN)"] = digitalRead(AUDIO_GATE_PIN);
     json["AUDIO_GATE_PIN"] = AUDIO_GATE_PIN;
     json["averageAudioInput"] = averageAudioInput;
@@ -3778,7 +4099,7 @@ void loadWebPageHandlers() {
     json["lightSensorValue"] = lightSensorValue;
     json["lightshowMode"] = lightshowMode;
     json["lightshowSpeed"] = lightshowSpeed;
-    json["MIC_IN_PIN"] = MIC_IN_PIN;
+    json["ENVELOPE_IN_PIN"] = ENVELOPE_IN_PIN;
     json["MILLI_AMPS"] = MILLI_AMPS;
     json["ntpServer"] = ntpServer;
     json["NUM_LEDS"] = NUM_LEDS;
