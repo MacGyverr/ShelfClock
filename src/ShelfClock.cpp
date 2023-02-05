@@ -830,7 +830,7 @@ void loop(){
       previousTimeMin = currentTimeMin; 
       randomMinPassed = 1;
       minutesUptime += 1; 
-     // GetBrightnessLevel(); 
+      GetBrightnessLevel(); 
       if (scrollFrequency == 1 && (suspendType == 0 || isAsleep == 0) && scrollOverride == 1 && ((clockMode != 11) && (clockMode != 1) && (clockMode != 4))) {displayScrollMode();}
       if (scrollFrequency == 1 && randomSpectrumMode == 1 && clockMode == 9) {allBlank(); spectrumMode = random(11);}
       } //end of run every minute
@@ -2197,13 +2197,29 @@ void ShelfDownLights() {  //turns on the drop lights on the underside of each sh
         if ((spotlightsColorSettings == 1 && pastelColors == 1)  && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { spotlightsColor = CRGB(random(0, 255), random(0, 255), random(0, 255));  LEDs[i] = spotlightsColor;}
         if (spotlightsColorSettings == 2 ){ LEDs[i] = colorWheel2(((i-SEGMENTS_LEDS)  * 18 + colorWheelPositionTwo) % 256); }
         if (spotlightsColorSettings == 3 ){ LEDs[i] = colorWheel2(((255) + colorWheelPositionTwo) % 256); }
+        if (spotlightsColorSettings == 4 ){
+    int seed = random(2500);         // A random number. Higher number => fewer twinkles. Use random16() for values >255.
+    if (seed < 30) {
+      CRGB color = CRGB::Black;
+      if (pastelColors == 0){ color = CHSV(random(0, 255), 255, 255); }
+      if (pastelColors == 1){ color = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
+            {              
+              LEDs[SEGMENTS_LEDS+random((NUM_LEDS-SEGMENTS_LEDS))] = color;
+            }
+      }
+    
+      for (int j=SEGMENTS_LEDS; j<NUM_LEDS; j++) {
+        LEDs[j].fadeToBlackBy(1);
+        }
+     }
     }
     colorWheelPositionTwo = colorWheelPositionTwo - 1; // SPEED OF 2nd COLOR WHEEL
     if (colorWheelPositionTwo < 0) {colorWheelPositionTwo = 255;} // RESET 2nd COLOR WHEEL 
     if ((spotlightsColorSettings == 2 || spotlightsColorSettings == 3) && clockMode != 11){FastLED.show();}
     prevTime2 = currentMillis;
+  FastLED.show();		 
   }
- } else {  //or turn them all off
+ } else if (useSpotlights == 0) {  //or turn them all off
   for (int i=SEGMENTS_LEDS; i<NUM_LEDS; i++) {
     LEDs[i] = CRGB::Black;
   }
