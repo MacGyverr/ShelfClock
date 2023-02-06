@@ -19,7 +19,7 @@ class Sounds {
             const char * halloween = "Hallowee:d=4,o=5,b=160:8c6,8f,8f,8c6,8f,8f,8c6,8f,8c#6,8f,8c6,8f,8f,8c6,8f,8c6,8f,8c#6,8f,8b,8e,8e,8b,8e,8e,8b,8e,8c6,8e,8b,8e,8e,8b,8e,8e,8b,16e";
             const char * mandy = "Mandy:d=8,o=6,b=120:d#,f,d#,d,4c.,f5,d#,d,c,4d#,f,d,4c,2a#5,f5,d,4c,a#5,d.5,4c,a#5,d,4c,16g5,2f5,f5,f5,d#,d,d#,4d,c,d,4c,2a#5,f5,d,4c,a#5,d,4c,a#5,a#5,4c,2c.5,f5,f5,d#,d,d#,d.,16c,4d,c,a#5,2a#.5";
             const char * burgertime = "Burgertime:d=4,o=6,b=285:8f,8f,8f#,8f#,8g#,8g#,8a,8a,a#,f,a#,f,8g#,8c#7,8c7,8a#,8g#,8g,8g#,8g,g#,c#7,g#,c#7,g#,f7,g#,f7,g#,d#7,g#,c#7,g#,d#7,g#,c#7";
-            const char * tron = "tron:d=4,o=5,b=200:8f6,8c6,8g,e,8p,8f6,8c6,8g,8f6,8c6,8g,e.";
+            const char * tron = "tron:d=4,o=5,b=200:8f6,8c6,8g,e,8p,8f6,8c6,8g,8f6,8c6,8g,e,8p,8f6,8c6,8g,e.,2d";
             const char * mario = "mario:d=4,o=5,b=100:16e6,16e6,32p,8e6,16c6,8e6,8g6,8p,8g,8p,8c6,16p,8g,16p,8e,16p,8a,8b,16a#,8a,16g.,16e6,16g6,8a6,16f6,8g6,8e6,16c6,16d6,8b,16p,8c6,16p,8g,16p,8e,16p,8a,8b,16a#,8a,16g.,16e6,16g6,8a6,16f6,8g6,8e6,16c6,16d6,8b,8p,16g6,16f#6,16f6,16d#6,16p,16e6,16p,16g#,16a,16c6,16p,16a,16c6,16d6,8p,16g6,16f#6,16f6,16d#6,16p,16e6,16p,16c7,16p,16c7,16c7,p,16g6,16f#6,16f6,16d#6,16p,16e6,16p,16g#,16a,16c6,16p,16a,16c6,16d6,8p,16d#6,8p,16d6,8p,16c6";
             const char * smb_under = "smb_under:d=4,o=6,b=100:32c,32p,32c7,32p,32a5,32p,32a,32p,32a#5,32p,32a#,2p";
             const char * finalcount = "FinalCou:d=4,o=5,b=125:16c#6,16b,c#6,f#,p.,16d6,16c#6,8d6,8c#6,b,p.,16d6,16c#6,d6,f#,p.,16b,16a,8b,8a,8g#,8b,a.,16c#6,16b,c#6,f#,p.,16d6,16c#6,8d6,8c#6,b,p.,16d6,16c#6,d6,f#,p.,16b,16a,8b,8a,8g#,8b,a.,16g#,16a,b.,16a,16b,8c#6,8b,8a,8g#,f#,d6,2c#.6,16c#6,16d6,16c#6,16b,1c#6,2p";

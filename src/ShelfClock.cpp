@@ -24,7 +24,7 @@
 #define NUMBER_OF_DIGITS 7    // 7 = 4 real + 3 fake,  this should be always 7 unless you redesign all display routines
 #define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
 #define DHTTYPE DHT11         // DHT 11 tempsensor
-#define MIC_IN_PIN 34         // Use 34 for mic input
+#define ENVELOPE_IN_PIN 34    // Use 34 for envelope pin input
 #define AUDIO_GATE_PIN 15     // for sound gate input trigger
 #define BUZZER_PIN 16         // peizo speaker
 #define DHT_PIN 18            // temp sensor pin
@@ -34,7 +34,7 @@
 #define LEDS_PER_SEGMENT 7    // can be 1 to 10 LEDS per segment
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
-#define PHOTO_SAMPLES 2      //number of samples to take from the photoresister
+#define PHOTO_SAMPLES 2       //number of samples to take from the photoresister
 #define PHOTO_SIZE 5
 #define SEGMENTS_LEDS (SPECTRUM_PIXELS * LEDS_PER_SEGMENT)  // Number leds in all segments
 #define SPOT_LEDS (NUMBER_OF_DIGITS * 2)        // Number of Spotlight leds
@@ -87,7 +87,7 @@ const int colorWheelSpeed = 3;
 int sleepTimerCurrent = 0;
 int isAsleep = 0;
 int photo_in[PHOTO_SIZE] = {   0, 150, 1180, 2170, 4095};
-int photo_out[PHOTO_SIZE] = {255, 160,   40,   14,    2};
+int photo_out[PHOTO_SIZE] = {255, 160,   40,   14,    4};
 int photoresisterReadings[PHOTO_SAMPLES];      // the readings from the analog input
 int readIndex = 0;              // the index of the current reading
 int lightSensorValue = 255;
@@ -202,7 +202,7 @@ byte b16_val = 255;
 byte r17_val = 0;  //spectrum analyzer background
 byte g17_val = 0;
 byte b17_val = 0;
-byte clockMode = 0;   // Clock modes: 0=Clock, 1=Countdown, 2=Temperature, 3=Scoreboard, 4=Stopwatch, 5=Lightshow, 6=Rainbows/Scroll, 7=Date, 8=Humidity, 9=Spectrum, 10=Display Off
+byte clockMode = 11;   // Clock modes: 0=Clock, 1=Countdown, 2=Temperature, 3=Scoreboard, 4=Stopwatch, 5=Lightshow, 6=Rainbows/Scroll, 7=Date, 8=Humidity, 9=Spectrum, 10=Display Off
 byte clockDisplayType = 3; //0-Center Times, 1-24-hour Military Time, 2-12-hour Space-Padded, 3-Blinking Center Light
 byte dateDisplayType = 5; //0-Zero-Padded (MMDD), 1-Space-Padded (MMDD), 2-Center Dates (1MDD), 3-Just Day of Week (Sun), 4-Just Numeric Day (DD), 5-With "." Separator (MM.DD), 6-Just Year (YYYY)
 byte tempDisplayType = 0; //0-Temperature with Degree and Type (79°F), 1-Temperature with just Type (79 F), 2-Temperature with just Degree (79°), 3-Temperature with Decimal (79.9), 4-Just Temperature (79)
@@ -229,7 +229,7 @@ int realtimeMode = 0;
 int spotlightsColorSettings = 0;
 bool useSpotlights = 1;
 int scrollColorSettings = 0;
-bool scrollOverride = 1;
+bool scrollOverride = 0;
 bool scrollOptions1 = 0;   //Military Time (HHMM)
 bool scrollOptions2 = 0;   //Day of Week (DOW)
 bool scrollOptions3 = 0;   //Today's Date (DD-MM)
@@ -237,7 +237,7 @@ bool scrollOptions4 = 0;   //Year (YYYY)
 bool scrollOptions5 = 0;   //Temperature (70 °F)
 bool scrollOptions6 = 0;   //Humidity (47 H)
 bool scrollOptions7 = 0;   //Text Message
-bool scrollOptions8 = 0;   //IP Address of Clock
+bool scrollOptions8 = 1;   //IP Address of Clock
 int scrollFrequency = 1;
 int lightshowMode = 0;
 byte randomSpectrumMode = 0;
@@ -483,7 +483,7 @@ void setup() {
 
   //init audio gate inpute detection
   pinMode(AUDIO_GATE_PIN, INPUT_PULLUP);
-  pinMode(MIC_IN_PIN, INPUT);  //setup microphone
+  pinMode(ENVELOPE_IN_PIN, INPUT);  //setup microphone
 
   // init temp & humidity sensor
   Serial.println(F("DHTxx test!"));
@@ -505,7 +505,7 @@ void setup() {
   Portal.config(Config);      
 
   Serial.println();
-  WiFi.hostname("shelfclock"); //set hostname
+  WiFi.hostname(host); //set hostname
 
   // setup AutoConnect to control WiFi
   if (Portal.begin()) {
@@ -749,7 +749,7 @@ void loop(){
       previousTimeMin = currentTimeMin; 
       randomMinPassed = 1;
       minutesUptime += 1; 
-     // GetBrightnessLevel(); 
+      GetBrightnessLevel(); 
       if (scrollFrequency == 1 && (suspendType == 0 || isAsleep == 0) && scrollOverride == 1 && ((clockMode != 11) && (clockMode != 1) && (clockMode != 4))) {displayScrollMode();}
       if (scrollFrequency == 1 && randomSpectrumMode == 1 && clockMode == 9) {allBlank(); spectrumMode = random(11);}
       } //end of run every minute
@@ -1446,7 +1446,7 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
   const TProgmemRGBPalette16 FireColors = {0xFFFFCC, 0xFFFF99, 0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
   const TProgmemRGBPalette16 FireColors2 = {0xFFFF99, 0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
   const TProgmemRGBPalette16 FireColors3 = {0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
-  int audio_input = analogRead(MIC_IN_PIN); // ADD x2 HERE FOR MORE SENSITIVITY  
+  int audio_input = analogRead(ENVELOPE_IN_PIN); // ADD x2 HERE FOR MORE SENSITIVITY  
   if (audio_input > 0) {
     pre_react = ((long)SPECTRUM_PIXELS * (long)audio_input) / 1023L; // TRANSLATE AUDIO LEVEL TO NUMBER OF LEDs
     if (pre_react > react) // ONLY ADJUST LEVEL OF LED IF LEVEL HIGHER THAN CURRENT LEVEL
@@ -1738,15 +1738,15 @@ void checkSleepTimer(){  //controls suspend mode
   if(!rtttl::isPlaying()) {  // don't allow chimes to keep it awake. 
     if (suspendType != 0) {sleepTimerCurrent++;}  //sleep enabled? add one to timer
     //if (digitalRead(AUDIO_GATE_PIN)==HIGH) {sleepTimerCurrent = 0; isAsleep = 0;}   //sound sensor went off (while checking this function)? wake up
-    int audio_input1 = analogRead(MIC_IN_PIN); 
+    int audio_input1 = analogRead(ENVELOPE_IN_PIN); 
     if (audio_input1 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-    int audio_input2 = analogRead(MIC_IN_PIN); 
+    int audio_input2 = analogRead(ENVELOPE_IN_PIN); 
     if (audio_input2 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-    int audio_input3 = analogRead(MIC_IN_PIN); 
+    int audio_input3 = analogRead(ENVELOPE_IN_PIN); 
     if (audio_input3 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-    int audio_input4 = analogRead(MIC_IN_PIN); 
+    int audio_input4 = analogRead(ENVELOPE_IN_PIN); 
     if (audio_input4 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-    int audio_input5 = analogRead(MIC_IN_PIN); 
+    int audio_input5 = analogRead(ENVELOPE_IN_PIN); 
     if (audio_input5 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
     averageAudioInput = (audio_input1 + audio_input2 + audio_input3 + audio_input4 + audio_input5) / 5;
     if (averageAudioInput > 50) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
@@ -1881,8 +1881,9 @@ void ShelfDownLights() {  //turns on the drop lights on the underside of each sh
     if (colorWheelPositionTwo < 0) {colorWheelPositionTwo = 255;} // RESET 2nd COLOR WHEEL 
     if ((spotlightsColorSettings == 2 || spotlightsColorSettings == 3) && clockMode != 11){FastLED.show();}
     prevTime2 = currentMillis;
+  FastLED.show();
   }
- } else {  //or turn them all off
+ } else if (useSpotlights == 0) {  //or turn them all off
   for (int i=SEGMENTS_LEDS; i<NUM_LEDS; i++) {
     LEDs[i] = CRGB::Black;
   }
@@ -2034,7 +2035,7 @@ void Chase() {   //lightshow chase mode
 
  
 void Twinkles() {
-  int audio_input = analogRead(MIC_IN_PIN); 
+  int audio_input = analogRead(ENVELOPE_IN_PIN); 
   int Level = map(audio_input, 100, 2000, 50, 210);
   if (audio_input < 100){  Level = 50;  }
   if (audio_input > 2000){  Level = 210;  }
@@ -2135,7 +2136,7 @@ void updateMatrix() {
 
 
 void blueRain() {
-    int audio_input = analogRead(MIC_IN_PIN); 
+    int audio_input = analogRead(ENVELOPE_IN_PIN); 
   int Level = map(audio_input, 100, 2000, 0, 400);
   if (audio_input < 100){  Level = 0;  }
   if (audio_input > 2000){  Level = 400;  }
@@ -2297,7 +2298,7 @@ void Snake() {  //real random snake mode with random food changing its color
   if (snakePosition == 36 && snakeLastDirection == 2 && move == 0)  {if (pickOne == 1) {snakeLastDirection = 1; snakePosition = 32; move = 1;} else {snakePosition = 31; move = 1;}}
   if (snakePosition == foodSpot) { oldsnakecolor = spotcolor;  snakeWaiting = 1; foodSpot = 40;}  //did snake find the food, change snake color
   if (snakeWaiting > 0) {snakeWaiting = snakeWaiting + 1;} //counting while waiting
-  int audio_input = analogRead(MIC_IN_PIN); 
+  int audio_input = analogRead(ENVELOPE_IN_PIN); 
   int Level = map(audio_input, 100, 2000, 1, 10);
   if (audio_input < 100){  Level = 1;  }
   if (audio_input > 2000){  Level = 10;  }
@@ -2403,7 +2404,7 @@ void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   r17_val = preferences.getInt("r17_val", 0);
   g17_val = preferences.getInt("g17_val", 0);
   b17_val = preferences.getInt("b17_val", 0);
-  clockMode = preferences.getInt("clockMode", 0);
+  clockMode = preferences.getInt("clockMode", 11);
   pastelColors = preferences.getInt("pastelColors", 0);
   temperatureSymbol = preferences.getInt("temperatureSym", 39);
   ClockColorSettings = preferences.getInt("ClockColorSet", 0);
@@ -2430,7 +2431,7 @@ void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   scrollColorSettings = preferences.getInt("scrollColorSet", 0);
   scrollFrequency = preferences.getInt("scrollFreq", 1);
   randomSpectrumMode = preferences.getBool("randSpecMode", 0);
-  scrollOverride = preferences.getBool("scrollOverride", 1);
+  scrollOverride = preferences.getBool("scrollOverride", 0);
   scrollOptions1 = preferences.getBool("scrollOptions1", 0);
   scrollOptions2 = preferences.getBool("scrollOptions2", 0);
   scrollOptions3 = preferences.getBool("scrollOptions3", 0);
@@ -2438,7 +2439,7 @@ void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   scrollOptions5 = preferences.getBool("scrollOptions5", 0);
   scrollOptions6 = preferences.getBool("scrollOptions6", 0);
   scrollOptions7 = preferences.getBool("scrollOptions7", 0);
-  scrollOptions8 = preferences.getBool("scrollOptions8", 0);
+  scrollOptions8 = preferences.getBool("scrollOptions8", 1);
   lightshowMode = preferences.getInt("lightshowMode", 0);
   suspendFrequency = preferences.getInt("suspendFreq", 1);
   suspendType = preferences.getInt("suspendType", 0);
@@ -3727,7 +3728,7 @@ void loadWebPageHandlers() {
     json["DHT11 Humidity"] = humidTemp;
     json["WiFi IP"] = WiFi.localIP().toString();
     json["analogRead(PHOTORESISTER_PIN)"] = analogRead(PHOTORESISTER_PIN);
-    json["analogRead(MIC_IN_PIN)"] = analogRead(MIC_IN_PIN);
+    json["analogRead(ENVELOPE_IN_PIN)"] = analogRead(ENVELOPE_IN_PIN);
     json["digitalRead(AUDIO_GATE_PIN)"] = digitalRead(AUDIO_GATE_PIN);
     json["AUDIO_GATE_PIN"] = AUDIO_GATE_PIN;
     json["averageAudioInput"] = averageAudioInput;
@@ -3778,7 +3779,7 @@ void loadWebPageHandlers() {
     json["lightSensorValue"] = lightSensorValue;
     json["lightshowMode"] = lightshowMode;
     json["lightshowSpeed"] = lightshowSpeed;
-    json["MIC_IN_PIN"] = MIC_IN_PIN;
+    json["ENVELOPE_IN_PIN"] = ENVELOPE_IN_PIN;
     json["MILLI_AMPS"] = MILLI_AMPS;
     json["ntpServer"] = ntpServer;
     json["NUM_LEDS"] = NUM_LEDS;

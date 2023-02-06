@@ -60,6 +60,7 @@ const char * Sounds::getSongByName(const char* song) {
     else if (strncmp("mandy", song, 20) == 0) return songs.mandy;
     else if (strncmp("burgertime", song, 20) == 0) return songs.burgertime;
     else if (strncmp("mario", song, 20) == 0) return songs.mario;
+    else if (strncmp("tron", song, 20) == 0) return songs.tron;
     else if (strncmp("smb_under", song, 20) == 0) return songs.smb_under;
     else if (strncmp("finalcount", song, 20) == 0) return songs.finalcount;
     else if (strncmp("adams", song, 20) == 0) return songs.adams;
@@ -83,34 +84,34 @@ const char * Sounds::getSongByName(const char* song) {
 DynamicJsonDocument Sounds::getListOfSongs() {
     DynamicJsonDocument json(2500);
 
-    json["rickroll2"] = "Together Forever";
+    json["adams"] = "Adams Family";
     json["auldlang"] = "Auld Lang Syne";
+    json["beethoven"] = "Beethoven - Fur Elise";
+    json["burgertime"] = "BurgerTime";
+    json["finalcount"] = "Final Count Down";
+    json["galaga"] = "Galaga";
+    json["halloween"] = "Halloween";
+    json["birthday"] = "Happy Birthday";
+    json["cinco"] = "Macarena";
+    json["macgyver"] = "MacGyver Theme";
+    json["mandy"] = "Mandy";
+    json["mario"] = "Mario";
+    json["mspacman"] = "Ms PacMan";
+    json["rickroll"] = "Never Gonna Give You Up";
+    json["melody"] = "Nokia Theme";
+    json["puffs"] = "PowerPuffs";
     json["startrek"] = "Star Trek";
     json["starwars"] = "Star Wars";
-    json["birthday"] = "Happy Birthday";
-    json["rickroll"] = "Never Gonna Give You Up";
-    json["cinco"] = "Macarena";
-    json["xmas"] = "Wish You a Merry Christmas";
-    json["macgyver"] = "MacGyver Theme";
-    json["takeonme"] = "Take On Me";
-    json["melody"] = "Nokia Theme";
-    json["halloween"] = "Halloween";
-    json["mandy"] = "Mandy";
-    json["burgertime"] = "BurgerTime";
-    json["tron"] = "Tron";
-    json["mario"] = "Mario";
     json["smb_under"] = "Super Mario Brothers Underground";
-    json["finalcount"] = "Final Count Down";
-    json["adams"] = "Adams Family";
-    json["mspacman"] = "Ms PacMan";
-    json["galaga"] = "Galaga";
-    json["xmen"] = "Xmen";
-    json["beethoven"] = "Beethoven - Fur Elise";
-    json["puffs"] = "PowerPuffs";
-    json["wonderfulworld"] = "Wonderful World";
+    json["takeonme"] = "Take On Me";
     json["tetris1"] = "Tetris 1";
     json["tetris2"] = "Tetris 2";
     json["tetris3"] = "Tetris 3";
+    json["rickroll2"] = "Together Forever";
+    json["tron"] = "Tron";
+    json["xmas"] = "Wish You a Merry Christmas";
+    json["wonderfulworld"] = "Wonderful World";
+    json["xmen"] = "Xmen";
 
     return json;
 }
