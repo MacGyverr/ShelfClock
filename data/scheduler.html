@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="css/main.css">
+  <script type="text/javascript" src="js/jquery.min.js"></script>
+  <title>Shelf Clock</title>
+</head>
+<script type="text/javascript">
+	const url = "";
+	var jsonScheduleList;   // Declare jsonScheduleList as a global variable
+		var selectedKey;
+	window.onload = function(){ 
+		var date = new Date();
+		var day = date.getDate();
+		var month = date.getMonth() + 1;
+		var year = date.getFullYear();
+		if (month < 10) month = "0" + month;
+		if (day < 10) day = "0" + day;
+
+		function handleFormSubmit(event) {
+		  event.preventDefault();
+		  const data = new FormData(event.target);
+		  const formJSON = Object.fromEntries(data.entries());
+		  const formJSON2 = Object.fromEntries(data.entries());
+		  const results = document.querySelector('.results pre');
+			if (formJSON.mon == null) {formJSON.mon = "0";} else {formJSON.mon = "1";}
+			if (formJSON.tue == null) {formJSON.tue = "0";} else {formJSON.tue = "1";}
+			if (formJSON.wed == null) {formJSON.wed = "0";} else {formJSON.wed = "1";}
+			if (formJSON.thu == null) {formJSON.thu = "0";} else {formJSON.thu = "1";}
+			if (formJSON.fri == null) {formJSON.fri = "0";} else {formJSON.fri = "1";}
+			if (formJSON.sat == null) {formJSON.sat = "0";} else {formJSON.sat = "1";}
+			if (formJSON.sun == null) {formJSON.sun = "0";} else {formJSON.sun = "1";}
+			if (formJSON.dailyType == null) {formJSON.dailyType = "9";}
+			if (formJSON.hourlyType == null) {formJSON.hourlyType = "99";}
+			if (formJSON.gongmode == null) {formJSON.gongmode = "0";} else {formJSON.gongmode = "1";}
+			if (formJSON.daymode == null) {formJSON.daymode = "0";} else {formJSON.daymode = "1";}
+			if (formJSON.date == "") {formJSON.year = "9999"; formJSON.month = "00"; formJSON.day = "00";} else {formJSON.year = formJSON.date[0] + formJSON.date[1] + formJSON.date[2] + formJSON.date[3]; formJSON.month = formJSON.date[5] + formJSON.date[6]; formJSON.day = formJSON.date[8] + formJSON.date[9];}
+			if (formJSON.recurring == null) {formJSON.recurring = "0";} else {formJSON.recurring = "1";}
+			if (formJSON.scheduleType == "3") {formJSON.year = "9999";}
+			if (formJSON.scheduleType == "4") {formJSON.year = "9999"; formJSON.title="Happy New Year"; formJSON.song="Auld Lang Syne"; formJSON.hours="00"; formJSON.minutes="00"; formJSON.month="01"; formJSON.day="01";}
+			let uuid = formJSON.mon + formJSON.tue + formJSON.wed + formJSON.thu + formJSON.fri + formJSON.sat + formJSON.sun + formJSON.hours + formJSON.minutes + formJSON.gongmode + formJSON.daymode + formJSON.dom + formJSON.year + formJSON.month + formJSON.day;
+			formJSON.uid = uuid;
+			if (formJSON.title == "") {formJSON.title = uuid;}
+			console.log(JSON.stringify(formJSON, null, 2));
+			fetch(`${url}/scheduler`, {
+				method: 'POST',
+				body: JSON.stringify(formJSON)
+				});     
+			location.reload();	
+		}
+
+		const form = document.querySelector('.contact-form');
+		form.addEventListener('submit', handleFormSubmit);
+		const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+		const allCheckboxes2 = document.querySelectorAll('input[name="daymode"]');
+		const allCheckboxes3 = document.querySelectorAll('input[name="gongmode"]');
+		const allRadioboxes = document.querySelectorAll('input[name="dailyType"]');
+		const allRadioboxes2 = document.querySelectorAll('input[name="hourlyType"]');
+
+
+		$('input[name="scheduleType"]').on('change', function() {
+			$("select").each(function() { this.selectedIndex = 0 });
+			$("input[type=date]").val("");
+			var q01 = $('input[name=scheduleType]');
+			if ($(q01).is(':checked')&& this.value==0 ) { //Daily
+				$('.showDaily').show();
+				$('.showDailysub').show();
+				$('.showHourly').hide();
+				$('.showDaymode').hide();
+				$('.showGong').hide();
+				$('.showHour').hide();
+				$('.showMinutes').hide();
+				$('.showMonthly').hide();
+				$('.showDate').hide();
+				$('.showRecurring').hide();
+				$('.showSong').show();
+				$('.showTitle').show();
+				$('.showSave').show();
+				allCheckboxes.forEach(element => element.checked = false);
+				allRadioboxes.forEach(element => element.checked = false);
+				allRadioboxes2.forEach(element => element.checked = false);
+			} else if ($(q01).is(':checked')&& this.value==1 ) {  //Monthly
+				$('.showDaily').hide();
+				$('.showDailysub').hide();
+				$('.showHourly').hide();
+				$('.showDaymode').hide();
+				$('.showGong').hide();
+				$('.showHour').show();
+				$('.showMinutes').show();
+				$('.showMonthly').show();
+				$('.showDate').hide();
+				$('.showRecurring').hide();
+				$('.showSong').show();
+				$('.showTitle').show();
+				$('.showSave').show();
+				allCheckboxes.forEach(element => element.checked = false);
+				allRadioboxes.forEach(element => element.checked = false);
+				allRadioboxes2.forEach(element => element.checked = false); 
+			} else if ($(q01).is(':checked')&& this.value==2 ) {  //Date
+				$('.showDaily').hide();
+				$('.showDailysub').hide();
+				$('.showHourly').hide();
+				$('.showDaymode').hide();
+				$('.showGong').hide();
+				$('.showHour').show();
+				$('.showMinutes').show();
+				$('.showMonthly').hide();
+				$('.showDate').show();
+				$('.showRecurring').show();
+				$('.showSong').show();
+				$('.showTitle').show();
+				$('.showSave').show();
+				allCheckboxes.forEach(element => element.checked = false);
+				allRadioboxes.forEach(element => element.checked = false);
+				allRadioboxes2.forEach(element => element.checked = false);
+			} else if ($(q01).is(':checked')&& this.value==3 ) {  //Special Date
+				$('.showDaily').hide();
+				$('.showDailysub').hide();
+				$('.showHourly').hide();
+				$('.showDaymode').hide();
+				$('.showGong').hide();
+				$('.showHour').hide();
+				$('.showMinutes').hide();
+				$('.showMonthly').hide();
+				$('.showDate').show();
+				$('.showRecurring').hide();
+				$('.showSong').show();
+				$('.showTitle').show();
+				$('.showSave').show();
+				allCheckboxes.forEach(element => element.checked = false);
+				allRadioboxes.forEach(element => element.checked = false);
+				allRadioboxes2.forEach(element => element.checked = false);
+			} else if ($(q01).is(':checked')&& this.value==4 ) {  //New Years
+				$('.showDaily').hide();
+				$('.showDailysub').hide();
+				$('.showHourly').hide();
+				$('.showDaymode').hide();
+				$('.showGong').hide();
+				$('.showHour').hide();
+				$('.showMinutes').hide();
+				$('.showMonthly').hide();
+				$('.showDate').hide();
+				$('.showRecurring').hide();
+				$('.showSong').hide();
+				$('.showTitle').hide();
+				$('.showSave').show();
+				allCheckboxes.forEach(element => element.checked = false);
+				allRadioboxes.forEach(element => element.checked = false);
+				allRadioboxes2.forEach(element => element.checked = false);
+			} else {                    //Startup
+				$('.showDaily').hide();
+				$('.showDailysub').hide();
+				$('.showHourly').hide();
+				$('.showDaymode').hide();
+				$('.showGong').hide();
+				$('.showHour').hide();
+				$('.showMinutes').hide();
+				$('.showMonthly').hide();
+				$('.showDate').hide();
+				$('.showRecurring').hide();
+				$('.showSong').hide();
+				$('.showTitle').hide();
+				$('.showSave').hide();
+				allCheckboxes.forEach(element => element.checked = false);
+				allRadioboxes.forEach(element => element.checked = false);
+				allRadioboxes2.forEach(element => element.checked = false);
+				allCheckboxes3.forEach(element => element.checked = false);
+			}
+		}).change();
+
+		$('input[name="dailyType"]').on('change', function() {
+			var q01 = $('input[name=dailyType]');
+			if ($(q01).is(':checked')&& this.value==0 ) {
+				$('.showHourly').show();
+				$('.showDaymode').show();
+				$('.showGong').show();
+				$('.showHour').hide();
+				$('.showMinutes').hide();
+				allRadioboxes2.forEach(element => element.checked = false);
+				allCheckboxes2.forEach(element => element.checked = false);
+				allCheckboxes3.forEach(element => element.checked = false);
+			} else if ($(q01).is(':checked')&& this.value==1 ) {
+				$('.showHourly').hide();
+				$('.showDaymode').hide();
+				$('.showGong').hide();
+				$('.showHour').show();
+				$('.showMinutes').show();
+				allRadioboxes2.forEach(element => element.checked = false);
+				allCheckboxes2.forEach(element => element.checked = false);
+				allCheckboxes3.forEach(element => element.checked = false);
+			} else {
+				$('.showHourly').hide();
+				$('.showDaymode').hide();
+				$('.showGong').hide();
+				$('.showHour').hide();
+				$('.showMinutes').hide();
+				allRadioboxes2.forEach(element => element.checked = false);
+				allCheckboxes2.forEach(element => element.checked = false);
+				allCheckboxes3.forEach(element => element.checked = false);
+			}
+		}).change();
+
+		$('input[name="hourlyType"]').on('change', function() {
+			var q01 = $('input[name=hourlyType]');
+			if ($(q01).is(':checked')&& this.value!=0 ) {
+				$('.showGong').hide();
+				allCheckboxes3.forEach(element => element.checked = false);
+			}
+		}).change();
+		
+		$('input[name="gongmode"]').on('change', function() {
+			var q01 = $('input[name=gongmode]');
+			if ($(q01).is(':checked')) {
+				$('.showHourly').hide();
+				allRadioboxes2.forEach(element => element.checked = false);
+			}
+		}).change();
+
+	};
+
+
+
+
+	// Function to populate the object list with the JSON array
+	function populateObjectList() {
+		var objectList = document.getElementById("objectList");
+		objectList.innerHTML = ''; // Clear existing radio buttons
+		for (var i = 0; i < jsonScheduleList.length; i++) {
+			var listItem = document.createElement("li");
+			var radioButton = document.createElement("input");
+			radioButton.type = "radio";
+			radioButton.name = "selectedObject";
+			radioButton.value = i;
+			radioButton.id = "radio" + i;
+			radioButton.addEventListener("change", toggleButtonVisibility); // Add event listener
+			radioButton.addEventListener('change', populateForm);
+			listItem.appendChild(radioButton);
+			var valuetitle = jsonScheduleList[i]["title"]; // Assuming the key is "key1"
+			var valuemonth = jsonScheduleList[i]["month"]; // Assuming the key is "key1"
+			var valueday = jsonScheduleList[i]["day"]; // Assuming the key is "key1"
+			var valuehours = jsonScheduleList[i]["hours"]; // Assuming the key is "key1"
+			var valueminutes = jsonScheduleList[i]["minutes"]; // Assuming the key is "key1"
+		 //   listItem.appendChild(document.createTextNode(valuetitle + " - " + valuemonth + "/" + valueday + " " + valuehours + ":" + valueminutes));
+			listItem.appendChild(document.createTextNode(valuetitle));
+			objectList.appendChild(listItem);
+		}
+	}
+
+	// Function to check if a radio button is selected
+	function isRadioButtonSelected() {
+		var radioButtons = document.getElementsByName("selectedObject");
+		for (var i = 0; i < radioButtons.length; i++) {
+			if (radioButtons[i].checked) {
+				selectedKey = radioButtons[i].value;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// Function to toggle the visibility of the button
+	function toggleButtonVisibility() {
+		var button = document.getElementById("deleteButton");
+		button.style.display = isRadioButtonSelected() ? "block" : "none";
+		var displayForm = document.getElementById("display-form");
+		displayForm.style.display = isRadioButtonSelected() ? "block" : "none";
+	}
+
+	// Function to send the selected object to another link
+	function sendSelectedObject() {
+		var radioButtons = document.getElementsByName("selectedObject");
+		for (var i = 0; i < radioButtons.length; i++) {
+			if (radioButtons[i].checked) {
+				selectedKey = radioButtons[i].value;
+				break; // Exit the loop after finding the selected key
+			}
+		}
+
+		if (selectedKey) {
+			var selectedValue = jsonScheduleList[selectedKey]["uid"]; // Assuming the key is "key1"
+
+			// Construct the URL with the selected value
+		//    var url = "another_page.html?data=" + encodeURIComponent(firstKeyValue);
+		//    window.location.href = url;
+		
+			var deleteStuff = '{"deleteData":"' + encodeURIComponent(selectedValue) + '"}';	
+	console.log(deleteStuff);
+					 fetch(`${url}/schedulerDelete`, {
+				method: 'POST',
+				body: deleteStuff
+			}); 
+		}
+		location.reload();
+	}
+
+	// Function to fetch the JSON data from the server
+	function fetchJSONData() {
+		// Make an asynchronous request to fetch the JSON data
+		fetch(`${url}/getscheduler`)
+			.then(response => response.json())
+			.then(data => {
+				console.log("JSON data:", data);
+				// Extract the JSON array from the received data
+				jsonScheduleList = data.jsonScheduleData;
+
+				// Populate the object list with the JSON array
+				populateObjectList();
+				
+				// Populate the song list with the JSON array
+				let add = document.querySelector("[name='song']");
+				for (let [key, value] of Object.entries(data.listOfSong)) {
+					let element = document.createElement("option");
+					element.value = key;
+					element.innerHTML = key;
+					add.appendChild(element);
+				}		
+				let add2 = document.querySelector("[name='displaysong']");
+				for (let [key, value] of Object.entries(data.listOfSong)) {
+					let element = document.createElement("option");
+					element.value = key;
+					element.innerHTML = key;
+					add2.appendChild(element);
+				}		
+			})
+			.catch(error => {
+				console.log("Error fetching JSON data:", error);
+			});
+	}
+
+function populateForm() {
+  // Get the selected object index from the select element
+
+  // Get the selected object from the jsonScheduleList based on the index
+  var selectedObject = jsonScheduleList[selectedKey];
+  console.log("JSON data2:", jsonScheduleList[selectedKey]);
+	var dateString =  selectedObject.year + "-" + ( selectedObject.month < 10 ? "0" +  selectedObject.month :  selectedObject.month) + "-" + ( selectedObject.day < 10 ? "0" +  selectedObject.day :  selectedObject.day);
+	  console.log(dateString);
+	  var dailyTypeString = selectedObject.dailyType;
+	  if (selectedObject.dailyType == 9) {dailyTypeString = 0}
+  // Populate the form with values from the selected object
+  document.querySelector('input[name="displayscheduleType"][value="' + selectedObject.scheduleType + '"]').checked = true;
+  document.querySelector('input[name="displaysun"]').checked = selectedObject.sun;
+  document.querySelector('input[name="displaymon"]').checked = selectedObject.mon;
+  document.querySelector('input[name="displaytue"]').checked = selectedObject.tue;
+  document.querySelector('input[name="displaywed"]').checked = selectedObject.wed;
+  document.querySelector('input[name="displaythu"]').checked = selectedObject.thu;
+  document.querySelector('input[name="displayfri"]').checked = selectedObject.fri;
+  document.querySelector('input[name="displaysat"]').checked = selectedObject.sat;
+  document.querySelector('input[name="displaydailyType"][value="' + dailyTypeString + '"]').checked = true;
+  document.querySelector('select[name="displaydom"]').value = selectedObject.dom;
+  document.querySelector('input[name="displaydate"]').value = dateString;
+  document.querySelector('select[name="displayhours"]').value = selectedObject.hours;
+  document.querySelector('select[name="displayminutes"]').value = selectedObject.minutes;
+  document.querySelector('input[name="displaytitle"]').value = selectedObject.title;
+  document.querySelector('select[name="displaysong"]').value = selectedObject.song;
+  	    
+	  if (selectedObject.hourlyType != 99) {document.querySelector('input[name="displayhourlyType"][value="' + selectedObject.hourlyType + '"]').checked = true; console.log(selectedObject.hourlyType); } 
+
+  document.querySelector('input[name="displayrecurring"]').checked = selectedObject.recurring;
+  document.querySelector('input[name="displaygongmode"]').checked = selectedObject.gongmode;
+  document.querySelector('input[name="displaydaymode"]').checked = selectedObject.daymode;
+			if (selectedObject.scheduleType == 0 ) { //Daily
+	  console.log(selectedObject.hourlyType);
+				$('.showDisplayDaily').show();
+				$('.showDisplayDailysub').show();
+				if (selectedObject.dailyType == 0 ){
+					$('.showDisplayHour').hide();
+					$('.showDisplayMinutes').hide();
+					if (selectedObject.hourlyType != 99 ){
+						$('.showDisplayHourly').show();
+						$('.showDisplayDaymode').show();
+						$('.showDisplayGong').hide();
+					} else {
+						$('.showDisplayHourly').hide();
+						$('.showDisplayGong').show();
+						}
+				} 
+				if (selectedObject.dailyType == 1 ){
+					$('.showDisplayHour').show();
+					$('.showDisplayMinutes').show();
+					$('.showDisplayHourly').hide();
+					$('.showDisplayDaymode').hide();
+					$('.showDisplayGong').hide();
+				}
+				$('.showDisplayMonthly').hide();
+				$('.showDisplayDate').hide();
+				$('.showDisplayRecurring').hide();
+				$('.showDisplaySong').show();
+				$('.showDisplayTitle').show();
+				$('.showDisplaySave').show();
+			} else if (selectedObject.scheduleType == 1 ) {  //Monthly
+				$('.showDisplayDaily').hide();
+				$('.showDisplayDailysub').hide();
+				$('.showDisplayHourly').hide();
+				$('.showDisplayDaymode').hide();
+				$('.showDisplayGong').hide();
+				$('.showDisplayHour').show();
+				$('.showDisplayMinutes').show();
+				$('.showDisplayMonthly').show();
+				$('.showDisplayDate').hide();
+				$('.showDisplayRecurring').hide();
+				$('.showDisplaySong').show();
+				$('.showDisplayTitle').show();
+				$('.showDisplaySave').show();
+			} else if (selectedObject.scheduleType == 2 ) {  //Date
+				$('.showDisplayDaily').hide();
+				$('.showDisplayDailysub').hide();
+				$('.showDisplayHourly').hide();
+				$('.showDisplayDaymode').hide();
+				$('.showDisplayGong').hide();
+				$('.showDisplayHour').show();
+				$('.showDisplayMinutes').show();
+				$('.showDisplayMonthly').hide();
+				$('.showDisplayDate').show();
+				$('.showDisplayRecurring').show();
+				$('.showDisplaySong').show();
+				$('.showDisplayTitle').show();
+				$('.showDisplaySave').show();
+			} else if (selectedObject.scheduleType == 3 ) {  //Special Date
+				$('.showDisplayDaily').hide();
+				$('.showDisplayDailysub').hide();
+				$('.showDisplayHourly').hide();
+				$('.showDisplayDaymode').hide();
+				$('.showDisplayGong').hide();
+				$('.showDisplayHour').hide();
+				$('.showDisplayMinutes').hide();
+				$('.showDisplayMonthly').hide();
+				$('.showDisplayDate').show();
+				$('.showDisplayRecurring').hide();
+				$('.showDisplaySong').show();
+				$('.showDisplayTitle').show();
+				$('.showDisplaySave').show();
+			} else if (selectedObject.scheduleType == 4 ) {  //New Years
+				$('.showDisplayDaily').hide();
+				$('.showDisplayDailysub').hide();
+				$('.showDisplayHourly').hide();
+				$('.showDisplayDaymode').hide();
+				$('.showDisplayGong').hide();
+				$('.showDisplayHour').hide();
+				$('.showDisplayMinutes').hide();
+				$('.showDisplayMonthly').hide();
+				$('.showDisplayDate').hide();
+				$('.showDisplayRecurring').hide();
+				$('.showDisplaySong').hide();
+				$('.showDisplayTitle').hide();
+				$('.showDisplaySave').show();
+			} else {                    //Startup
+				$('.showDisplayDaily').hide();
+				$('.showDisplayDailysub').hide();
+				$('.showDisplayHourly').hide();
+				$('.showDisplayDaymode').hide();
+				$('.showDisplayGong').hide();
+				$('.showDisplayHour').hide();
+				$('.showDisplayMinutes').hide();
+				$('.showDisplayMonthly').hide();
+				$('.showDisplayDate').hide();
+				$('.showDisplayRecurring').hide();
+				$('.showDisplaySong').hide();
+				$('.showDisplayTitle').hide();
+				$('.showDisplaySave').hide();
+			}
+
+$('.display-form form').find(':input').prop('disabled', true);
+}
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('playthesong').addEventListener('click', async event => {
+        let body = {};
+        body['song'] = document.querySelector("[name='song']").value;
+        await fetch(`${url}/playsong`, {
+          method: 'POST',
+          body: JSON.stringify(body)
+        });
+      });
+    });
+
+
+	// Call the fetchJSONData function to initiate the data fetching process
+	fetchJSONData();
+</script>
+
+<body>
+	<nav>
+		<a href="./index.html">Shelf Clock</a>
+		<button title="Expand Navigation">
+		  <span></span>
+		</button>
+		<div>
+		  <ul>
+			<li><a href="./index.html">Home</a></li>
+			<li><a href="./settings.html">Settings</a></li>
+			<li><a href="./scheduler.html" class="active">Alarm Scheduler</a></li>
+			<li><a href="./_ac">Setup Wifi</a></li>
+			<li><a href="./update">Update Firmware</a></li>
+			<li><a href="./denotbug.html">Debug Info</a></li>
+		  </ul>
+		</div>   
+	</nav>
+	<section class="contact-form">
+		<h1>Create New Schedule</h1>
+		<form name="schedule-settings">
+		<section>
+			<div class="input-group">
+				<div>
+				  <label><input type="radio" name="scheduleType" value="0"> Daily</label>
+				  <label><input type="radio" name="scheduleType" value="1"> Monthly</label>
+				  <label><input type="radio" name="scheduleType" value="2"> Date</label>
+				  <label><input type="radio" name="scheduleType" value="3"> Special Date</label>
+				  <label><input type="radio" name="scheduleType" value="4"> New Years</label>
+				</div>
+				<div class="showDaily">
+				  <label><input type="checkbox" name="sun"> S</label>
+				  <label><input type="checkbox" name="mon"> M</label>
+				  <label><input type="checkbox" name="tue"> T</label>
+				  <label><input type="checkbox" name="wed"> W</label>
+				  <label><input type="checkbox" name="thu"> T</label>
+				  <label><input type="checkbox" name="fri"> F</label>
+				  <label><input type="checkbox" name="sat"> S</label>
+				</div>
+				<div class="showDailysub">
+				  <label><input type="radio" name="dailyType" value="0"> Hourly</label>
+				  <label><input type="radio" name="dailyType" value="1"> Specific Time</label>
+				</div>
+				<div class="showHourly">
+				  <label><input type="radio" name="hourlyType" value="15"> 15 Min</label>
+				  <label><input type="radio" name="hourlyType" value="30"> 30 Min</label>
+				  <label><input type="radio" name="hourlyType" value="60"> 60 Min</label>
+				</div>
+				<div class="showMonthly">
+				  Day of Month:
+				   <select name="dom">
+					<option value="00">--Choose an option--</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="32">EOM-2</option>
+					<option value="33">EOM-1</option>
+					<option value="34">EOM</option>
+				  </select>
+				</div>
+				<div class="showDate">
+					<label for="scheduleData">Date:</label>
+					<input type="date" id="date" name="date" min="2023-05-01" max="2060-12-31">
+				</div>
+				<div class="showHour">
+				  Hour:
+				   <select name="hours">
+					<option value="99">--Choose an option--</option>
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+				  </select>
+				</div>
+				<div class="showMinutes">
+				  Minute:
+				   <select name="minutes">
+					<option value="99">--Choose an option--</option>
+					<option value="0">00</option>
+					<option value="1">01</option>
+					<option value="2">02</option>
+					<option value="3">03</option>
+					<option value="4">04</option>
+					<option value="5">05</option>
+					<option value="6">06</option>
+					<option value="7">07</option>
+					<option value="8">08</option>
+					<option value="9">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				  </select>
+				</div>
+				<div class="showRecurring">
+				  <label><input type="checkbox" name="recurring"> Recurring</label>
+				</div>
+				<div class="showGong">
+				  <label><input type="checkbox" name="gongmode"> Hourly Gong</label>
+				</div>
+				<div class="showDaymode">
+				  <label><input type="checkbox" name="daymode"> 8am - 8pm Only</label>
+				</div>
+				<div class="showSong">
+					Song:
+				   <select name="song">
+				  </select>
+				<input type="button" value="Test" id="playthesong">
+				</div>
+				<div class="showTitle">
+				  <label for="scheduleTitle">Title:</label>
+				  <input type="text" id="title" name="title">
+				</div>	
+				<div class="showSave">
+					<button type="submit">Create Schedule</button>
+				</div>
+			</div>
+		</section>
+	  </form>
+	</section>
+
+
+	
+			<section>
+		<h1>Delete Existing Schedule</h1>
+		<style>
+			/* Remove bullets from the unordered list */
+			ul {
+				list-style-type: none;
+				padding: 0;
+				margin: 0;
+			}
+		</style>
+		<div>
+			<ul id="objectList">
+		</ul>
+		<br>
+				<div class="showDisplayDelete">
+					<button id="deleteButton" style="display: none;" onclick="sendSelectedObject()">Delete Schedule</button>
+				</div>
+		</div>
+	</section>
+
+<section class="display-form" id="display-form" style="display: none;">
+	
+<form name="schedule-display">
+  <section>
+			<div class="input-group">
+				<div>
+				  <label><input type="radio" name="displayscheduleType" value="0"> Daily</label>
+				  <label><input type="radio" name="displayscheduleType" value="1"> Monthly</label>
+				  <label><input type="radio" name="displayscheduleType" value="2"> Date</label>
+				  <label><input type="radio" name="displayscheduleType" value="3"> Special Date</label>
+				  <label><input type="radio" name="displayscheduleType" value="4"> New Years</label>
+				</div>
+				<div class="showDisplayDaily">
+				  <label><input type="checkbox" name="displaysun"> S</label>
+				  <label><input type="checkbox" name="displaymon"> M</label>
+				  <label><input type="checkbox" name="displaytue"> T</label>
+				  <label><input type="checkbox" name="displaywed"> W</label>
+				  <label><input type="checkbox" name="displaythu"> T</label>
+				  <label><input type="checkbox" name="displayfri"> F</label>
+				  <label><input type="checkbox" name="displaysat"> S</label>
+				</div>
+				<div class="showDisplayDailysub">
+				  <label><input type="radio" name="displaydailyType" value="0"> Hourly</label>
+				  <label><input type="radio" name="displaydailyType" value="1"> Specific Time</label>
+				</div>
+				<div class="showDisplayHourly">
+				  <label><input type="radio" name="displayhourlyType" value="15"> 15 Min</label>
+				  <label><input type="radio" name="displayhourlyType" value="30"> 30 Min</label>
+				  <label><input type="radio" name="displayhourlyType" value="60"> 60 Min</label>
+				</div>
+				<div class="showDisplayMonthly">
+				  Day of Month:
+				   <select name="displaydom">
+					<option value="00">--Choose an option--</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="32">EOM-2</option>
+					<option value="33">EOM-1</option>
+					<option value="34">EOM</option>
+				  </select>
+				</div>
+				<div class="showDisplayDate">
+					<label for="scheduleData">Date:</label>
+					<input type="date" id="date" name="displaydate" min="2023-05-01" max="2060-12-31">
+				</div>
+				<div class="showDisplayHour">
+				  Hour:
+				   <select name="displayhours">
+					<option value="99">--Choose an option--</option>
+					<option value="00">00</option>
+					<option value="01">01</option>
+					<option value="02">02</option>
+					<option value="03">03</option>
+					<option value="04">04</option>
+					<option value="05">05</option>
+					<option value="06">06</option>
+					<option value="07">07</option>
+					<option value="08">08</option>
+					<option value="09">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+				  </select>
+				</div>
+				<div class="showDisplayMinutes">
+				  Minute:
+				   <select name="displayminutes">
+					<option value="99">--Choose an option--</option>
+					<option value="0">00</option>
+					<option value="1">01</option>
+					<option value="2">02</option>
+					<option value="3">03</option>
+					<option value="4">04</option>
+					<option value="5">05</option>
+					<option value="6">06</option>
+					<option value="7">07</option>
+					<option value="8">08</option>
+					<option value="9">09</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+					<option value="32">32</option>
+					<option value="33">33</option>
+					<option value="34">34</option>
+					<option value="35">35</option>
+					<option value="36">36</option>
+					<option value="37">37</option>
+					<option value="38">38</option>
+					<option value="39">39</option>
+					<option value="40">40</option>
+					<option value="41">41</option>
+					<option value="42">42</option>
+					<option value="43">43</option>
+					<option value="44">44</option>
+					<option value="45">45</option>
+					<option value="46">46</option>
+					<option value="47">47</option>
+					<option value="48">48</option>
+					<option value="49">49</option>
+					<option value="50">50</option>
+					<option value="51">51</option>
+					<option value="52">52</option>
+					<option value="53">53</option>
+					<option value="54">54</option>
+					<option value="55">55</option>
+					<option value="56">56</option>
+					<option value="57">57</option>
+					<option value="58">58</option>
+					<option value="59">59</option>
+				  </select>
+				</div>
+				<div class="showDisplayRecurring">
+				  <label><input type="checkbox" name="displayrecurring"> Recurring</label>
+				</div>
+				<div class="showDisplayGong">
+				  <label><input type="checkbox" name="displaygongmode"> Hourly Gong</label>
+				</div>
+				<div class="showDisplayDaymode">
+				  <label><input type="checkbox" name="displaydaymode"> 8am - 8pm Only</label>
+				</div>
+				<div class="showDisplaySong">
+					Song:
+				   <select name="displaysong">
+				  </select>
+				</div>
+				<div class="showDisplayTitle">
+				  <label for="scheduleTitle">Title:</label>
+				  <input type="text" id="title" name="displaytitle">
+				</div>	
+				
+			</div>
+    </div>
+  </section>
+</form>
+	</section>
+
+</body>
+</html>
