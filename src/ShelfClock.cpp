@@ -389,9 +389,6 @@ int spectrumMode = 0;
 int spectrumColorSettings = 2;
 int spectrumBackgroundSettings = 0;
 int realtimeMode = 0;
-CRGB spectrumColor = CRGB(r15_val, g15_val, b15_val);
-CRGB spectrumBackground = CRGB(r17_val, g17_val, b17_val);
-
 int spotlightsColorSettings = 0;
 bool useSpotlights = 1;
 int scrollColorSettings = 0;
@@ -410,6 +407,8 @@ byte randomSpectrumMode = 0;
 int suspendFrequency = 1;  //in minutes
 byte suspendType = 0; //0-off, 1-digits-only, 2-everything
 
+CRGB spectrumColor = CRGB(r15_val, g15_val, b15_val);
+CRGB spectrumBackground = CRGB(r17_val, g17_val, b17_val);
 CRGB hourColor = CRGB(r1_val, g1_val, b1_val); 
 CRGB colonColor = CRGB(r3_val, g3_val, b3_val); 
 CRGB spotlightsColor = CRGB(r0_val, g0_val, b0_val);
@@ -605,13 +604,6 @@ byte numbers[] = {
 
 TaskHandle_t Task1;
 QueueHandle_t jobQueue;
-#if HAS_BUZZER
-//  Sounds sounds;
-  bool quarterHour = true;
-  bool halfHour = true;
-  bool threeQuarterHour = true;
-  bool wholeHour = true;
-#endif
 
 void setup() {
   Serial.begin(115200);
@@ -750,7 +742,7 @@ void setup() {
   Serial.println("OTA Available");
 
   createSchedulesArray();  //load array of schedule files on drive
-processSchedules(0);  //print out schedule array
+  processSchedules(0);  //print out schedule array
 
 
   #if HAS_BUZZER
@@ -758,9 +750,7 @@ processSchedules(0);  //print out schedule array
     pinMode(BUZZER_PIN, OUTPUT);
     rtttl::begin(BUZZER_PIN, "SMB Underworld:d=4,o=6,b=100:32c,32p,32c7,32p,32a5,32p,32a,32p,32a#5,32p,32a#,2p");  //play mario sound and set initial brightness level
     while( !rtttl::done() ){GetBrightnessLevel(); rtttl::play();}
-
     getListOfSongs();
-
   #endif
     jobQueue = xQueueCreate(30, sizeof(String *));
     xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 0, &Task1, 0);
@@ -775,18 +765,10 @@ void Task1code(void * parameter) {
     #if HAS_BUZZER
 
         if (xQueueReceive(jobQueue, songTaskbuffer, (TickType_t)10)) {
-        String job = String(songTaskbuffer);
-      //    const char * songer = job->c_str();
+          String job = String(songTaskbuffer);
           Serial.print("job ");
           Serial.println(job);
-playRTTTLsong(job, 1);
-     //     if (song) {
-      //      rtttl::begin(BUZZER_PIN, song);
-       //     while( !rtttl::done()) { 
-      //        rtttl::play();  
-       //     }
-       //   }
-      //    delete job;
+          playRTTTLsong(job, 1);
         } 
     #endif
     if ((millis() - lastTime) > weatherTimerDelay) {
@@ -835,7 +817,6 @@ void loop(){
   //run everything inside here every second
   if ((unsigned long)(currentMillis - prevTime) >= 1000) {
     prevTime = currentMillis;
-    //struct tm timeinfo; 
     if(!getLocalTime(&timeinfo)){ 
       Serial.println("Failed to obtain time");
     }
@@ -849,8 +830,6 @@ void loop(){
     int currentTimeDay = timeinfo.tm_mday;
     int currentTimeWeek = ((timeinfo.tm_yday + 7 - (timeinfo.tm_wday ? (timeinfo.tm_wday - 1) : 6)) / 7);
     int currentTimeMonth = timeinfo.tm_mon;
-
-
 
     checkSleepTimer();  //time to sleep?
 
@@ -1896,25 +1875,18 @@ void endCountdown() {  //countdown timer has reached 0, sound alarm and flash En
     if(!getLocalTime(&timeinfo)){ Serial.println("Failed to obtain time"); }
     int mday = timeinfo.tm_mday;
     int mont = timeinfo.tm_mon + 1;
-  //  rtttl::begin(BUZZER_PIN, sounds.getSongForAlarm(mday, mont));
-  //  while( !rtttl::done() && !breakOutSet) {   //play song and flash lights
-  //      rtttl::play();
-
-          String songName = SONGS[specialAudibleAlarm];  // Get the song name as a String
-          Serial.print("songName ");
-          Serial.println(songName);
-          songName.toCharArray(songTaskbuffer, songTaskbufferSize);
-          xQueueSend(jobQueue, songTaskbuffer, (TickType_t)0);
-
-
-        color = colorWheel((205 / 50 + colorWheelPosition) % 256);
-        displayNumber(38,5,color);  //E 38
-        displayNumber(79,3,color);  //n 79
-        displayNumber(69,1,color);  //d 69
-        FastLED.show();
-        colorWheelPosition++;
-        server.handleClient();   
-    //  }
+    String songName = SONGS[specialAudibleAlarm];  // Get the song name as a String
+    Serial.print("songName ");
+    Serial.println(songName);
+    songName.toCharArray(songTaskbuffer, songTaskbufferSize);
+    xQueueSend(jobQueue, songTaskbuffer, (TickType_t)0);
+    color = colorWheel((205 / 50 + colorWheelPosition) % 256);
+    displayNumber(38,5,color);  //E 38
+    displayNumber(79,3,color);  //n 79
+    displayNumber(69,1,color);  //d 69
+    FastLED.show();
+    colorWheelPosition++;
+    server.handleClient();   
     } else {  //no alarm, ok, flash lights
     for (int i=0; i<1000 && !breakOutSet; i++) {
       color = colorWheel((205 / 50 + colorWheelPosition) % 256);
@@ -1939,7 +1911,6 @@ void endCountdown() {  //countdown timer has reached 0, sound alarm and flash En
   #endif
   clockMode = currentMode; 
   realtimeMode = currentReal;
-//  preferences.putInt("clockMode", clockMode);  //remember to fix this
   if (!breakOutSet) {scroll("tIMEr Ended      tIMEr Ended");}
   allBlank(); 
 }
@@ -2786,28 +2757,24 @@ void Snake() {  //real random snake mode with random food changing its color
 
 void Cylon() {
   int fake = 0;
-   const uint8_t CYLON[12] = {4,8,13,18,23,28,32,28,23,18,13,8};
-   
-   if (cylonPosition >=12) { cylonPosition = 0;}
-   fake = CYLON[cylonPosition] * LEDS_PER_SEGMENT;
-      for (byte s=0; s<LEDS_PER_SEGMENT; s++ ){LEDs[FAKE_LEDs_SNAKE[s+((fake))]] = CRGB::Red;}
+  const uint8_t CYLON[12] = {4,8,13,18,23,28,32,28,23,18,13,8};
+  if (cylonPosition >=12) { cylonPosition = 0;}
+  fake = CYLON[cylonPosition] * LEDS_PER_SEGMENT;
+  for (byte s=0; s<LEDS_PER_SEGMENT; s++ ){LEDs[FAKE_LEDs_SNAKE[s+((fake))]] = CRGB::Red;}
   cylonPosition++;
-  
-   if (cylonPosition >=12) { cylonPosition = 0;}
-    for (byte j = 0; j < SPECTRUM_PIXELS; j++) {
-      int fake =  j * LEDS_PER_SEGMENT;
-      for (byte s=0; s<LEDS_PER_SEGMENT; s++ ){              // 7 LEDs per segment
-        LEDs[FAKE_LEDs_SNAKE[s+((fake))]].fadeToBlackBy( 120 );
-      }
+  if (cylonPosition >=12) { cylonPosition = 0;}
+  for (byte j = 0; j < SPECTRUM_PIXELS; j++) {
+    int fake =  j * LEDS_PER_SEGMENT;
+    for (byte s=0; s<LEDS_PER_SEGMENT; s++ ){              // 7 LEDs per segment
+      LEDs[FAKE_LEDs_SNAKE[s+((fake))]].fadeToBlackBy( 120 );
     }
+  }
   if (clockMode != 5) { allBlank(); }
 } //Cylon
 
 
 void loadSetupSettings(){  //setting stored in preffs and loaded at boot
   preferences.begin("shelfclock", false);
-  //preferences.getBytes("temperature", &temperature, preferences.getBytesLength("temperature"));
-  //preferences.getBytes("humidity", &humidity, preferences.getBytesLength("humidity"));
   preferences.getBytes("weatherapi", &weatherapi, preferences.getBytesLength("weatherapi"));
   //   ssid = preferences.getChar("ssid");
   //    password = preferences.getChar("password");
@@ -2868,7 +2835,6 @@ void getListOfSongs() {
 
 void writeFile(fs::FS &fs, const char * path, const char * message){
    Serial.printf("Writing file: %s\r\n", path);
-
    File file = fs.open(path, FILE_WRITE);
    if(!file){
       Serial.println("− failed to open file for writing");
@@ -2881,6 +2847,7 @@ void writeFile(fs::FS &fs, const char * path, const char * message){
    }
 }
 
+#if HAS_BUZZER
 void playRTTTLsong(String goforit, int chimeNumber)
 {
   File file = FileFS.open(goforit, "r");
@@ -2901,6 +2868,7 @@ void playRTTTLsong(String goforit, int chimeNumber)
   rtttl::begin(BUZZER_PIN, output.c_str());  
   while( !rtttl::done() ){ rtttl::play();}
 }
+#endif
 
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
    Serial.printf("Listing directory: %s\r\n", dirname);
@@ -2954,16 +2922,15 @@ void processSchedules(bool alarmType) {
     else if (mins == 45) {minsSixty = 45;}
     else if (mins == 30) {minsSixty = 30;}
     else if (mins == 15) {minsSixty = 15;}
- int dayOfweek = timeinfo.tm_wday;
+    int dayOfweek = timeinfo.tm_wday;
     int mday = timeinfo.tm_mday;
     int mont = timeinfo.tm_mon + 1;
     int years = (timeinfo.tm_year +1900);
     int currentEOM = 0;
-//  Serial.println("testing...................");
+    //  Serial.println("testing...................");
     int object_count = jsonScheduleData.size();
-  for (int i = 0; i < (object_count); i++) {
-    JsonObject jsonObj = jsonScheduleData[i];
-  //  const char* test = obj["title"];
+    for (int i = 0; i < (object_count); i++) {
+      JsonObject jsonObj = jsonScheduleData[i];
       int scheduleType = (int)jsonObj["scheduleType"];
       int mon = (int)jsonObj["mon"];
       int tue = (int)jsonObj["tue"];
@@ -3069,17 +3036,31 @@ void processSchedules(bool alarmType) {
       Serial.println("----------------");
       Serial.println("");
 
+
    if (scheduleType == 0)  {   //0 = daily schedule type
       if ((dayOfweek == 0 && sun == 1) || (dayOfweek == 1 && mon == 1) || (dayOfweek == 2 && tue == 1) || (dayOfweek == 3 && wed == 1) || (dayOfweek == 4 && thu == 1) || (dayOfweek == 5 && fri == 1) || (dayOfweek == 6 && sat == 1)) {   //day of week match?
         if (((daymode == 1) && ((hour >= 8) && (hour <=19 ))) || (daymode == 0)) {  //datlight mode is right or not on?
-          if (((dailyType == 1) && ((hours == hour && minutes == mins) || (hours == 99 && minutes == mins) || (hours == hour && mins == 99 && minutes == 0))) || (((hourlyType == 15) && (minsSixty % 15 == 0)) || ((hourlyType == 30) && (minsSixty % 30 == 0)) || ((hourlyType == 60) && (minsSixty % 60 == 0)))) {  //specific time or hourly type is right, or hourlytype 15,30,60?        
-            playRTTTLsong(SONGS[song], 1);
+          if (((dailyType == 1) && ((hours == hour && minutes == mins) || (hours == 99 && minutes == mins) || (hours == hour && mins == 99 && minutes == 0))) || (((hourlyType == 15) && (minsSixty % 15 == 0)) || ((hourlyType == 30) && (minsSixty % 30 == 0)) || ((hourlyType == 60) && (minsSixty % 60 == 0))) || ((dailyType == 0) && ((hourlyType == 99) && (minsSixty % 60 == 0)))) {  //specific time or hourly type is right, or hourlytype 15,30,60?        
+            #if HAS_BUZZER
+              if (gongmode && (dailyType == 0) && (hourlyType == 99) && (minsSixty % 60 == 0)){  //hourly bongs should always run as secondary because of the uid file name
+                // Makes sure the bongs are between 1 and 12. 
+                int numberofChimes = hour;
+                if (numberofChimes == 0) numberofChimes = 12;
+                else if (numberofChimes > 12) numberofChimes -= 12;
+                for(int i = 0; i < numberofChimes; i++) {
+                  playRTTTLsong(SONGS[song], 1);
+                 }
+                }  else {
+                playRTTTLsong(SONGS[song], 1);
+                }
+            #endif
             if (!breakOutSet) {scroll(title);}
             allBlank();
-         }
+          }
         }
       }
    }  //end of daily schedule type
+
 
    if (scheduleType == 1)  {   //1 = Monthly schedule type
     if (mont == 2) {    // Function to calculate the number of days in a given month and year
@@ -3104,19 +3085,25 @@ void processSchedules(bool alarmType) {
 
     if ((dom == mday) || (dom == 34 && (mday == currentEOM)) || (dom == 33 && (mday == (currentEOM-1))) || (dom == 32 && (mday == (currentEOM-2))))  {    // Check DOM and EOM
       if (((hours == hour && minutes == mins) || (hours == 99 && minutes == mins) || (hours == hour && mins == 99 && minutes == 0))) {  //time, some minute all day, sloppy top of hour
+            #if HAS_BUZZER
               playRTTTLsong(SONGS[song], 1);
+            #endif
               if (!breakOutSet) {scroll(title);}
               allBlank(); 
       } else {
+            #if HAS_BUZZER
         if (!jsonObj["song"].isNull()) {
             strcpy(specialAudibleAlarm, jsonObj["song"]);
            
           Serial.println(defaultAudibleAlarm);
           Serial.println(specialAudibleAlarm);
         }
+            #endif
         }
     } else {
+            #if HAS_BUZZER
           sprintf(specialAudibleAlarm, "%s", defaultAudibleAlarm);
+            #endif
       }
    }  //end of Monthly schedule type
 
@@ -3135,7 +3122,9 @@ void processSchedules(bool alarmType) {
             deleteFile(FileFS, processedText);  //delete non-recurring schedule
             fileChanged = 1;
           }
-          playRTTTLsong(SONGS[song], 1);
+            #if HAS_BUZZER
+              playRTTTLsong(SONGS[song], 1);
+            #endif
           if (!breakOutSet) {scroll(title);}
           allBlank(); 
         }
@@ -3147,23 +3136,31 @@ void processSchedules(bool alarmType) {
           Serial.println("special alarm");
           //fix in future, play song
         if (hour == 12 && mins == 0) {
-          playRTTTLsong(SONGS[song], 1);
+            #if HAS_BUZZER
+              playRTTTLsong(SONGS[song], 1);
+            #endif
           if (!breakOutSet) {scroll(title);}
           allBlank(); 
         } 
+            #if HAS_BUZZER
         if (!jsonObj["song"].isNull()) {
             strcpy(specialAudibleAlarm, jsonObj["song"]);
           Serial.println(defaultAudibleAlarm);
           Serial.println(specialAudibleAlarm);
         }
+            #endif
      } else {
+            #if HAS_BUZZER
           sprintf(specialAudibleAlarm, "%s", defaultAudibleAlarm);
+            #endif
      }
    }  //end of Special Date schedule type
 
    if (scheduleType == 4)  {   //4 = New Years schedule type
     if (mont == 01 && mday == 01 && hour == 0 && mins == 0) {
-          playRTTTLsong("/settings/auldlang.rttl", 1);
+            #if HAS_BUZZER
+              playRTTTLsong("/settings/auldlang.rttl", 1);
+            #endif
           if (!breakOutSet) {scroll(title);}
           allBlank(); 
     }
@@ -3185,9 +3182,6 @@ void createSchedulesArray() {
     if (fileName.endsWith(".json")) { // only read files that have a .txt extension
       String fileContent = file.readString(); // read the contents of the file
       JsonObject fileData = dataArray.createNestedObject(); // create a JSON object to store the file data
-
-      //Serial.println(fileContent);
-      //Parse the JSON string into a JSON object
       DynamicJsonDocument jsonScheduleDataTemp(1024);
       DeserializationError error = deserializeJson(jsonScheduleDataTemp, fileContent);
       if (error) {
@@ -3421,8 +3415,6 @@ void getclockSettings(String fileType) {
   temperature_outdoor_enable = jsonObj["temperature_outdoor_enable"].as<bool>();
   //weatherapi = jsonObj["weatherapi"];weatherapi.latitude
 
-
-
   // Close the file.
   file.close();
 }  
@@ -3649,7 +3641,6 @@ void saveclockSettings(String fileType) {
   clockSettings["humidity_outdoor_enable"] = humidity_outdoor_enable;
   clockSettings["temperature_outdoor_enable"] = temperature_outdoor_enable;
   //clockSettings["weatherapi"] = weatherapi;
-
   // Serialize the JSON document to a string
   String jsonStr;
   serializeJson(doc, jsonStr);
@@ -3697,8 +3688,6 @@ void loadWebPageHandlers() {
     json["HAS_BUZZER"] = HAS_BUZZER;
     json["HAS_PHOTOSENSOR"] = HAS_PHOTOSENSOR;
     json["HAS_ONLINEWEATHER"] = HAS_ONLINEWEATHER;
-
-
     serializeJson(json, output);
     server.send(200, "application/json", output);
   });
@@ -3713,56 +3702,46 @@ void loadWebPageHandlers() {
     char humiColor[8], humiDecimalColor[8], humiSymbolColor[8];
     char colorCD[8], scoreboardColorLeft[8], scoreboardColorRight[8];
     char spectrumColor[8], spectrumBackgroundColor[8], scrollingColor[8];
-
     json["ColorPalette"] = pastelColors;
     json["ColorChangeFrequency"] = ColorChangeFrequency;
     json["rangeBrightness"] = brightness;
     json["suspendType"] = suspendType;
     json["suspendFrequency"] = suspendFrequency;
     json["useSpotlights"] = useSpotlights;
-    
     sprintf(spotlightcolor, "#%02X%02X%02X", r0_val, g0_val, b0_val);
     json["spotlightcolor"] = spotlightcolor;
-
     json["spotlightsColorSettings"] = spotlightsColorSettings;
     json["ClockDisplayType"] = clockDisplayType;
     json["ColonType"] = colonType;
     json["TimezoneSetting"] = gmtOffset_sec;
     json["DSTime"] = DSTime;
     json["ClockColorSettings"] = ClockColorSettings;
-
     sprintf(colorHour, "#%02X%02X%02X", r1_val, g1_val, b1_val);
     json["colorHour"] = colorHour;
     sprintf(colorMin, "#%02X%02X%02X", r2_val, g2_val, b2_val);
     json["colorMin"] = colorMin;
     sprintf(colorColon, "#%02X%02X%02X", r3_val, g3_val, b3_val);
     json["colorColon"] = colorColon;
-
     json["DateDisplayType"] = dateDisplayType;
     json["DateColorSettings"] = DateColorSettings;
-
     sprintf(dayColor, "#%02X%02X%02X", r4_val, g4_val, b4_val);
     json["dayColor"] = dayColor;
     sprintf(monthColor, "#%02X%02X%02X", r5_val, g5_val, b5_val);
     json["monthColor"] = monthColor;
     sprintf(separatorColor, "#%02X%02X%02X", r6_val, g6_val, b6_val);
     json["separatorColor"] = separatorColor;
-
     json["TempType"] = temperatureSymbol;
     json["CorrectionSelect"] = temperatureCorrection;
     json["TempDisplayType"] = tempDisplayType;
     json["TempColorSettings"] = tempColorSettings;
-
     sprintf(tempColor, "#%02X%02X%02X", r7_val, g7_val, b7_val);
     json["TempColor"] = tempColor;
     sprintf(typeColor, "#%02X%02X%02X", r8_val, g8_val, b8_val);
     json["TypeColor"] = typeColor;
     sprintf(degreeColor, "#%02X%02X%02X", r9_val, g9_val, b9_val);
     json["DegreeColor"] = degreeColor;
-
     json["HumiDisplayType"] = humiDisplayType;
     json["HumiColorSettings"] = humiColorSettings;
-
     sprintf(humiColor, "#%02X%02X%02X", r10_val, g10_val, b10_val);
     json["HumiColor"] = humiColor;
     sprintf(humiDecimalColor, "#%02X%02X%02X", r11_val, g11_val, b11_val);
@@ -3773,20 +3752,17 @@ void loadWebPageHandlers() {
     json["useAudibleAlarm"] = useAudibleAlarm;
 #endif
     json["colorchangeCD"] = colorchangeCD;
-
     sprintf(colorCD, "#%02X%02X%02X", cd_r_val, cd_g_val, cd_b_val);
     json["colorCD"] = colorCD;
     sprintf(scoreboardColorLeft, "#%02X%02X%02X", r13_val, g13_val, b13_val);
     json["scoreboardColorLeft"] = scoreboardColorLeft;
     sprintf(scoreboardColorRight, "#%02X%02X%02X", r14_val, g14_val, b14_val);
     json["scoreboardColorRight"] = scoreboardColorRight;
-
     json["randomSpectrumMode"] = randomSpectrumMode;
     sprintf(spectrumColor, "#%02X%02X%02X", r15_val, g15_val, b15_val);
     json["spectrumColor"] = spectrumColor;
     sprintf(spectrumBackgroundColor, "#%02X%02X%02X", r17_val, g17_val, b17_val);
     json["spectrumBackgroundColor"] = spectrumBackgroundColor;
-
     json["spectrumBackgroundSettings"] = spectrumBackgroundSettings;
     json["spectrumColorSettings"] = spectrumColorSettings;
     json["scrollFrequency"] = scrollFrequency;
@@ -3800,36 +3776,25 @@ void loadWebPageHandlers() {
     json["scrollOptions8"] = scrollOptions8;
     json["scrollText"] = scrollText;
     json["scrollOverride"] = scrollOverride;
-
     sprintf(scrollingColor, "#%02X%02X%02X", r16_val, g16_val, b16_val);
     json["scrollColor"] = scrollingColor;
-
     json["scrollColorSettings"] = scrollColorSettings;
-
     json["weatherapi"]["latitude"] = weatherapi.latitude;
     json["weatherapi"]["longitude"] = weatherapi.longitude;
     json["weatherapi"]["apikey"] = weatherapi.apikey;
-
     json["humidity_outdoor_enable"] = humidity_outdoor_enable;
     json["temperature_outdoor_enable"] = temperature_outdoor_enable;
-
-
     json["HAS_DHT"] = HAS_DHT;
     json["HAS_RTC"] = HAS_RTC;
     json["HAS_SOUNDDETECTOR"] = HAS_SOUNDDETECTOR;
     json["HAS_BUZZER"] = HAS_BUZZER;
     json["HAS_PHOTOSENSOR"] = HAS_PHOTOSENSOR;
     json["HAS_ONLINEWEATHER"] = HAS_ONLINEWEATHER;
-     
   #if HAS_BUZZER
-    //json["listOfSong"] = sounds.getListOfSongs();
-        json["listOfSong"] = SONGS;
+    json["listOfSong"] = SONGS;
   #endif
-
-
     serializeJson(json, output);
     server.send(200, "application/json", output);
-
   });
 
   server.on("/updateanything", HTTP_POST, []() {
@@ -4499,24 +4464,12 @@ void loadWebPageHandlers() {
       Serial.println(body);
       Serial.println("----");
       deserializeJson(json, server.arg(0));
-
   #if HAS_BUZZER
       // play music
-      /*
       if (!json["song"].isNull()) {
-        String *song = new String(json["song"].as<String>());
-        Serial.printf("Play song: %s\n", json["song"].as<String>());
-        xQueueSend(jobQueue, &song, (TickType_t)0);
-      }
-      */
-      // play music
-      if (!json["song"].isNull()) {
-     //   playRTTTLsong(SONGS[json["song"].as<String>()], 1);
-       //   String songName = SONGS[defaultAudibleAlarm];  // Get the song name as a String
           String songName = SONGS[json["song"].as<String>()];  // Get the song name as a String
           Serial.print("songName ");
           Serial.println(songName);
-     //   const char* songNamePtr = songName.c_str();  // Get the C-style string (const char*) from the String
           songName.toCharArray(songTaskbuffer, songTaskbufferSize);
           xQueueSend(jobQueue, songTaskbuffer, (TickType_t)0);
           Serial.println("play song only");
@@ -4526,26 +4479,22 @@ void loadWebPageHandlers() {
     server.send(204);
   });
 
-
-
    server.on("/getscheduler", []() {
     DynamicJsonDocument json(16192);
     String output;
-      Serial.println("getscheduler running");
-
-
-    //json["listOfSong"] = getListOfSongs();
+    Serial.println("getscheduler running");
+    json["HAS_BUZZER"] = HAS_BUZZER;
+#if HAS_BUZZER
     json["listOfSong"] = SONGS;
+#endif
     json["jsonScheduleData"] = jsonScheduleData;
     serializeJson(json, output);
     server.send(200, "application/json", output);
-    //  deserializeJson(json, Serial);
   });
 
   server.on("/schedulerDelete", HTTP_POST, []() {   //catch post from the scheduler page save function
     DynamicJsonDocument json(1500);
     if(server.args() > 0) {
-     // String body = server.arg(0); //assign data from post
       deserializeJson(json, server.arg(0));
       Serial.println(server.arg(0));
       if (!json["deleteData"].isNull()) {     //if there was data
@@ -4794,8 +4743,10 @@ void loadWebPageHandlers() {
     json["useSpotlights"] = useSpotlights;
     json["humidity_outdoor_enable"] = humidity_outdoor_enable;
     json["temperature_outdoor_enable"] = temperature_outdoor_enable;
+            #if HAS_BUZZER
     json["defaultAudibleAlarm"] = SONGS[defaultAudibleAlarm];
     json["specialAudibleAlarm"] = SONGS[specialAudibleAlarm];
+            #endif
 
     serializeJson(json, output);
     server.send(200, "application/json", output);
@@ -4834,7 +4785,6 @@ void loadWebPageHandlers() {
   /*handling uploading song file */
   server.on("/uploadSong", HTTP_POST, []() {
     //server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
-    //ESP.restart();
     }, []() {
     HTTPUpload& upload = server.upload();
     if(upload.status == UPLOAD_FILE_START)  {

@@ -401,6 +401,7 @@ async function loadSettings() {
     if (response.ok) {
         let settings = await response.json();
 		
+				console.log("JSON data:", settings);
 		if (!settings.HAS_SOUNDDETECTOR) { document.getElementById("FFT").style.display = 'none'; document.getElementById("FFT2").style.display = 'none'; } //hide FFT if no sounddetector hardware
 		if (!settings.HAS_BUZZER) { document.getElementById("BUZZER").style.display = 'none'; document.getElementById("BUZZER2").style.display = 'none'; } //hide buzzer if no sounddetector hardware
 		if (!settings.HAS_ONLINEWEATHER && !settings.HAS_DHT) { document.getElementById("NOTEMP").style.display = 'none';  document.getElementById("NOTEMP2").style.display = 'none'; document.getElementById("NOTEMP3").style.display = 'none'; document.getElementById("NOTEMP4").style.display = 'none';} //hide TEMP STUFF if no sounddetector hardware

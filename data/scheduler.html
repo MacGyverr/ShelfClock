@@ -11,6 +11,7 @@
 	const url = "";
 	var jsonScheduleList;   // Declare jsonScheduleList as a global variable
 		var selectedKey;
+		var HAS_BUZZER;
 	window.onload = function(){ 
 		var date = new Date();
 		var day = date.getDate();
@@ -18,7 +19,6 @@
 		var year = date.getFullYear();
 		if (month < 10) month = "0" + month;
 		if (day < 10) day = "0" + day;
-
 		function handleFormSubmit(event) {
 		  event.preventDefault();
 		  const data = new FormData(event.target);
@@ -65,104 +65,37 @@
 			$("input[type=date]").val("");
 			var q01 = $('input[name=scheduleType]');
 			if ($(q01).is(':checked')&& this.value==0 ) { //Daily
-				$('.showDaily').show();
-				$('.showDailysub').show();
-				$('.showHourly').hide();
-				$('.showDaymode').hide();
-				$('.showGong').hide();
-				$('.showHour').hide();
-				$('.showMinutes').hide();
-				$('.showMonthly').hide();
-				$('.showDate').hide();
-				$('.showRecurring').hide();
-				$('.showSong').show();
-				$('.showTitle').show();
-				$('.showSave').show();
+				$('.showDaily, .showDailysub, .showSong, .showTitle, .showSave').show();
+				$('.showHourly, .showDaymode, .showGong, .showHour, .showMinutes, .showMonthly, .showDate, .showRecurring').hide();
 				allCheckboxes.forEach(element => element.checked = false);
 				allRadioboxes.forEach(element => element.checked = false);
 				allRadioboxes2.forEach(element => element.checked = false);
 			} else if ($(q01).is(':checked')&& this.value==1 ) {  //Monthly
-				$('.showDaily').hide();
-				$('.showDailysub').hide();
-				$('.showHourly').hide();
-				$('.showDaymode').hide();
-				$('.showGong').hide();
-				$('.showHour').show();
-				$('.showMinutes').show();
-				$('.showMonthly').show();
-				$('.showDate').hide();
-				$('.showRecurring').hide();
-				$('.showSong').show();
-				$('.showTitle').show();
-				$('.showSave').show();
+				$('.showHour, .showMinutes, .showMonthly, .showSong, .showTitle, .showSave').show();
+				$('.showDaily, .showDailysub, .showHourly, .showDaymode, .showGong, .showDate, .showRecurring').hide();
 				allCheckboxes.forEach(element => element.checked = false);
 				allRadioboxes.forEach(element => element.checked = false);
 				allRadioboxes2.forEach(element => element.checked = false); 
 			} else if ($(q01).is(':checked')&& this.value==2 ) {  //Date
-				$('.showDaily').hide();
-				$('.showDailysub').hide();
-				$('.showHourly').hide();
-				$('.showDaymode').hide();
-				$('.showGong').hide();
-				$('.showHour').show();
-				$('.showMinutes').show();
-				$('.showMonthly').hide();
-				$('.showDate').show();
-				$('.showRecurring').show();
-				$('.showSong').show();
-				$('.showTitle').show();
-				$('.showSave').show();
+				$('.showHour, .showMinutes, .showDate, .showRecurring, .showSong, .showTitle, .showSave').show();
+				$('.showDaily, .showDailysub, .showHourly, .showDaymode, .showGong, .showMonthly').hide();
 				allCheckboxes.forEach(element => element.checked = false);
 				allRadioboxes.forEach(element => element.checked = false);
 				allRadioboxes2.forEach(element => element.checked = false);
 			} else if ($(q01).is(':checked')&& this.value==3 ) {  //Special Date
-				$('.showDaily').hide();
-				$('.showDailysub').hide();
-				$('.showHourly').hide();
-				$('.showDaymode').hide();
-				$('.showGong').hide();
-				$('.showHour').hide();
-				$('.showMinutes').hide();
-				$('.showMonthly').hide();
-				$('.showDate').show();
-				$('.showRecurring').hide();
-				$('.showSong').show();
-				$('.showTitle').show();
-				$('.showSave').show();
+				$('.showDate, .showSong, .showTitle, .showSave').show();
+				$('.showDaily, .showDailysub, .showHourly, .showDaymode, .showGong, .showHour, .showMinutes, .showMonthly, .showRecurring').hide();
 				allCheckboxes.forEach(element => element.checked = false);
 				allRadioboxes.forEach(element => element.checked = false);
 				allRadioboxes2.forEach(element => element.checked = false);
 			} else if ($(q01).is(':checked')&& this.value==4 ) {  //New Years
-				$('.showDaily').hide();
-				$('.showDailysub').hide();
-				$('.showHourly').hide();
-				$('.showDaymode').hide();
-				$('.showGong').hide();
-				$('.showHour').hide();
-				$('.showMinutes').hide();
-				$('.showMonthly').hide();
-				$('.showDate').hide();
-				$('.showRecurring').hide();
-				$('.showSong').hide();
-				$('.showTitle').hide();
 				$('.showSave').show();
+				$('.showDaily, .showDailysub, .showHourly, .showDaymode, .showGong, .showHour, .showMinutes, .showMonthly, .showDate, .showRecurring, .showSong, .showTitle').hide();
 				allCheckboxes.forEach(element => element.checked = false);
 				allRadioboxes.forEach(element => element.checked = false);
 				allRadioboxes2.forEach(element => element.checked = false);
 			} else {                    //Startup
-				$('.showDaily').hide();
-				$('.showDailysub').hide();
-				$('.showHourly').hide();
-				$('.showDaymode').hide();
-				$('.showGong').hide();
-				$('.showHour').hide();
-				$('.showMinutes').hide();
-				$('.showMonthly').hide();
-				$('.showDate').hide();
-				$('.showRecurring').hide();
-				$('.showSong').hide();
-				$('.showTitle').hide();
-				$('.showSave').hide();
+				$('.showDaily, .showDailysub, .showHourly, .showDaymode, .showGong, .showHour, .showMinutes, .showMonthly, .showDate, .showRecurring, .showSong, .showTitle, .showSave').hide();
 				allCheckboxes.forEach(element => element.checked = false);
 				allRadioboxes.forEach(element => element.checked = false);
 				allRadioboxes2.forEach(element => element.checked = false);
@@ -173,29 +106,19 @@
 		$('input[name="dailyType"]').on('change', function() {
 			var q01 = $('input[name=dailyType]');
 			if ($(q01).is(':checked')&& this.value==0 ) {
-				$('.showHourly').show();
-				$('.showDaymode').show();
-				$('.showGong').show();
-				$('.showHour').hide();
-				$('.showMinutes').hide();
+				$('.showHourly, .showDaymode, .showGong').show();
+				$('.showHour, .showMinutes').hide();
 				allRadioboxes2.forEach(element => element.checked = false);
 				allCheckboxes2.forEach(element => element.checked = false);
 				allCheckboxes3.forEach(element => element.checked = false);
 			} else if ($(q01).is(':checked')&& this.value==1 ) {
-				$('.showHourly').hide();
-				$('.showDaymode').hide();
-				$('.showGong').hide();
-				$('.showHour').show();
-				$('.showMinutes').show();
+				$('.showHourly, .showDaymode, .showGong').hide();
+				$('.showHour, .showMinutes').show();
 				allRadioboxes2.forEach(element => element.checked = false);
 				allCheckboxes2.forEach(element => element.checked = false);
 				allCheckboxes3.forEach(element => element.checked = false);
 			} else {
-				$('.showHourly').hide();
-				$('.showDaymode').hide();
-				$('.showGong').hide();
-				$('.showHour').hide();
-				$('.showMinutes').hide();
+				$('.showHourly, .showDaymode, .showGong, .showHour, .showMinutes').hide();
 				allRadioboxes2.forEach(element => element.checked = false);
 				allCheckboxes2.forEach(element => element.checked = false);
 				allCheckboxes3.forEach(element => element.checked = false);
@@ -237,12 +160,7 @@
 			radioButton.addEventListener("change", toggleButtonVisibility); // Add event listener
 			radioButton.addEventListener('change', populateForm);
 			listItem.appendChild(radioButton);
-			var valuetitle = jsonScheduleList[i]["title"]; // Assuming the key is "key1"
-			var valuemonth = jsonScheduleList[i]["month"]; // Assuming the key is "key1"
-			var valueday = jsonScheduleList[i]["day"]; // Assuming the key is "key1"
-			var valuehours = jsonScheduleList[i]["hours"]; // Assuming the key is "key1"
-			var valueminutes = jsonScheduleList[i]["minutes"]; // Assuming the key is "key1"
-		 //   listItem.appendChild(document.createTextNode(valuetitle + " - " + valuemonth + "/" + valueday + " " + valuehours + ":" + valueminutes));
+			var valuetitle = jsonScheduleList[i]["title"]; 
 			listItem.appendChild(document.createTextNode(valuetitle));
 			objectList.appendChild(listItem);
 		}
@@ -304,11 +222,32 @@
 				console.log("JSON data:", data);
 				// Extract the JSON array from the received data
 				jsonScheduleList = data.jsonScheduleData;
-
+HAS_BUZZER = data.HAS_BUZZER;
 				// Populate the object list with the JSON array
 				populateObjectList();
 				
 				// Populate the song list with the JSON array
+				
+				
+
+		if (!HAS_BUZZER) { 
+			var div = document.getElementById("BUZZER");
+			div.style.display = 'none';
+
+			var childElements = div.getElementsByTagName('*');
+			for (var i = 0; i < childElements.length; i++) {
+			childElements[i].style.display = 'none';
+			}
+			var div2 = document.getElementById("BUZZER2");
+			div2.style.display = 'none';
+
+			var childElements = div2.getElementsByTagName('*');
+			for (var i = 0; i < childElements.length; i++) {
+			childElements[i].style.display = 'none';
+			console.log(i);
+			}
+		} //hide buzzer if no sounddetector hardware				
+						else {
 				let add = document.querySelector("[name='song']");
 				for (let [key, value] of Object.entries(data.listOfSong)) {
 					let element = document.createElement("option");
@@ -322,7 +261,12 @@
 					element.value = key;
 					element.innerHTML = key;
 					add2.appendChild(element);
-				}		
+				}	
+}				
+
+
+
+
 			})
 			.catch(error => {
 				console.log("Error fetching JSON data:", error);
@@ -340,129 +284,55 @@ function populateForm() {
 	  var dailyTypeString = selectedObject.dailyType;
 	  if (selectedObject.dailyType == 9) {dailyTypeString = 0}
   // Populate the form with values from the selected object
-  document.querySelector('input[name="displayscheduleType"][value="' + selectedObject.scheduleType + '"]').checked = true;
-  document.querySelector('input[name="displaysun"]').checked = selectedObject.sun;
-  document.querySelector('input[name="displaymon"]').checked = selectedObject.mon;
-  document.querySelector('input[name="displaytue"]').checked = selectedObject.tue;
-  document.querySelector('input[name="displaywed"]').checked = selectedObject.wed;
-  document.querySelector('input[name="displaythu"]').checked = selectedObject.thu;
-  document.querySelector('input[name="displayfri"]').checked = selectedObject.fri;
-  document.querySelector('input[name="displaysat"]').checked = selectedObject.sat;
-  document.querySelector('input[name="displaydailyType"][value="' + dailyTypeString + '"]').checked = true;
-  document.querySelector('select[name="displaydom"]').value = selectedObject.dom;
-  document.querySelector('input[name="displaydate"]').value = dateString;
-  document.querySelector('select[name="displayhours"]').value = selectedObject.hours;
-  document.querySelector('select[name="displayminutes"]').value = selectedObject.minutes;
-  document.querySelector('input[name="displaytitle"]').value = selectedObject.title;
-  document.querySelector('select[name="displaysong"]').value = selectedObject.song;
-  	    
-	  if (selectedObject.hourlyType != 99) {document.querySelector('input[name="displayhourlyType"][value="' + selectedObject.hourlyType + '"]').checked = true; console.log(selectedObject.hourlyType); } 
-
-  document.querySelector('input[name="displayrecurring"]').checked = selectedObject.recurring;
-  document.querySelector('input[name="displaygongmode"]').checked = selectedObject.gongmode;
-  document.querySelector('input[name="displaydaymode"]').checked = selectedObject.daymode;
-			if (selectedObject.scheduleType == 0 ) { //Daily
-	  console.log(selectedObject.hourlyType);
-				$('.showDisplayDaily').show();
-				$('.showDisplayDailysub').show();
-				if (selectedObject.dailyType == 0 ){
-					$('.showDisplayHour').hide();
-					$('.showDisplayMinutes').hide();
-					if (selectedObject.hourlyType != 99 ){
-						$('.showDisplayHourly').show();
-						$('.showDisplayDaymode').show();
-						$('.showDisplayGong').hide();
-					} else {
-						$('.showDisplayHourly').hide();
-						$('.showDisplayGong').show();
-						}
-				} 
-				if (selectedObject.dailyType == 1 ){
-					$('.showDisplayHour').show();
-					$('.showDisplayMinutes').show();
-					$('.showDisplayHourly').hide();
-					$('.showDisplayDaymode').hide();
-					$('.showDisplayGong').hide();
+	document.querySelector('input[name="displayscheduleType"][value="' + selectedObject.scheduleType + '"]').checked = true;
+	var days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+	days.forEach(day => { document.querySelector(`input[name="display${day}"]`).checked = selectedObject[day]; });
+	document.querySelector('input[name="displaydailyType"][value="' + dailyTypeString + '"]').checked = true;
+	document.querySelector('select[name="displaydom"]').value = selectedObject.dom;
+	document.querySelector('input[name="displaydate"]').value = dateString;
+	document.querySelector('select[name="displayhours"]').value = selectedObject.hours;
+	document.querySelector('select[name="displayminutes"]').value = selectedObject.minutes;
+	document.querySelector('input[name="displaytitle"]').value = selectedObject.title;
+	document.querySelector('select[name="displaysong"]').value = selectedObject.song;
+	if (selectedObject.hourlyType != 99) {document.querySelector('input[name="displayhourlyType"][value="' + selectedObject.hourlyType + '"]').checked = true; console.log(selectedObject.hourlyType); } 
+	document.querySelector('input[name="displayrecurring"]').checked = selectedObject.recurring;
+	document.querySelector('input[name="displaygongmode"]').checked = selectedObject.gongmode;
+	document.querySelector('input[name="displaydaymode"]').checked = selectedObject.daymode;
+	if (selectedObject.scheduleType == 0 ) { //Daily
+		console.log(selectedObject.hourlyType);
+		$('.showDisplayDaily, .showDisplayDailysub').show();
+		if (selectedObject.dailyType == 0 ){
+			$('.showDisplayHour, .showDisplayMinutes').hide();
+			if (selectedObject.hourlyType != 99 ){
+				$('.showDisplayHourly, .showDisplayDaymode').show();
+				$('.showDisplayGong').hide();
+			} else {
+				$('.showDisplayHourly').hide();
+				$('.showDisplayGong').show();
 				}
-				$('.showDisplayMonthly').hide();
-				$('.showDisplayDate').hide();
-				$('.showDisplayRecurring').hide();
-				$('.showDisplaySong').show();
-				$('.showDisplayTitle').show();
-				$('.showDisplaySave').show();
-			} else if (selectedObject.scheduleType == 1 ) {  //Monthly
-				$('.showDisplayDaily').hide();
-				$('.showDisplayDailysub').hide();
-				$('.showDisplayHourly').hide();
-				$('.showDisplayDaymode').hide();
-				$('.showDisplayGong').hide();
-				$('.showDisplayHour').show();
-				$('.showDisplayMinutes').show();
-				$('.showDisplayMonthly').show();
-				$('.showDisplayDate').hide();
-				$('.showDisplayRecurring').hide();
-				$('.showDisplaySong').show();
-				$('.showDisplayTitle').show();
-				$('.showDisplaySave').show();
-			} else if (selectedObject.scheduleType == 2 ) {  //Date
-				$('.showDisplayDaily').hide();
-				$('.showDisplayDailysub').hide();
-				$('.showDisplayHourly').hide();
-				$('.showDisplayDaymode').hide();
-				$('.showDisplayGong').hide();
-				$('.showDisplayHour').show();
-				$('.showDisplayMinutes').show();
-				$('.showDisplayMonthly').hide();
-				$('.showDisplayDate').show();
-				$('.showDisplayRecurring').show();
-				$('.showDisplaySong').show();
-				$('.showDisplayTitle').show();
-				$('.showDisplaySave').show();
-			} else if (selectedObject.scheduleType == 3 ) {  //Special Date
-				$('.showDisplayDaily').hide();
-				$('.showDisplayDailysub').hide();
-				$('.showDisplayHourly').hide();
-				$('.showDisplayDaymode').hide();
-				$('.showDisplayGong').hide();
-				$('.showDisplayHour').hide();
-				$('.showDisplayMinutes').hide();
-				$('.showDisplayMonthly').hide();
-				$('.showDisplayDate').show();
-				$('.showDisplayRecurring').hide();
-				$('.showDisplaySong').show();
-				$('.showDisplayTitle').show();
-				$('.showDisplaySave').show();
-			} else if (selectedObject.scheduleType == 4 ) {  //New Years
-				$('.showDisplayDaily').hide();
-				$('.showDisplayDailysub').hide();
-				$('.showDisplayHourly').hide();
-				$('.showDisplayDaymode').hide();
-				$('.showDisplayGong').hide();
-				$('.showDisplayHour').hide();
-				$('.showDisplayMinutes').hide();
-				$('.showDisplayMonthly').hide();
-				$('.showDisplayDate').hide();
-				$('.showDisplayRecurring').hide();
-				$('.showDisplaySong').hide();
-				$('.showDisplayTitle').hide();
-				$('.showDisplaySave').show();
-			} else {                    //Startup
-				$('.showDisplayDaily').hide();
-				$('.showDisplayDailysub').hide();
-				$('.showDisplayHourly').hide();
-				$('.showDisplayDaymode').hide();
-				$('.showDisplayGong').hide();
-				$('.showDisplayHour').hide();
-				$('.showDisplayMinutes').hide();
-				$('.showDisplayMonthly').hide();
-				$('.showDisplayDate').hide();
-				$('.showDisplayRecurring').hide();
-				$('.showDisplaySong').hide();
-				$('.showDisplayTitle').hide();
-				$('.showDisplaySave').hide();
-			}
-
-$('.display-form form').find(':input').prop('disabled', true);
+		} 
+		if (selectedObject.dailyType == 1 ){
+			$('.showDisplayHour,.showDisplayMinutes').show();
+			$('.showDisplayHourly, .showDisplayDaymode, .showDisplayGong').hide();
+		}
+		$('.showDisplayMonthly, .showDisplayDate, .showDisplayRecurring').hide();
+		$('.showDisplaySong, .showDisplayTitle, .showDisplaySave').show();
+	} else if (selectedObject.scheduleType == 1 ) {  //Monthly
+		$('.showDisplayDaily, .showDisplayDailysub, .showDisplayHourly, .showDisplayDaymode, .showDisplayGong, .showDisplayDate, .showDisplayRecurring').hide();
+		$('.showDisplayHour, .showDisplayMinutes, .showDisplayMonthly, .showDisplaySong, .showDisplayTitle, .showDisplaySave').show();
+	} else if (selectedObject.scheduleType == 2 ) {  //Date
+		$('.showDisplayDaily, .showDisplayDailysub, .showDisplayHourly, .showDisplayDaymode, .showDisplayGong, .showDisplayMonthly').hide();
+		$('.showDisplayHour, .showDisplayMinutes, .showDisplayDate, .showDisplayRecurring, .showDisplaySong, .showDisplayTitle, .showDisplaySave').show();
+	} else if (selectedObject.scheduleType == 3 ) {  //Special Date
+		$('.showDisplayDaily, .showDisplayDailysub, .showDisplayHourly, .showDisplayDaymode, .showDisplayGong, .showDisplayHour, .showDisplayMinutes, .showDisplayMonthly, .showDisplayRecurring').hide();
+		$('.showDisplayDate, .showDisplaySong, .showDisplayTitle, .showDisplaySave').show();
+	} else if (selectedObject.scheduleType == 4 ) {  //New Years
+		$('.showDisplayDaily, .showDisplayDailysub, .showDisplayHourly, .showDisplayDaymode, .showDisplayGong, .showDisplayHour, .showDisplayMinutes, .showDisplayMonthly, .showDisplayDate, .showDisplayRecurring, .showDisplaySong, .showDisplayTitle').hide();
+		$('.showDisplaySave').show();
+	} else {                    //Startup
+		$('.showDisplayDaily, .showDisplayDailysub, .showDisplayHourly, .showDisplayDaymode, .showDisplayGong, .showDisplayHour, .showDisplayMinutes, .showDisplayMonthly, .showDisplayDate, .showDisplayRecurring, .showDisplaySong, .showDisplayTitle, .showDisplaySave').hide();
+	}
+	$('.display-form form').find(':input').prop('disabled', true);
 }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -668,17 +538,20 @@ $('.display-form form').find(':input').prop('disabled', true);
 				<div class="showRecurring">
 				  <label><input type="checkbox" name="recurring"> Recurring</label>
 				</div>
-				<div class="showGong">
-				  <label><input type="checkbox" name="gongmode"> Hourly Gong</label>
-				</div>
 				<div class="showDaymode">
 				  <label><input type="checkbox" name="daymode"> 8am - 8pm Only</label>
 				</div>
+				<div id="BUZZER">
+				<div class="showGong">
+				  <label><input type="checkbox" name="gongmode"> Hourly Gong</label>
+				</div>
+				<br>
 				<div class="showSong">
 					Song:
 				   <select name="song">
 				  </select>
 				<input type="button" value="Test" id="playthesong">
+				</div>
 				</div>
 				<div class="showTitle">
 				  <label for="scheduleTitle">Title:</label>
@@ -884,16 +757,19 @@ $('.display-form form').find(':input').prop('disabled', true);
 				<div class="showDisplayRecurring">
 				  <label><input type="checkbox" name="displayrecurring"> Recurring</label>
 				</div>
-				<div class="showDisplayGong">
-				  <label><input type="checkbox" name="displaygongmode"> Hourly Gong</label>
-				</div>
 				<div class="showDisplayDaymode">
 				  <label><input type="checkbox" name="displaydaymode"> 8am - 8pm Only</label>
 				</div>
+				<div id="BUZZER2">
+				<div class="showDisplayGong">
+				  <label><input type="checkbox" name="displaygongmode"> Hourly Gong</label>
+				</div>
+				<br>
 				<div class="showDisplaySong">
 					Song:
 				   <select name="displaysong">
 				  </select>
+				</div>
 				</div>
 				<div class="showDisplayTitle">
 				  <label for="scheduleTitle">Title:</label>
