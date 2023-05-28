@@ -3054,8 +3054,8 @@ void processSchedules(bool alarmType) {
                 playRTTTLsong(SONGS[song], 1);
                 }
             #endif
-            if (!breakOutSet) {scroll(title);}
-            allBlank();
+           // if (!breakOutSet) {scroll(title);}
+          //  allBlank();
           }
         }
       }

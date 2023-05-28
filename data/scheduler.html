@@ -143,9 +143,6 @@
 
 	};
 
-
-
-
 	// Function to populate the object list with the JSON array
 	function populateObjectList() {
 		var objectList = document.getElementById("objectList");
@@ -222,14 +219,10 @@
 				console.log("JSON data:", data);
 				// Extract the JSON array from the received data
 				jsonScheduleList = data.jsonScheduleData;
-HAS_BUZZER = data.HAS_BUZZER;
+				HAS_BUZZER = data.HAS_BUZZER;
 				// Populate the object list with the JSON array
 				populateObjectList();
-				
 				// Populate the song list with the JSON array
-				
-				
-
 		if (!HAS_BUZZER) { 
 			var div = document.getElementById("BUZZER");
 			div.style.display = 'none';
@@ -263,10 +256,6 @@ HAS_BUZZER = data.HAS_BUZZER;
 					add2.appendChild(element);
 				}	
 }				
-
-
-
-
 			})
 			.catch(error => {
 				console.log("Error fetching JSON data:", error);
@@ -364,7 +353,7 @@ function populateForm() {
 			<li><a href="./scheduler.html" class="active">Alarm Scheduler</a></li>
 			<li><a href="./_ac">Setup Wifi</a></li>
 			<li><a href="./update">Update Firmware</a></li>
-			<li><a href="./denotbug.html">Debug Info</a></li>
+			<li><a href="./debug.html">Debug Info</a></li>
 		  </ul>
 		</div>   
 	</nav>
@@ -565,8 +554,6 @@ function populateForm() {
 	  </form>
 	</section>
 
-
-	
 			<section>
 		<h1>Delete Existing Schedule</h1>
 		<style>
