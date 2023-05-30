@@ -263,13 +263,6 @@ section > div > div input[type='checkbox'] {
     background-color: rgba(255, 128, 0, 1);
 }
 
-
-.blueish, input[type='file'], input.blueish{
-  color:white;
-  font-size:18px;
-    border-radius: .25rem;
-    background-color: rgba(255, 128, 0, 1);
-}
 .button-wrapper .scoreboard {
     margin-top: 0;
     row-gap: 0.1rem;

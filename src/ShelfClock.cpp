@@ -225,6 +225,9 @@
 const char* host = "shelfclock";
 const int   daylightOffset_sec = 3600;
 const char* ntpServer = "pool.ntp.org";
+const int valid_durations[] = {1, 2, 4, 8, 16, 32};
+const int valid_octaves[] = {4, 5, 6, 7};
+const int valid_beats[] = {25, 28, 31, 35, 40, 45, 50, 56, 63, 70, 80, 90, 100, 112, 125, 140, 160, 180, 200, 225, 250, 285, 320, 355, 400, 450, 500, 565, 635, 715, 800, 900};
 unsigned long WiFi_startTime = 0;
 unsigned long WiFi_elapsedTime = 0;
 int WiFi_retryCount = 0;
@@ -2916,9 +2919,6 @@ File file = FileFS.open(processedText, "r");  //open each song
 
 
 
-const int valid_durations[] = {1, 2, 4, 8, 16, 32};
-const int valid_octaves[] = {4, 5, 6, 7};
-const int valid_beats[] = {25, 28, 31, 35, 40, 45, 50, 56, 63, 70, 80, 90, 100, 112, 125, 140, 160, 180, 200, 225, 250, 285, 320, 355, 400, 450, 500, 565, 635, 715, 800, 900};
 
 
 bool is_valid_attribute(int value, const int* valid_values, int array_size) {
