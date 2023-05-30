@@ -348,14 +348,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     
-		if (localStorage.getItem("HAS_BUZZER") == "true") { //hide FFT if no sounddetector hardware
+		if (localStorage.getItem("HAS_BUZZER") == "true") { //hide FFT if no sounddetector hardware     
 		document.querySelector("#upload-button").addEventListener('click', async function() {
-			let upload = await uploadFile();
-			
-			if(upload.error == 0)
-				alert('File uploaded successful');
-			else if(upload.error == 1)
+			let upload = await uploadFile();   
+			if(upload.error == 0) {
+				alert('File uploaded successfully');
+			} else if(upload.error == 1) {
 				alert('File uploading failed - ' + upload.message);
+			}
 		});
 		}
 
@@ -596,46 +596,44 @@ function debounce(func, wait, immediate) {
 };
 // async function managing upload operation
 async function uploadFile() {
-	// function return value
-	let return_data = { error: 0, message: '' };
+    try {
+        const fileInput = document.querySelector("#file-to-upload");
+        if (fileInput.files.length === 0) {
+            throw new Error('No file selected');
+        }
+        
+        const data = new FormData();
+        data.append('title', 'Sample Title');
+        data.append('file', fileInput.files[0]);
 
-	try {
-		// no file selected
-		if(document.querySelector("#file-to-upload").files.length == 0) {
-			throw new Error('No file selected');
-		}
-		else {
-			// formdata
-			let data = new FormData();
-			data.append('title', 'Sample Title');
-			data.append('file', document.querySelector("#file-to-upload").files[0]);
+        const response = await fetch(`${url}/uploadSong`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: data,
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        });
 
-			// send fetch along with cookies
-			let response = await fetch(`${url}/uploadSong`, {
-		        method: 'POST',
-		        credentials: 'same-origin',
-		        body: data
-		    });
+        if (!response.ok) { // If HTTP status is error
+            let errorMessage = 'HTTP error ' + response.status + ': ' + response.statusText;
+            try {
+                const errorResponse = await response.json(); // Try to parse the JSON error message
+                errorMessage = errorResponse.message;
+            } catch(e) {
+                console.error('Failed to parse JSON error response: ' + e.message);
+            }
+            throw new Error(errorMessage);
+        }
 
-	    	// server responded with http response != 200
-	    	if(response.status != 200)
-	    		throw new Error('HTTP response code != 200');
+        const jsonResponse = await response.json(); // Parse the JSON response
+        if (jsonResponse.error === 1) {
+            throw new Error(jsonResponse.message); // Throw if server indicates an error
+        }
 
-	    	// read json response from server
-	    	// success response example : {"error":0,"message":""}
-	    	// error response example : {"error":1,"message":"File type not allowed"}
-	    	let json_response = await response.json();
-	        if(json_response.error == 1)
-	           	throw new Error(json_response.message);	
-	        if(json_response.error == 0)
-	           	throw new Error(json_response.message);	
-		}
-
-	}
-	catch(e) {
-		// catch rejected Promises and Error objects
-    	return_data = { error: 1, message: e.message };
+        return { error: 0, message: jsonResponse.message }; // Return a successful result
+    } catch (error) {
+        console.error(error); // Log the error for debugging
+        return { error: 1, message: error.message }; // Return a failure result
     }
-
-	return return_data;
-};
+}

@@ -62,3 +62,7 @@ void createSchedulesArray();
 void getListOfSongs();
 void saveclockSettings(String fileType);
 void getclockSettings(String fileType);
+void checkSong(String incomingFile);
+bool validate_rtttl(char* rtttl);
+bool is_valid_attribute(int value, const int* valid_values, int array_size);
+bool is_valid_pitch(const char* pitch);

@@ -82,14 +82,17 @@
 #define SEGMENTS_LEDS (SPECTRUM_PIXELS * LEDS_PER_SEGMENT)  // Number leds in all segments
 #define SPOT_LEDS (NUMBER_OF_DIGITS * 2)        // Number of Spotlight leds
 #define NUM_LEDS  (SEGMENTS_LEDS + SPOT_LEDS)   // Number of all leds
+#define WiFi_MAX_RETRIES 100
+#define WiFi_MAX_RETRY_DURATION 600000 // 10 minutes in milliseconds
+
 #if HAS_DHT
   #include "DHT.h"
   #define DHTTYPE DHT11         // DHT 11 tempsensor
   #define DHT_PIN 18            // temp sensor pin
 #endif
   #if HAS_SOUNDDETECTOR
-  #define ENVELOPE_IN_PIN 13    // Use 34 for envelope pin input
-  #define AUDIO_GATE_PIN 15     // for sound gate input trigger
+  #define SOUNDDETECTOR_ENVELOPE_IN_PIN 13    // Use 34 for envelope pin input
+  #define SOUNDDETECTOR_AUDIO_GATE_PIN 15     // for sound gate input trigger
   #define AUDIO_IN_PIN    32    // Analog audio in (audio pin)
   #define SAMPLES         512          // Must be a power of 2
   #define SAMPLING_FREQ   40000         // Hz, must be 40000 or less due to ADC conversion time. Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
@@ -211,17 +214,21 @@
   CRGBPalette16 heatPal = redyellow_gp;
   uint8_t colorTimer = 0;
   int buttonPushCounter = 0;
-  int averageAudioInput = 0;
-  int decay = 0; // HOW MANY MS BEFORE ONE LIGHT DECAY
-  int decay_check = 0;
-  long pre_react = 0; // NEW SPIKE CONVERSION
-  long react = 0; // NUMBER OF LEDs BEING LIT
-  long post_react = 0; // OLD SPIKE CONVERSION
+  int SOUNDDETECTOR_averageAudioInput = 0;
+  int SOUNDDETECTOR_decay = 0; // HOW MANY MS BEFORE ONE LIGHT DECAY
+  int SOUNDDETECTOR_decay_check = 0;
+  long SOUNDDETECTOR_pre_react = 0; // NEW SPIKE CONVERSION
+  long SOUNDDETECTOR_react = 0; // NUMBER OF LEDs BEING LIT
+  long SOUNDDETECTOR_post_react = 0; // OLD SPIKE CONVERSION
 #endif
 
 const char* host = "shelfclock";
 const int   daylightOffset_sec = 3600;
 const char* ntpServer = "pool.ntp.org";
+unsigned long WiFi_startTime = 0;
+unsigned long WiFi_elapsedTime = 0;
+int WiFi_retryCount = 0;
+int WiFi_totalReconnections = 0;
 int breakOutSet = 0; //jump out of count
 int colorWheelPosition = 255; // COLOR WHEEL POSITION
 int colorWheelPositionTwo = 255; // 2nd COLOR WHEEL POSITION
@@ -290,10 +297,11 @@ bool updateSettingsRequired = 0;
 int totalSongs = 0;
 char filesArray[255][255];
 char songsArray[255][255];
-File fsUploadFile;
 
 DynamicJsonDocument jsonDoc(8192); // create a JSON document to store the data
 DynamicJsonDocument jsonScheduleData(8192);  //stores schedules
+File fsUploadFile;
+
 struct tm timeinfo; 
 CRGB LEDs[NUM_LEDS];
 Preferences preferences;
@@ -639,8 +647,8 @@ void setup() {
 
   #if HAS_SOUNDDETECTOR
     //init audio gate inpute detection
-    pinMode(AUDIO_GATE_PIN, INPUT_PULLUP);
-    pinMode(ENVELOPE_IN_PIN, INPUT);  //setup microphone
+    pinMode(SOUNDDETECTOR_AUDIO_GATE_PIN, INPUT_PULLUP);
+    pinMode(SOUNDDETECTOR_ENVELOPE_IN_PIN, INPUT);  //setup microphone
 
     // setup analog read to avoid spikes
     adc1_config_width(ADC_WIDTH_12Bit);
@@ -674,6 +682,8 @@ void setup() {
   // setup AutoConnect to control WiFi
   if (Portal.begin()) {
     Serial.println("WiFi connected: " + WiFi.localIP().toString());
+    WiFi_startTime = millis();
+    WiFi_retryCount = 0;
    }  
 
   //use mdns for host name resolution
@@ -741,17 +751,19 @@ void setup() {
   //OTA firmware Upgrade Webpage Handlers
   Serial.println("OTA Available");
 
-  createSchedulesArray();  //load array of schedule files on drive
-  processSchedules(0);  //print out schedule array
-
 
   #if HAS_BUZZER
     //init rtttl (functions that play the alarms)
     pinMode(BUZZER_PIN, OUTPUT);
-    rtttl::begin(BUZZER_PIN, "SMB Underworld:d=4,o=6,b=100:32c,32p,32c7,32p,32a5,32p,32a,32p,32a#5,32p,32a#,2p");  //play mario sound and set initial brightness level
+    rtttl::begin(BUZZER_PIN, "Intel:d=4,o=5,b=400:32p,d,g,d,2a");  //play mario sound and set initial brightness level
     while( !rtttl::done() ){GetBrightnessLevel(); rtttl::play();}
     getListOfSongs();
   #endif
+
+  
+  createSchedulesArray();  //load array of schedule files on drive
+  processSchedules(0);  //print out schedule array
+
     jobQueue = xQueueCreate(30, sizeof(String *));
     xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 0, &Task1, 0);
 
@@ -807,15 +819,40 @@ void getRemoteWeather() {
 void loop(){
   server.handleClient(); 
   Portal.handleRequest(); 
-  if (WiFi.status() == WL_IDLE_STATUS) {
-   ESP.restart();
-   delay(1000);
+  if (WiFi.status() != WL_CONNECTED) {
+    WiFi_elapsedTime = millis() - WiFi_startTime;
+    if (WiFi_elapsedTime >= WiFi_MAX_RETRY_DURATION) {
+      // Reboot if maximum retry duration exceeded
+      ESP.restart();
+    } else {
+      if (WiFi_retryCount >= WiFi_MAX_RETRIES) {
+        // Reboot if maximum retry attempts exceeded
+        ESP.restart();
+      } else if (WiFi.status() == WL_IDLE_STATUS) {
+        // Attempt to reconnect to Wi-Fi
+        WiFi.disconnect();
+        delay(1000);
+        WiFi.begin();
+        WiFi_retryCount++;
+        WiFi_totalReconnections++;
+        Serial.print("Retry ");
+        Serial.print(WiFi_retryCount);
+        Serial.println(" - Reconnecting...");
+      }
+    }
+  } else {
+    // Wi-Fi connection is successful
+    //Serial.println("Connected!");
+    // Reset retry count and start time
+    WiFi_retryCount = 0;
+    WiFi_startTime = millis();
+    // Your other code logic can go here
   }
 
   //Change Frequency so as to not use hard-coded delays
   unsigned long currentMillis = millis();  
   //run everything inside here every second
-  if ((unsigned long)(currentMillis - prevTime) >= 1000) {
+  if (((unsigned long)(currentMillis - prevTime) >= 1000) || ((unsigned long)(currentMillis - prevTime) <= 0)) {  //deals with millis() having a rollover period after approximately 49.7 days
     prevTime = currentMillis;
     if(!getLocalTime(&timeinfo)){ 
       Serial.println("Failed to obtain time");
@@ -1624,16 +1661,16 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
 	  const TProgmemRGBPalette16 FireColors = {0xFFFFCC, 0xFFFF99, 0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
 	  const TProgmemRGBPalette16 FireColors2 = {0xFFFF99, 0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
 	  const TProgmemRGBPalette16 FireColors3 = {0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
-	  int audio_input = analogRead(ENVELOPE_IN_PIN); // ADD x2 HERE FOR MORE SENSITIVITY  
+	  int audio_input = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); // ADD x2 HERE FOR MORE SENSITIVITY  
 	  if (audio_input > 0) {
-		pre_react = ((long)SPECTRUM_PIXELS * (long)audio_input) / 1023L; // TRANSLATE AUDIO LEVEL TO NUMBER OF LEDs
-		if (pre_react > react) // ONLY ADJUST LEVEL OF LED IF LEVEL HIGHER THAN CURRENT LEVEL
-		  react = pre_react;
+		SOUNDDETECTOR_pre_react = ((long)SPECTRUM_PIXELS * (long)audio_input) / 1023L; // TRANSLATE AUDIO LEVEL TO NUMBER OF LEDs
+		if (SOUNDDETECTOR_pre_react > SOUNDDETECTOR_react) // ONLY ADJUST LEVEL OF LED IF LEVEL HIGHER THAN CURRENT LEVEL
+		  SOUNDDETECTOR_react = SOUNDDETECTOR_pre_react;
 	   }
 	  for(int i = SPECTRUM_PIXELS - 1; i >= 0; i--) {
       int fake =  i * LEDS_PER_SEGMENT;
       int fireChoice = random(4);
-      if (i < react)
+      if (i < SOUNDDETECTOR_react)
       for (byte s=0; s<LEDS_PER_SEGMENT; s++ ){              // 7 LEDs per segment
         if (spectrumColorSettings == 0) { spectrumColor = CRGB(r15_val, g15_val, b15_val); }
         if (spectrumColorSettings == 1) { spectrumColor = CHSV((255/SPECTRUM_PIXELS)*i, 255, 255);}
@@ -1680,11 +1717,11 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
 	  colorWheelPosition = colorWheelPosition - colorWheelSpeed; // SPEED OF COLOR WHEEL
 	  if (colorWheelPosition < 0) // RESET COLOR WHEEL
 		colorWheelPosition = 255;
-	  decay_check++;
-	  if (decay_check > decay) {
-      decay_check = 0;
-      if (react > 0)
-        react--;
+	  SOUNDDETECTOR_decay_check++;
+	  if (SOUNDDETECTOR_decay_check > SOUNDDETECTOR_decay) {
+      SOUNDDETECTOR_decay_check = 0;
+      if (SOUNDDETECTOR_react > 0)
+        SOUNDDETECTOR_react--;
 	  }
 	}// end spectrumMode < 12
   else {
@@ -1847,7 +1884,7 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
         //sprintf(buffer, "%d 0\r\n", Amplitude);
         //prn(buffer);
       }
-     /* int audio_input = analogRead(ENVELOPE_IN_PIN);
+     /* int audio_input = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN);
       char buffer[15];
       sprintf(buffer, "%d %d  ", Amplitude, audio_input);
       prn(buffer);*/
@@ -2107,38 +2144,38 @@ void checkSleepTimer(){  //controls suspend mode
   if(!rtttl::isPlaying()) {  // don't allow chimes to keep it awake. 
     if (suspendType != 0) {sleepTimerCurrent++;}  //sleep enabled? add one to timer
       #if HAS_SOUNDDETECTOR
-        //if (digitalRead(AUDIO_GATE_PIN)==HIGH) {sleepTimerCurrent = 0; isAsleep = 0;}   //sound sensor went off (while checking this function)? wake up
-        int audio_input1 = analogRead(ENVELOPE_IN_PIN); 
+        //if (digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN)==HIGH) {sleepTimerCurrent = 0; isAsleep = 0;}   //sound sensor went off (while checking this function)? wake up
+        int audio_input1 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
         if (audio_input1 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-        int audio_input2 = analogRead(ENVELOPE_IN_PIN); 
+        int audio_input2 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
         if (audio_input2 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-        int audio_input3 = analogRead(ENVELOPE_IN_PIN); 
+        int audio_input3 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
         if (audio_input3 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-        int audio_input4 = analogRead(ENVELOPE_IN_PIN); 
+        int audio_input4 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
         if (audio_input4 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-        int audio_input5 = analogRead(ENVELOPE_IN_PIN); 
+        int audio_input5 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
         if (audio_input5 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-        averageAudioInput = (audio_input1 + audio_input2 + audio_input3 + audio_input4 + audio_input5) / 5;
-        if (averageAudioInput > 50) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+        SOUNDDETECTOR_averageAudioInput = (audio_input1 + audio_input2 + audio_input3 + audio_input4 + audio_input5) / 5;
+        if (SOUNDDETECTOR_averageAudioInput > 50) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
       #endif
     if ((suspendType != 0) && sleepTimerCurrent >= (suspendFrequency * 60)) {sleepTimerCurrent = 0; isAsleep = 1; allBlank(); }  //sleep enabled, been some amount of time, go to sleep
   }
   #else
     #if HAS_SOUNDDETECTOR
       if (suspendType != 0) {sleepTimerCurrent++;}  //sleep enabled? add one to timer
-      //if (digitalRead(AUDIO_GATE_PIN)==HIGH) {sleepTimerCurrent = 0; isAsleep = 0;}   //sound sensor went off (while checking this function)? wake up
-      int audio_input1 = analogRead(ENVELOPE_IN_PIN); 
+      //if (digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN)==HIGH) {sleepTimerCurrent = 0; isAsleep = 0;}   //sound sensor went off (while checking this function)? wake up
+      int audio_input1 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
       if (audio_input1 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-      int audio_input2 = analogRead(ENVELOPE_IN_PIN); 
+      int audio_input2 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
       if (audio_input2 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-      int audio_input3 = analogRead(ENVELOPE_IN_PIN); 
+      int audio_input3 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
       if (audio_input3 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-      int audio_input4 = analogRead(ENVELOPE_IN_PIN); 
+      int audio_input4 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
       if (audio_input4 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-      int audio_input5 = analogRead(ENVELOPE_IN_PIN); 
+      int audio_input5 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
       if (audio_input5 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-      averageAudioInput = (audio_input1 + audio_input2 + audio_input3 + audio_input4 + audio_input5) / 5;
-      if (averageAudioInput > 50) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+      SOUNDDETECTOR_averageAudioInput = (audio_input1 + audio_input2 + audio_input3 + audio_input4 + audio_input5) / 5;
+      if (SOUNDDETECTOR_averageAudioInput > 50) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
       if ((suspendType != 0) && sleepTimerCurrent >= (suspendFrequency * 60)) {sleepTimerCurrent = 0; isAsleep = 1; allBlank(); }  //sleep enabled, been some amount of time, go to sleep
     #endif
   #endif
@@ -2456,7 +2493,7 @@ void Chase() {   //lightshow chase mode
  
 void Twinkles() {
 #if HAS_SOUNDDETECTOR
-  int audio_input = analogRead(ENVELOPE_IN_PIN); 
+  int audio_input = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
   int Level = map(audio_input, 100, 2000, 50, 210);
   if (audio_input < 100){  Level = 50;  }
   if (audio_input > 2000){  Level = 210;  }
@@ -2561,7 +2598,7 @@ void updateMatrix() {
 
 void blueRain() {
 #if HAS_SOUNDDETECTOR
-    int audio_input = analogRead(ENVELOPE_IN_PIN); 
+    int audio_input = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
   int Level = map(audio_input, 100, 2000, 0, 400);
   if (audio_input < 100){  Level = 0;  }
   if (audio_input > 2000){  Level = 400;  }
@@ -2727,7 +2764,7 @@ void Snake() {  //real random snake mode with random food changing its color
   if (snakePosition == foodSpot) { oldsnakecolor = spotcolor;  snakeWaiting = 1; foodSpot = 40;}  //did snake find the food, change snake color
   if (snakeWaiting > 0) {snakeWaiting = snakeWaiting + 1;} //counting while waiting
 #if HAS_SOUNDDETECTOR
-  int audio_input = analogRead(ENVELOPE_IN_PIN); 
+  int audio_input = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
   int Level = map(audio_input, 100, 2000, 1, 10);
   if (audio_input < 100){  Level = 1;  }
   if (audio_input > 2000){  Level = 10;  }
@@ -2796,30 +2833,73 @@ void getListOfSongs() {
       strcpy(processedText, "/songs/");
       strcat(processedText, entry.name());  //build full pathname
       entry.close();
-      File file = FileFS.open(processedText, "r");  //open each song
+
+
+     File file = FileFS.open(processedText, "r");  //open each song
       if(!file){Serial.println("No Saved Data!"); return;}
       String output;
       while (file.available()) {     //read song file contents
+      
         char intRead = file.read();
+        
+//  Serial.print(intRead);
         if (allowedChars.indexOf(intRead) != -1){ output += intRead; }else{ Serial.print(processedText); Serial.print(" contains non-RTTTL characters! "); Serial.println(intRead); fileBad = 1; break;}
       }
       file.close();
+      
       if (!fileBad) {
         char *token;
         char SongName[512];
         const char *delimiter =":";
-        if (output.length() > 511) {Serial.print(processedText); Serial.println(" file is too big!"); FileFS.remove(processedText); break;}
+        if (output.length() > 511) {Serial.print(processedText); Serial.println(" file is too big!"); deleteFile(FileFS, processedText); break;}
         sprintf(SongName, "%s", output.c_str());    //throw whole contents into variable
         token = strtok(SongName, delimiter);    //keep only the contents before first :
-        //if (strlen(token) > 14) {Serial.println("Song name too long!"); deleteFile(FileFS, processedText); break;}
+        if (strlen(token) > 32) {Serial.print(processedText); Serial.println(" Song name too long!"); deleteFile(FileFS, processedText); break;}
+
+        if (strlen(processedText) > 40) {Serial.print(processedText); Serial.println(" Filename too long!");Serial.print(strlen(processedText)); deleteFile(FileFS, processedText); break;}
+
+//checkSong(processedText);
+
+File file = FileFS.open(processedText, "r");  //open each song
+
+  char buffer[1024]; // Adjust the buffer size as per your requirement
+  memset(buffer, 0, sizeof(buffer));
+  size_t bytesRead = file.readBytes(buffer, sizeof(buffer));
+
+  // Close the file
+  file.close();
+
+  // Check if any bytes were read
+  if (bytesRead == 0) {
+    Serial.print(processedText);
+    Serial.println("Empty RTTTL file!");
+    deleteFile(FileFS, processedText);
+     break;
+  }
+
+  // Validate the RTTTL contents
+  if (validate_rtttl(buffer)) {
+    Serial.print(processedText);
+    Serial.println(" is valid!");
         sprintf(songsArray[totalSongs], "%s",token);         //throw song title from file into array
         sprintf(filesArray[totalSongs], "%s", processedText);  //throw full path and name into array
         SONGS[songsArray[totalSongs]] = filesArray[totalSongs]; // Adding CHIPID
+//  Serial.println(processedText);
         totalSongs++;
+  } else {
+    Serial.print(processedText); 
+    Serial.println(" Invalid RTTTL format!");
+    deleteFile(FileFS, processedText); 
+ //   break;
+  }
+
+
+
       }else{
         FileFS.remove(processedText);
         fileBad = 0;
       }
+      
     }
   }
   totalSongs--;  //strip off last file count
@@ -2832,6 +2912,123 @@ void getListOfSongs() {
   return;
 }
 #endif
+
+
+
+
+const int valid_durations[] = {1, 2, 4, 8, 16, 32};
+const int valid_octaves[] = {4, 5, 6, 7};
+const int valid_beats[] = {25, 28, 31, 35, 40, 45, 50, 56, 63, 70, 80, 90, 100, 112, 125, 140, 160, 180, 200, 225, 250, 285, 320, 355, 400, 450, 500, 565, 635, 715, 800, 900};
+
+
+bool is_valid_attribute(int value, const int* valid_values, int array_size) {
+  for (int i = 0; i < array_size; i++) {
+    if (valid_values[i] == value) return true;
+  }
+  return false;
+}
+
+
+bool validate_rtttl(char* rtttl) {
+  // Parsing variables
+  int duration, octave, beats;
+  char delimiter;
+
+//    Serial.println("start");
+//    Serial.println(rtttl);
+  // Check format and extract metadata
+  if (sscanf(rtttl, "%*[^:]:d=%d,o=%d,b=%d%c", &duration, &octave, &beats, &delimiter) != 4 ||
+      !is_valid_attribute(duration, valid_durations, sizeof(valid_durations) / sizeof(valid_durations[0])) ||
+      !is_valid_attribute(octave, valid_octaves, sizeof(valid_octaves) / sizeof(valid_octaves[0])) ||
+      !is_valid_attribute(beats, valid_beats, sizeof(valid_beats) / sizeof(valid_beats[0])) ||
+      delimiter != ':') {
+    Serial.println(rtttl);
+    Serial.println(" Invalid metadata");
+    return false; // Invalid format or metadata
+  }
+
+  // Locate the start of notes section
+  const char* pos = strchr(strchr(rtttl, ':') + 1, ':') + 1;
+
+ //   Serial.println("start note");
+ //   Serial.println(pos);
+  // Validate notes
+while (*pos && *pos != '\0') {
+  char token[7];
+  sscanf(pos, "%6[^,]%c", token, &delimiter);
+
+  // Validate the token against the allowed patterns
+  bool isValidToken = false;
+
+  if (strlen(token) == 1) {
+    if (strchr("abcdefghp", token[0])) {
+      isValidToken = true;
+    }
+  } else if (strlen(token) == 2) {
+    if ((strchr("abcdefghp", token[0]) && token[1] == '#') ||
+        (strchr("abcdefghp", token[0]) && token[1] == '.') ||
+        (strchr("abcdefghp", token[0]) && strchr("12345678", token[1])) ||
+        (strchr("1248", token[0]) && strchr("abcdefghp", token[1]))) {
+      isValidToken = true;
+    }
+  } else if (strlen(token) == 3) {
+    if ((strchr("abcdefghp", token[0]) && strchr("12345678", token[1]) && token[2] == '.') ||
+        (strchr("abcdefghp", token[0]) && token[1] == '.'&& strchr("12345678", token[2])) ||
+        (strchr("abcdefghp", token[0]) && token[1] == '#' && token[2] == '.') ||
+        (strchr("abcdefghp", token[0]) && token[1] == '#' && strchr("12345678", token[2])) ||
+        (strchr("13", token[0]) && strchr("26", token[1]) && strchr("abcdefghp", token[2])) ||
+        (strchr("1248", token[0]) && strchr("abcdefghp", token[1]) && token[2] == '#') ||
+        (strchr("1248", token[0]) && strchr("abcdefghp", token[1]) && token[2] == '.') ||
+        (strchr("1248", token[0]) && strchr("abcdefghp", token[1]) && strchr("12345678", token[2]))) {
+      isValidToken = true;
+    }
+  } else if (strlen(token) == 4) {
+    if ((strchr("1248", token[0]) && strchr("abcdefghp", token[1]) && token[2] == '#' && strchr("12345678", token[3])) ||
+        (strchr("1248", token[0]) && strchr("abcdefghp", token[1]) && token[2] == '#' && token[3] == '.') ||
+        (strchr("13", token[0]) && strchr("26", token[1]) && strchr("abcdefghp", token[2]) && token[3] == '.') ||
+        (strchr("13", token[0]) && strchr("26", token[1]) && strchr("abcdefghp", token[2]) && strchr("12345678", token[3])) ||
+        (strchr("13", token[0]) && strchr("26", token[1]) && strchr("abcdefghp", token[2]) && token[3] == '#') ||
+        (strchr("abcdefghp", token[0]) && token[1] == '#' && strchr("12345678", token[2]) && token[3] == '.') ||
+        (strchr("abcdefghp", token[0]) && token[1] == '#' && token[2] == '.' && strchr("12345678", token[3])) ||
+        (strchr("1248", token[0]) && strchr("abcdefghp", token[1]) && token[2] == '.' && strchr("12345678", token[3])) ||
+        (strchr("1248", token[0]) && strchr("abcdefghp", token[1]) && strchr("12345678", token[2]) && token[3] == '.')) {
+      isValidToken = true;
+    }
+  } else if (strlen(token) == 5) {
+    if ((strchr("13", token[0]) && strchr("26", token[1]) && strchr("abcdefghp", token[2]) && token[3] == '#' && token[4] == '.') ||
+        (strchr("1248", token[0]) && strchr("abcdefghp", token[1]) && token[2] == '#'  && token[3] == '.'&& strchr("12345678", token[4])) ||
+        (strchr("1248", token[0]) && strchr("abcdefghp", token[1]) && token[2] == '#' && strchr("12345678", token[3]) && token[4] == '.') ||
+        (strchr("13", token[0]) && strchr("26", token[1]) && strchr("abcdefghp", token[2]) && token[3] == '.' && strchr("12345678", token[4])) ||
+        (strchr("13", token[0]) && strchr("26", token[1]) && strchr("abcdefghp", token[2]) && strchr("12345678", token[3]) && token[4] == '.') ||
+        (strchr("13", token[0]) && strchr("26", token[1]) && strchr("abcdefghp", token[2]) && token[3] == '#' && strchr("12345678", token[4]))) {
+      isValidToken = true;
+    }
+  } else if (strlen(token) == 6) {
+    if ((strchr("13", token[0]) && strchr("26", token[1]) && strchr("abcdefghp", token[2]) && token[3] == '#' && strchr("12345678", token[4]) && token[5] == '.') ||
+    (strchr("13", token[0]) && strchr("26", token[1]) && strchr("abcdefghp", token[2]) && token[3] == '#' && token[4] == '.' && strchr("12345678", token[5]))) {
+      isValidToken = true;
+    }
+  } 
+  
+  if (isValidToken) {
+  //  Serial.println(token);
+  } else {
+    Serial.print(token);
+    Serial.println(" Invalid note format");
+    return false; // Invalid note format
+  }
+  
+  pos = strchr(pos, ',');
+  if (pos == NULL) {
+    return true; // RTTTL file is valid
+    break; // Exit the loop if no more comma found
+  }
+  
+  pos += 1; // Move to the next note after the comma
+}
+
+ // return true; // RTTTL file is valid
+}
 
 void writeFile(fs::FS &fs, const char * path, const char * message){
    Serial.printf("Writing file: %s\r\n", path);
@@ -2977,7 +3174,7 @@ void processSchedules(bool alarmType) {
     "day": "18",
     "recurring": "0",
     "uid": "00000009999000099990518"
-  */
+  
 
       Serial.println("-----local--------");
       Serial.print("record: ");
@@ -3035,7 +3232,7 @@ void processSchedules(bool alarmType) {
       Serial.println(recurring);
       Serial.println("----------------");
       Serial.println("");
-
+*/
 
    if (scheduleType == 0)  {   //0 = daily schedule type
       if ((dayOfweek == 0 && sun == 1) || (dayOfweek == 1 && mon == 1) || (dayOfweek == 2 && tue == 1) || (dayOfweek == 3 && wed == 1) || (dayOfweek == 4 && thu == 1) || (dayOfweek == 5 && fri == 1) || (dayOfweek == 6 && sat == 1)) {   //day of week match?
@@ -3095,8 +3292,8 @@ void processSchedules(bool alarmType) {
         if (!jsonObj["song"].isNull()) {
             strcpy(specialAudibleAlarm, jsonObj["song"]);
            
-          Serial.println(defaultAudibleAlarm);
-          Serial.println(specialAudibleAlarm);
+      //    Serial.println(defaultAudibleAlarm);
+      //    Serial.println(specialAudibleAlarm);
         }
             #endif
         }
@@ -4566,9 +4763,6 @@ void loadWebPageHandlers() {
     #if HAS_DHT
       int humidTemp = dht.readHumidity();        // read humidity
       float sensorTemp = dht.readTemperature();     // read temperature
-    #else
-      int humidTemp = 00.00;        // read humidity
-      float sensorTemp = 00.00;     // read temperature
     #endif
     char tempRTC[64]="";
     char tempRTCE[64]="";
@@ -4595,76 +4789,66 @@ void loadWebPageHandlers() {
     sprintf(tempRTCE + strlen(tempRTCE), "%02d:", timeinfo.tm_min);
     sprintf(tempRTCE + strlen(tempRTCE), "%02d", timeinfo.tm_sec);
 
-    #if HAS_PHOTOSENSOR
-      json["analogRead(PHOTORESISTER_PIN)"] = analogRead(PHOTORESISTER_PIN);
-      json["PHOTORESISTER_PIN"] = PHOTORESISTER_PIN;
-      json["PHOTO_SAMPLES"] = PHOTO_SAMPLES;
-      json["photoresisterReadings[0]"] = photoresisterReadings[0];
-      json["photoresisterReadings[1]"] = photoresisterReadings[1];
-      //json["photoresisterReadings[2]"] = photoresisterReadings[2];
-      //json["photoresisterReadings[3]"] = photoresisterReadings[3];
-      //json["photoresisterReadings[4]"] = photoresisterReadings[4];
-      //json["photoresisterReadings[5]"] = photoresisterReadings[5];
-      //json["photoresisterReadings[6]"] = photoresisterReadings[6];
-      //json["photoresisterReadings[7]"] = photoresisterReadings[7];
-      //json["photoresisterReadings[8]"] = photoresisterReadings[8];
-      //json["photoresisterReadings[9]"] = photoresisterReadings[9];
-      //json["photoresisterReadings[10]"] = photoresisterReadings[10];
-      //json["photoresisterReadings[11]"] = photoresisterReadings[11];
-      //json["photoresisterReadings[12]"] = photoresisterReadings[12];
-      //json["photoresisterReadings[13]"] = photoresisterReadings[13];
-    #endif
-    #if HAS_SOUNDDETECTOR
-      json["AUDIO_GATE_PIN"] = AUDIO_GATE_PIN;
-      json["ENVELOPE_IN_PIN"] = ENVELOPE_IN_PIN;
-      json["analogRead(ENVELOPE_IN_PIN)"] = analogRead(ENVELOPE_IN_PIN);
-      json["averageAudioInput"] = averageAudioInput;
-      json["decay"] = decay;
-      json["decay_check"] = decay_check;
-      json["digitalRead(AUDIO_GATE_PIN)"] = digitalRead(AUDIO_GATE_PIN);
-      json["post_react"] = post_react;
-      json["pre_react"] = pre_react;
-      json["randomSpectrumMode"] = randomSpectrumMode;
-      json["react"] = react;
-      json["spectrumBackgroundSettings"] = spectrumBackgroundSettings;
-      json["spectrumColorSettings"] = spectrumColorSettings;
-      json["spectrumMode"] = spectrumMode;
-    #endif
     #if HAS_BUZZER
       json["BUZZER_PIN"] = BUZZER_PIN;
-      json["useAudibleAlarm"] = useAudibleAlarm;
-    #endif
-    #if HAS_DHT
-      json["DHT11 C Temp"] = sensorTemp;
-      json["DHT11 F Temp"] = (sensorTemp * 1.8000) + 32;
-      json["DHT11 Humidity"] = humidTemp;
-      json["DHTTYPE"] = DHTTYPE;
-      json["DHT_PIN"] = DHT_PIN;
     #endif
     json["ClockColorSettings"] = ClockColorSettings;
     json["ColorChangeFrequency"] = ColorChangeFrequency;
     json["CountUpMillis"] = CountUpMillis;
-    json["DSTime"] = DSTime;
     json["DateColorSettings"] = DateColorSettings;
+    #if HAS_DHT
+      json["DHT_PIN"] = DHT_PIN;
+      json["DHT11 C Temp"] = sensorTemp;
+      json["DHT11 F Temp"] = (sensorTemp * 1.8000) + 32;
+      json["DHT11 Humidity"] = humidTemp;
+      json["DHTTYPE"] = DHTTYPE;
+    #endif
+    json["DSTime"] = DSTime;
     json["ESP32-NTP"] = tempRTCE;
     json["FAKE_NUM_LEDS"] = FAKE_NUM_LEDS;
     json["HAS_DHT"] = HAS_DHT;
+    json["HAS_BUZZER"] = HAS_BUZZER;
+    json["HAS_ONLINEWEATHER"] = HAS_ONLINEWEATHER;
+    json["HAS_PHOTOSENSOR"] = HAS_PHOTOSENSOR;
     json["HAS_RTC"] = HAS_RTC;
     json["HAS_SOUNDDETECTOR"] = HAS_SOUNDDETECTOR;
-    json["HAS_BUZZER"] = HAS_BUZZER;
-    json["HAS_PHOTOSENSOR"] = HAS_BUZZER;
-    json["HAS_ONLINEWEATHER"] = HAS_ONLINEWEATHER;
     json["LEDS_PER_DIGIT"] = LEDS_PER_DIGIT;
     json["LEDS_PER_SEGMENT"] = LEDS_PER_SEGMENT;
     json["LED_PIN"] = LED_PIN;
     json["MILLI_AMPS"] = MILLI_AMPS;
     json["NUMBER_OF_DIGITS"] = NUMBER_OF_DIGITS;
     json["NUM_LEDS"] = NUM_LEDS;
+    #if HAS_PHOTOSENSOR
+      json["PHOTORESISTER_PIN"] = PHOTORESISTER_PIN;
+      json["PHOTO_SAMPLES"] = PHOTO_SAMPLES;
+    #endif
     json["SEGMENTS_LEDS"] = SEGMENTS_LEDS;
     json["SEGMENTS_PER_NUMBER"] = SEGMENTS_PER_NUMBER;
+    #if HAS_SOUNDDETECTOR
+      json["SOUNDDETECTOR_AUDIO_GATE_PIN"] = SOUNDDETECTOR_AUDIO_GATE_PIN;
+      json["SOUNDDETECTOR_ENVELOPE_IN_PIN"] = SOUNDDETECTOR_ENVELOPE_IN_PIN;
+      json["SOUNDDETECTOR_averageAudioInput"] = SOUNDDETECTOR_averageAudioInput;
+      json["SOUNDDETECTOR_decay"] = SOUNDDETECTOR_decay;
+      json["SOUNDDETECTOR_decay_check"] = SOUNDDETECTOR_decay_check;
+      json["SOUNDDETECTOR_post_react"] = SOUNDDETECTOR_post_react;
+      json["SOUNDDETECTOR_pre_react"] = SOUNDDETECTOR_pre_react;
+      json["SOUNDDETECTOR_react"] = SOUNDDETECTOR_react;
+    #endif
     json["SPECTRUM_PIXELS"] = SPECTRUM_PIXELS;
     json["SPOT_LEDS"] = SPOT_LEDS;
     json["WiFi IP"] = WiFi.localIP().toString();
+    json["WiFi_MAX_RETRIES"] = WiFi_MAX_RETRIES;
+    json["WiFi_MAX_RETRY_DURATION"] = WiFi_MAX_RETRY_DURATION;
+    json["WiFi_elapsedTime"] = WiFi_elapsedTime;
+    json["WiFi_retryCount"] = WiFi_retryCount;
+    json["WiFi_startTime"] = WiFi_startTime;
+    json["WiFi_totalReconnections"] = WiFi_totalReconnections;
+    #if HAS_PHOTOSENSOR
+      json["analogRead(PHOTORESISTER_PIN)"] = analogRead(PHOTORESISTER_PIN);
+    #endif
+    #if HAS_SOUNDDETECTOR
+      json["analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN)"] = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN);
+    #endif
     json["breakOutSet"] = breakOutSet;
     json["brightness"] = brightness;
     json["clearOldLeds"] = clearOldLeds;
@@ -4683,6 +4867,12 @@ void loadWebPageHandlers() {
     json["dateDisplayType"] = dateDisplayType;
     json["daylightOffset_sec"] = daylightOffset_sec;
     json["daysUptime"] = daysUptime;
+    #if HAS_BUZZER
+      json["defaultAudibleAlarm"] = SONGS[defaultAudibleAlarm];
+    #endif
+    #if HAS_SOUNDDETECTOR
+      json["digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN)"] = digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN);
+    #endif
     json["dotsOn"] = dotsOn;
     json["endCountDownMillis"] = endCountDownMillis;
     json["fakeclockrunning"] = fakeclockrunning;
@@ -4691,16 +4881,39 @@ void loadWebPageHandlers() {
     json["gmtOffset_sec"] = gmtOffset_sec;
     json["host"] = host;
     json["hoursUptime"] = hoursUptime;
-    json["humiColorSettings"] = humiColorSettings;
-    json["humiDisplayType"] = humiDisplayType;
+    #if HAS_ONLINEWEATHER || HAS_DHT
+      json["humiColorSettings"] = humiColorSettings;
+      json["humiDisplayType"] = humiDisplayType;
+      json["humidity_outdoor_enable"] = humidity_outdoor_enable;
+    #endif
     json["isAsleep"] = isAsleep;
     json["lightSensorValue"] = lightSensorValue;
     json["lightshowMode"] = lightshowMode;
     json["lightshowSpeed"] = lightshowSpeed;
+    json["millis"] = millis();
   	json["minutesUptime"] = minutesUptime;
     json["ntpServer"] = ntpServer;
-    json["outdoortemp"] = outdoorTemp;
+    #if HAS_ONLINEWEATHER
+      json["outdoortemp"] = outdoorTemp;
+      json["outdoorHumidity"] = outdoorTemp;
+    #endif
     json["pastelColors"] = pastelColors;
+    #if HAS_PHOTOSENSOR
+      json["photoresisterReadings[0]"] = photoresisterReadings[0];
+      json["photoresisterReadings[1]"] = photoresisterReadings[1];
+      //json["photoresisterReadings[2]"] = photoresisterReadings[2];
+      //json["photoresisterReadings[3]"] = photoresisterReadings[3];
+      //json["photoresisterReadings[4]"] = photoresisterReadings[4];
+      //json["photoresisterReadings[5]"] = photoresisterReadings[5];
+      //json["photoresisterReadings[6]"] = photoresisterReadings[6];
+      //json["photoresisterReadings[7]"] = photoresisterReadings[7];
+      //json["photoresisterReadings[8]"] = photoresisterReadings[8];
+      //json["photoresisterReadings[9]"] = photoresisterReadings[9];
+      //json["photoresisterReadings[10]"] = photoresisterReadings[10];
+      //json["photoresisterReadings[11]"] = photoresisterReadings[11];
+      //json["photoresisterReadings[12]"] = photoresisterReadings[12];
+      //json["photoresisterReadings[13]"] = photoresisterReadings[13];
+    #endif
     json["prevTime"] = prevTime;
     json["prevTime2"] = prevTime2;
     json["previousTimeDay"] = previousTimeDay;
@@ -4712,6 +4925,9 @@ void loadWebPageHandlers() {
     json["randomHourPassed"] = randomHourPassed;
     json["randomMinPassed"] = randomMinPassed;
     json["randomMonthPassed"] = randomMonthPassed;
+    #if HAS_SOUNDDETECTOR
+      json["randomSpectrumMode"] = randomSpectrumMode;
+    #endif
     json["randomWeekPassed"] = randomWeekPassed;
     json["readIndex"] = readIndex;
     json["realtimeMode"] = realtimeMode;
@@ -4732,21 +4948,29 @@ void loadWebPageHandlers() {
     json["snakeLastDirection"] = snakeLastDirection;
     json["snakePosition"] = snakePosition;
     json["snakeWaiting"] = snakeWaiting;
+    #if HAS_BUZZER
+      json["specialAudibleAlarm"] = SONGS[specialAudibleAlarm];
+    #endif
+    #if HAS_SOUNDDETECTOR
+      json["spectrumBackgroundSettings"] = spectrumBackgroundSettings;
+      json["spectrumColorSettings"] = spectrumColorSettings;
+      json["spectrumMode"] = spectrumMode;
+    #endif
     json["spotlightsColorSettings"] = spotlightsColorSettings;
     json["suspendFrequency"] = suspendFrequency;
     json["suspendType"] = suspendType;
-    json["tempColorSettings"] = tempColorSettings;
-    json["tempDisplayType"] = tempDisplayType;
-    json["temperatureCorrection"] = temperatureCorrection;
-    json["temperatureSymbol"] = temperatureSymbol;
+    #if HAS_ONLINEWEATHER || HAS_DHT
+      json["tempColorSettings"] = tempColorSettings;
+      json["tempDisplayType"] = tempDisplayType;
+      json["temperatureCorrection"] = temperatureCorrection;
+      json["temperature_outdoor_enable"] = temperature_outdoor_enable;
+      json["temperatureSymbol"] = temperatureSymbol;
+    #endif
     json["updateSettingsRequired"] = updateSettingsRequired;
+    #if HAS_BUZZER
+      json["useAudibleAlarm"] = useAudibleAlarm;
+    #endif
     json["useSpotlights"] = useSpotlights;
-    json["humidity_outdoor_enable"] = humidity_outdoor_enable;
-    json["temperature_outdoor_enable"] = temperature_outdoor_enable;
-            #if HAS_BUZZER
-    json["defaultAudibleAlarm"] = SONGS[defaultAudibleAlarm];
-    json["specialAudibleAlarm"] = SONGS[specialAudibleAlarm];
-            #endif
 
     serializeJson(json, output);
     server.send(200, "application/json", output);
@@ -4783,29 +5007,47 @@ void loadWebPageHandlers() {
 
 #if HAS_BUZZER
   /*handling uploading song file */
-  server.on("/uploadSong", HTTP_POST, []() {
-    //server.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
-    }, []() {
+server.on("/uploadSong", HTTP_POST, []() {
+}, []() {
+    server.sendHeader("Access-Control-Allow-Origin", "*");  // Set CORS header
     HTTPUpload& upload = server.upload();
-    if(upload.status == UPLOAD_FILE_START)  {
-        String filename = upload.filename;
-        if(!filename.startsWith("/")){filename = "/songs/"+filename;}
-        Serial.print("Upload Name: "); Serial.println(filename);
-        fsUploadFile = FileFS.open(filename, "w");
-        } else if(upload.status == UPLOAD_FILE_WRITE)  {
-        Serial.print(".");
-        fsUploadFile.write(upload.buf, upload.currentSize);
-        } else if(upload.status == UPLOAD_FILE_END)  {
-        Serial.println("");
-        Serial.println("Upload Complete");
-        fsUploadFile.close();
-        Serial.print("Upload Size: "); Serial.println(upload.totalSize);
-        server.sendHeader("Connection", "close");
-        server.send(200, "text/json", "{\"error\":0,\"message\":\"Success\"}");
-        listDir(FileFS, "/songs/", 0);
-        getListOfSongs();
+    if (upload.status == UPLOAD_FILE_START) {
+        const char* filename = upload.filename.c_str();
+        char fullFilename[256];
+        if (filename[0] != '/') {
+            snprintf(fullFilename, sizeof(fullFilename), "/songs/%s", filename);
+        } else {
+            strncpy(fullFilename, filename, sizeof(fullFilename));
         }
-  });
+        Serial.print("Upload Name: ");
+        Serial.println(fullFilename);
+        fsUploadFile = FileFS.open(fullFilename, "w");
+        if (!fsUploadFile) {
+            Serial.println("Failed to open file for writing");
+        } else {
+            Serial.println("Upload started");
+        }
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+        Serial.print(".");
+        if (fsUploadFile) {
+            fsUploadFile.write(upload.buf, upload.currentSize);
+        }
+    } else if (upload.status == UPLOAD_FILE_END) {
+        Serial.println("");
+        if (fsUploadFile) {
+            fsUploadFile.close();
+            Serial.print("Upload Size: ");
+            Serial.println(upload.totalSize);
+            server.send(200, "text/json", "{\"error\":0,\"message\":\"Upload Complete\"}");
+        //    listDir(FileFS, "/songs/", 0);
+            getListOfSongs();
+        } else {
+            server.send(500, "text/json", "{\"error\":1,\"message\":\"Upload failed\"}");
+        }
+  server.sendHeader("Connection", "close");
+    }
+});
+
 
   server.on("/deleteSong", HTTP_POST, []() {
     DynamicJsonDocument json(1500);
