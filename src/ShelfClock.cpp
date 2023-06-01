@@ -16,11 +16,10 @@
 #include "Arduino.h"
 //#include <LittleFS.h>       // https://github.com/espressif/arduino-esp32/tree/master/libraries/LittleFS
 //#include <FS.h>    
- 
 #define HAS_RTC    false
 #define HAS_DHT    false
 #define HAS_SOUNDDETECTOR    false
-#define HAS_BUZZER    true
+#define HAS_BUZZER    false
 #define HAS_PHOTOSENSOR    false
 #define HAS_ONLINEWEATHER    true
 
@@ -72,7 +71,7 @@
 #define SEGMENTS_PER_NUMBER 7 // this can never change unless you redesign all display routines
 #define NUMBER_OF_DIGITS 7    // 7 = 4 real + 3 fake,  this should be always 7 unless you redesign all display routines
 #define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
-#define LED_PIN 48             // led control pin
+#define LED_PIN 2             // led control pin
 #define MILLI_AMPS 2400 
 #define LEDS_PER_SEGMENT 7    // can be 1 to 10 LEDS per segment
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
@@ -91,9 +90,9 @@
   #define DHT_PIN 18            // temp sensor pin
 #endif
   #if HAS_SOUNDDETECTOR
-  #define SOUNDDETECTOR_ENVELOPE_IN_PIN 13    // Use 34 for envelope pin input
+  #define SOUNDDETECTOR_ENVELOPE_IN_PIN 34    // Use 34 for envelope pin input
   #define SOUNDDETECTOR_AUDIO_GATE_PIN 15     // for sound gate input trigger
-  #define AUDIO_IN_PIN    32    // Analog audio in (audio pin)
+  #define AUDIO_IN_PIN    36    // Analog audio in (audio pin)
   #define SAMPLES         512          // Must be a power of 2
   #define SAMPLING_FREQ   40000         // Hz, must be 40000 or less due to ADC conversion time. Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
   #define NUM_BANDS       8            // To change this, you will need to change the bunch of if statements describing the mapping from bins to bands
@@ -101,10 +100,10 @@
   #define TOP            (LEDS_PER_SEGMENT * 2)                // Don't allow the bars to go offscreen
   #endif
 #if HAS_BUZZER
-  #define BUZZER_PIN 20         // peizo speaker
+  #define BUZZER_PIN 16         // peizo speaker
 #endif
 #if HAS_PHOTOSENSOR
-  #define PHOTORESISTER_PIN 11  // select the analog input pin for the photoresistor
+  #define PHOTORESISTER_PIN 36  // select the analog input pin for the photoresistor
 #endif
 #define digit0 seg(0), seg(1), seg(2), seg(3), seg(4), seg(5), seg(6)
 #define fdigit1 seg(2), seg(7), seg(10), seg(15), seg(8), seg(3), seg(9)
@@ -222,6 +221,7 @@
   long SOUNDDETECTOR_post_react = 0; // OLD SPIKE CONVERSION
 #endif
 
+String softwareVersion = "version-3.0.1-alpha";
 const char* host = "shelfclock";
 const int   daylightOffset_sec = 3600;
 const char* ntpServer = "pool.ntp.org";
@@ -291,6 +291,8 @@ struct WeatherAPI weatherapi;
   char defaultAudibleAlarm[100] = "Final Countdown";
   char specialAudibleAlarm[100] = "Final Countdown";
   DynamicJsonDocument SONGS(8192);
+char filesArray[64][64];
+char songsArray[64][64];
 #endif
 
 const int NUM_ROWS = 7;
@@ -298,8 +300,6 @@ const int NUM_COLS = 21;
 
 bool updateSettingsRequired = 0;
 int totalSongs = 0;
-char filesArray[255][255];
-char songsArray[255][255];
 
 DynamicJsonDocument jsonDoc(8192); // create a JSON document to store the data
 DynamicJsonDocument jsonScheduleData(8192);  //stores schedules
@@ -635,8 +635,12 @@ void setup() {
       Serial.println(F("!An error occurred during FileFS mounting"));
   }
 
+    Serial.println("list setting folder files");
+  listDir(FileFS, "/settings/", 0);
   //load settings from nvram and flash
+      Serial.println("load all settings from json file");
   getclockSettings("generic"); //load all settings from json file
+      Serial.println("load all previously saved settings from Preferences");
   loadSetupSettings();  //load all previously saved settings from Preferences
   
   #if HAS_RTC
@@ -699,6 +703,7 @@ void setup() {
   Serial.println("mDNS responder started");
 
   //init and set the time of the internal RTC from NTP server
+      Serial.println("set the time of the internal RTC from NTP server");
   configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
   
   #if HAS_RTC
@@ -727,6 +732,7 @@ void setup() {
     }
   #endif
 
+      Serial.println("print time");
   printLocalTime(); 
 
   //create something to know if now is not then
@@ -760,21 +766,27 @@ void setup() {
     pinMode(BUZZER_PIN, OUTPUT);
     rtttl::begin(BUZZER_PIN, "Intel:d=4,o=5,b=400:32p,d,g,d,2a");  //play mario sound and set initial brightness level
     while( !rtttl::done() ){GetBrightnessLevel(); rtttl::play();}
+        Serial.println("get list of songs");
     getListOfSongs();
   #endif
 
   
+        Serial.println("load array of schedule files on drive ");
   createSchedulesArray();  //load array of schedule files on drive
+        Serial.println("print out schedule array");
   processSchedules(0);  //print out schedule array
 
+        Serial.println("start of job queue");
     jobQueue = xQueueCreate(30, sizeof(String *));
+        Serial.println("start of xTaskCreatePinnedToCore");
     xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 0, &Task1, 0);
 
+        Serial.println("end of Setup");
 }    //end of Setup()
 
 void Task1code(void * parameter) {
   unsigned long lastTime = 0;
-  unsigned long weatherTimerDelay = 300000;  //5 seconds  600000 10 min
+  unsigned long weatherTimerDelay = 600000;  //600000 = 10 min
   getRemoteWeather();
   while(true) {
     #if HAS_BUZZER
@@ -826,10 +838,12 @@ void loop(){
     WiFi_elapsedTime = millis() - WiFi_startTime;
     if (WiFi_elapsedTime >= WiFi_MAX_RETRY_DURATION) {
       // Reboot if maximum retry duration exceeded
+        Serial.println("maximum retry duration exceeded ");
       ESP.restart();
     } else {
       if (WiFi_retryCount >= WiFi_MAX_RETRIES) {
         // Reboot if maximum retry attempts exceeded
+        Serial.println("maximum retry attemps exceeded ");
         ESP.restart();
       } else if (WiFi.status() == WL_IDLE_STATUS) {
         // Attempt to reconnect to Wi-Fi
@@ -849,6 +863,7 @@ void loop(){
     // Reset retry count and start time
     WiFi_retryCount = 0;
     WiFi_startTime = millis();
+     //   Serial.println("Wi-Fi connection is successful ");
     // Your other code logic can go here
   }
 
@@ -2836,73 +2851,51 @@ void getListOfSongs() {
       strcpy(processedText, "/songs/");
       strcat(processedText, entry.name());  //build full pathname
       entry.close();
-
-
      File file = FileFS.open(processedText, "r");  //open each song
       if(!file){Serial.println("No Saved Data!"); return;}
       String output;
       while (file.available()) {     //read song file contents
-      
         char intRead = file.read();
-        
-//  Serial.print(intRead);
-        if (allowedChars.indexOf(intRead) != -1){ output += intRead; }else{ Serial.print(processedText); Serial.print(" contains non-RTTTL characters! "); Serial.println(intRead); fileBad = 1; break;}
+        if (allowedChars.indexOf(intRead) != -1){ output += intRead; } else { Serial.print(processedText); Serial.print(" contains non-RTTTL characters! "); Serial.println(intRead); fileBad = 1; break;}
       }
       file.close();
-      
       if (!fileBad) {
-        char *token;
-        char SongName[512];
-        const char *delimiter =":";
-        if (output.length() > 511) {Serial.print(processedText); Serial.println(" file is too big!"); deleteFile(FileFS, processedText); break;}
-        sprintf(SongName, "%s", output.c_str());    //throw whole contents into variable
-        token = strtok(SongName, delimiter);    //keep only the contents before first :
-        if (strlen(token) > 32) {Serial.print(processedText); Serial.println(" Song name too long!"); deleteFile(FileFS, processedText); break;}
-
-        if (strlen(processedText) > 40) {Serial.print(processedText); Serial.println(" Filename too long!");Serial.print(strlen(processedText)); deleteFile(FileFS, processedText); break;}
-
-//checkSong(processedText);
-
-File file = FileFS.open(processedText, "r");  //open each song
-
-  char buffer[1024]; // Adjust the buffer size as per your requirement
-  memset(buffer, 0, sizeof(buffer));
-  size_t bytesRead = file.readBytes(buffer, sizeof(buffer));
-
-  // Close the file
-  file.close();
-
-  // Check if any bytes were read
-  if (bytesRead == 0) {
-    Serial.print(processedText);
-    Serial.println("Empty RTTTL file!");
-    deleteFile(FileFS, processedText);
-     break;
-  }
-
-  // Validate the RTTTL contents
-  if (validate_rtttl(buffer)) {
-    Serial.print(processedText);
-    Serial.println(" is valid!");
-        sprintf(songsArray[totalSongs], "%s",token);         //throw song title from file into array
-        sprintf(filesArray[totalSongs], "%s", processedText);  //throw full path and name into array
-        SONGS[songsArray[totalSongs]] = filesArray[totalSongs]; // Adding CHIPID
-//  Serial.println(processedText);
-        totalSongs++;
-  } else {
-    Serial.print(processedText); 
-    Serial.println(" Invalid RTTTL format!");
-    deleteFile(FileFS, processedText); 
- //   break;
-  }
-
-
-
-      }else{
+            char *token;
+            char SongName[512];
+            const char *delimiter =":";
+            if (output.length() > 511) {Serial.print(processedText); Serial.println(" file is too big!"); deleteFile(FileFS, processedText); break;}
+            sprintf(SongName, "%s", output.c_str());    //throw whole contents into variable
+            token = strtok(SongName, delimiter);    //keep only the contents before first :
+            if (strlen(token) > 32) {Serial.print(processedText); Serial.println(" Song name too long!"); deleteFile(FileFS, processedText); break;}
+            if (strlen(processedText) > 40) {Serial.print(processedText); Serial.println(" Filename too long!");Serial.print(strlen(processedText)); deleteFile(FileFS, processedText); break;}
+            File file = FileFS.open(processedText, "r");  //open each song
+            char buffer[1024]; // Adjust the buffer size as per your requirement
+            memset(buffer, 0, sizeof(buffer));
+            size_t bytesRead = file.readBytes(buffer, sizeof(buffer));
+            file.close();  // Close the file
+            if (bytesRead == 0) {   // Check if any bytes were read
+              Serial.print(processedText);
+              Serial.println("Empty RTTTL file!");
+              deleteFile(FileFS, processedText);
+              break;
+            }
+            if (validate_rtttl(buffer)) { // Validate the RTTTL contents
+              Serial.print(processedText);
+              Serial.println(" is valid!");
+              sprintf(songsArray[totalSongs], "%s",token);         //throw song title from file into array
+              sprintf(filesArray[totalSongs], "%s", processedText);  //throw full path and name into array
+              SONGS[songsArray[totalSongs]] = filesArray[totalSongs]; 
+              totalSongs++;
+            } else {
+              Serial.print(processedText); 
+              Serial.println(" Invalid RTTTL format!");
+              deleteFile(FileFS, processedText); 
+              //   break;
+            }
+      } else {
         FileFS.remove(processedText);
         fileBad = 0;
       }
-      
     }
   }
   totalSongs--;  //strip off last file count
@@ -2914,12 +2907,6 @@ File file = FileFS.open(processedText, "r");  //open each song
   listDir(FileFS, "/songs/", 0);
   return;
 }
-#endif
-
-
-
-
-
 
 bool is_valid_attribute(int value, const int* valid_values, int array_size) {
   for (int i = 0; i < array_size; i++) {
@@ -2928,14 +2915,10 @@ bool is_valid_attribute(int value, const int* valid_values, int array_size) {
   return false;
 }
 
-
 bool validate_rtttl(char* rtttl) {
   // Parsing variables
   int duration, octave, beats;
   char delimiter;
-
-//    Serial.println("start");
-//    Serial.println(rtttl);
   // Check format and extract metadata
   if (sscanf(rtttl, "%*[^:]:d=%d,o=%d,b=%d%c", &duration, &octave, &beats, &delimiter) != 4 ||
       !is_valid_attribute(duration, valid_durations, sizeof(valid_durations) / sizeof(valid_durations[0])) ||
@@ -2946,20 +2929,14 @@ bool validate_rtttl(char* rtttl) {
     Serial.println(" Invalid metadata");
     return false; // Invalid format or metadata
   }
-
   // Locate the start of notes section
   const char* pos = strchr(strchr(rtttl, ':') + 1, ':') + 1;
-
- //   Serial.println("start note");
- //   Serial.println(pos);
   // Validate notes
 while (*pos && *pos != '\0') {
   char token[7];
   sscanf(pos, "%6[^,]%c", token, &delimiter);
-
   // Validate the token against the allowed patterns
   bool isValidToken = false;
-
   if (strlen(token) == 1) {
     if (strchr("abcdefghp", token[0])) {
       isValidToken = true;
@@ -3009,7 +2986,6 @@ while (*pos && *pos != '\0') {
       isValidToken = true;
     }
   } 
-  
   if (isValidToken) {
   //  Serial.println(token);
   } else {
@@ -3017,18 +2993,17 @@ while (*pos && *pos != '\0') {
     Serial.println(" Invalid note format");
     return false; // Invalid note format
   }
-  
   pos = strchr(pos, ',');
   if (pos == NULL) {
     return true; // RTTTL file is valid
     break; // Exit the loop if no more comma found
   }
-  
   pos += 1; // Move to the next note after the comma
 }
-
- // return true; // RTTTL file is valid
+  return true; // RTTTL file is valid
 }
+#endif
+
 
 void writeFile(fs::FS &fs, const char * path, const char * message){
    Serial.printf("Writing file: %s\r\n", path);
@@ -4788,7 +4763,7 @@ void loadWebPageHandlers() {
     sprintf(tempRTCE + strlen(tempRTCE), "%02d:", timeinfo.tm_hour);
     sprintf(tempRTCE + strlen(tempRTCE), "%02d:", timeinfo.tm_min);
     sprintf(tempRTCE + strlen(tempRTCE), "%02d", timeinfo.tm_sec);
-
+      json["softwareVersion"] = softwareVersion;
     #if HAS_BUZZER
       json["BUZZER_PIN"] = BUZZER_PIN;
     #endif
