@@ -13,7 +13,7 @@ Ability to set an alarm that can chime on the hour and even gong the hours.
 Ability to set alarms that don't go off during the night.
 Every timezone on the planet.
 It has the ability to compile without any extra hardware modules, no DHT or RTL or SoundDetectoror light sensor, no problem.
-it can deal with different light density in the segments (not more or less segments).
+it can deal with different LED density in the segments (not more or less segments).
 It has a massive debug page.
 It will only show you web controls that you have compiled.
 Online weather.

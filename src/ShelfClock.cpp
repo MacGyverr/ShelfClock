@@ -12,26 +12,24 @@
 #include <ArduinoJson.h>
 #include <MultiMap.h>
 #include "../include/ShelfClick.h"
-
-#include "Arduino.h"
 //#include <LittleFS.h>       // https://github.com/espressif/arduino-esp32/tree/master/libraries/LittleFS
 //#include <FS.h>    
-#define HAS_RTC    false
-#define HAS_DHT    false
-#define HAS_SOUNDDETECTOR    false
-#define HAS_BUZZER    false
-#define HAS_PHOTOSENSOR    false
-#define HAS_ONLINEWEATHER    true
+
+#define HAS_RTC    true
+#define HAS_DHT    true
+#define HAS_SOUNDDETECTOR    true
+#define HAS_BUZZER    true
+#define HAS_PHOTOSENSOR    true
+#define HAS_ONLINEWEATHER    false
 
 #if HAS_RTC
   #include "RTClib.h"
 #endif
 
+
 #if HAS_SOUNDDETECTOR
-  #include <driver/adc.h>
   #include <arduinoFFT.h>				// Don't forget to change CPU Frequency to 240MHz in Arduino board settings
-  //#include "soc/adc_channel.h"
-  #include "C:\Users\User\.platformio\packages\framework-arduinoespressif32\tools\sdk\esp32\include\soc\esp32\include\soc\adc_channel.h"
+  #include <driver/i2s.h>
 #endif
 
 #if HAS_BUZZER
@@ -73,10 +71,10 @@
 #define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
 #define LED_PIN 2             // led control pin
 #define MILLI_AMPS 2400 
-#define LEDS_PER_SEGMENT 7    // can be 1 to 10 LEDS per segment
+#define LEDS_PER_SEGMENT 7    // can be 1 to 10 LEDS per segment (4 for test display, 7 for full)
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
-#define PHOTO_SAMPLES 2      //number of samples to take from the photoresister
+#define PHOTO_SAMPLES 10      //number of samples to take from the photoresister
 #define PHOTO_SIZE 5
 #define SEGMENTS_LEDS (SPECTRUM_PIXELS * LEDS_PER_SEGMENT)  // Number leds in all segments
 #define SPOT_LEDS (NUMBER_OF_DIGITS * 2)        // Number of Spotlight leds
@@ -87,20 +85,29 @@
 #if HAS_DHT
   #include "DHT.h"
   #define DHTTYPE DHT11         // DHT 11 tempsensor
-  #define DHT_PIN 18            // temp sensor pin
+  #define DHT_PIN 33            // temp sensor pin
 #endif
   #if HAS_SOUNDDETECTOR
-  #define SOUNDDETECTOR_ENVELOPE_IN_PIN 34    // Use 34 for envelope pin input
-  #define SOUNDDETECTOR_AUDIO_GATE_PIN 15     // for sound gate input trigger
-  #define AUDIO_IN_PIN    36    // Analog audio in (audio pin)
-  #define SAMPLES         512          // Must be a power of 2
-  #define SAMPLING_FREQ   40000         // Hz, must be 40000 or less due to ADC conversion time. Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
-  #define NUM_BANDS       8            // To change this, you will need to change the bunch of if statements describing the mapping from bins to bands
-  #define NOISE           500           // Used as a crude noise filter, values below this are ignored
-  #define TOP            (LEDS_PER_SEGMENT * 2)                // Don't allow the bars to go offscreen
+//  #define SOUNDDETECTOR_ENVELOPE_IN_PIN 34    // Use 34 for envelope pin input
+//  #define SOUNDDETECTOR_AUDIO_GATE_PIN 35     // for sound gate input trigger
+//  #define AUDIO_IN_PIN    32    // Analog audio in (audio pin)
+  #define SOUNDDETECTOR_I2S_WS 15
+#define SOUNDDETECTOR_I2S_SD 32
+#define SOUNDDETECTOR_I2S_SCK 14
+#define SOUNDDETECTOR_I2S_PORT I2S_NUM_0
+#define SOUNDDETECTOR_SAMPLING_FREQ 8000    // Lower sampling rate
+#define SOUNDDETECTOR_BITS_PER_SAMPLE 16
+#define SOUNDDETECTOR_SAMPLES 128           // Smaller FFT size
+  //#define SOUNDDETECTOR_SAMPLES         256          // Must be a power of 2
+ // #define SOUNDDETECTOR_SAMPLING_FREQ   40000         // Hz, must be 40000 or less due to ADC conversion time. Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
+  #define SOUNDDETECTOR_BANDS_WIDTH       8            // To change this, you will need to change the bunch of if statements describing the mapping from bins to bands
+//  #define NOISE           500           // Used as a crude noise filter, values below this are ignored
+  #define SOUNDDETECTOR_BANDS_HEIGHT            (LEDS_PER_SEGMENT * 2)                // Don't allow the bars to go offscreen
+  const int ANALYZER_SIZE = SOUNDDETECTOR_BANDS_WIDTH * LEDS_PER_SEGMENT * 2;
   #endif
 #if HAS_BUZZER
   #define BUZZER_PIN 16         // peizo speaker
+//  #define BUZZER_PIN 25         // peizo speaker
 #endif
 #if HAS_PHOTOSENSOR
   #define PHOTORESISTER_PIN 36  // select the analog input pin for the photoresistor
@@ -148,6 +155,8 @@
  #error "Not supported Leds per segment. You need to add definition of seg(n) with needed number of elements according to formula above"
 #endif
 
+
+
 #if HAS_SOUNDDETECTOR
   /*
   b     b     b     b     b     b     b     b
@@ -180,14 +189,15 @@
 
   // Sampling and FFT stuff
   unsigned int sampling_period_us;
-  byte peak[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};              // The length of these arrays must be >= NUM_BANDS
+  byte peak[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};              // The length of these arrays must be >= SOUNDDETECTOR_BANDS_WIDTH
   int oldBarHeights[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  int bandValues[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  double vReal[SAMPLES];
-  double vImag[SAMPLES];
+  int SOUNDDETECTOR_bandValues[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  int SOUNDDETECTOR_noiseThresholds[8] = {800, 300, 200, 200, 200, 200, 200, 200}; // Example thresholds
+  double vReal[SOUNDDETECTOR_SAMPLES];
+  double vImag[SOUNDDETECTOR_SAMPLES];
   unsigned long newTime;
-  long Amplitude = 1000;
-  arduinoFFT FFT = arduinoFFT(vReal, vImag, SAMPLES, SAMPLING_FREQ);
+  long SOUNDDETECTOR_Amplitude = 1000;
+  arduinoFFT FFT = arduinoFFT(vReal, vImag, SOUNDDETECTOR_SAMPLES, SOUNDDETECTOR_SAMPLING_FREQ);
   DEFINE_GRADIENT_PALETTE( purple_gp ) {
     0,   0, 212, 255,   //blue
   255, 179,   0, 255 }; //purple
@@ -207,18 +217,25 @@
   128,   231,   0,    0,   //red
   192,   255, 218,    0,   //yellow
   255,   200, 200,  200 }; //white
+  DEFINE_GRADIENT_PALETTE( fire_gp ) {
+    0,   255,   0,    0,   //red
+  64,   255, 64, 0,   //orange
+  128,   255, 128,    0,   //yellow
+  192,   255, 192,    0,   //light yellow
+  255,   255, 255,  255 }; //white
   CRGBPalette16 purplePal = purple_gp;
   CRGBPalette16 outrunPal = outrun_gp;
   CRGBPalette16 greenbluePal = greenblue_gp;
   CRGBPalette16 heatPal = redyellow_gp;
+  CRGBPalette16 heaterPal = fire_gp;
   uint8_t colorTimer = 0;
   int buttonPushCounter = 0;
   int SOUNDDETECTOR_averageAudioInput = 0;
   int SOUNDDETECTOR_decay = 0; // HOW MANY MS BEFORE ONE LIGHT DECAY
   int SOUNDDETECTOR_decay_check = 0;
-  long SOUNDDETECTOR_pre_react = 0; // NEW SPIKE CONVERSION
-  long SOUNDDETECTOR_react = 0; // NUMBER OF LEDs BEING LIT
-  long SOUNDDETECTOR_post_react = 0; // OLD SPIKE CONVERSION
+  int SOUNDDETECTOR_pre_react = 0; // NEW SPIKE CONVERSION
+  int SOUNDDETECTOR_react = 0; // NUMBER OF LEDs BEING LIT
+  int SOUNDDETECTOR_post_react = 0; // OLD SPIKE CONVERSION
 #endif
 
 String softwareVersion = "version-3.0.1-alpha";
@@ -310,6 +327,7 @@ CRGB LEDs[NUM_LEDS];
 Preferences preferences;
 #if HAS_DHT
   DHT dht(DHT_PIN, DHTTYPE);
+  int altitudeLocal = 81;  //in meters
 #endif
 WebServer server(80);
 HTTPUpdateServer httpUpdateServer;
@@ -417,6 +435,8 @@ int lightshowMode = 0;
 byte randomSpectrumMode = 0;
 int suspendFrequency = 1;  //in minutes
 byte suspendType = 0; //0-off, 1-digits-only, 2-everything
+static int prevPeak[SOUNDDETECTOR_BANDS_WIDTH] = {0}; // Initialize all elements to 0
+
 
 CRGB spectrumColor = CRGB(r15_val, g15_val, b15_val);
 CRGB spectrumBackground = CRGB(r17_val, g17_val, b17_val);
@@ -619,7 +639,7 @@ QueueHandle_t jobQueue;
 void setup() {
   Serial.begin(115200);
   #if HAS_SOUNDDETECTOR
-    sampling_period_us = round(1000000 * (1.0 / SAMPLING_FREQ));
+    sampling_period_us = round(1000000 * (1.0 / SOUNDDETECTOR_SAMPLING_FREQ));
   #endif
   loadWebPageHandlers();  //load about 900 webpage handlers from the bottom of this sketch
 
@@ -652,14 +672,19 @@ void setup() {
     }
   #endif
 
-  #if HAS_SOUNDDETECTOR
-    //init audio gate inpute detection
-    pinMode(SOUNDDETECTOR_AUDIO_GATE_PIN, INPUT_PULLUP);
-    pinMode(SOUNDDETECTOR_ENVELOPE_IN_PIN, INPUT);  //setup microphone
 
-    // setup analog read to avoid spikes
-    adc1_config_width(ADC_WIDTH_12Bit);
-    adc1_config_channel_atten(ADC1_GPIO32_CHANNEL, ADC_ATTEN_DB_11);
+
+
+  #if HAS_SOUNDDETECTOR
+    // Initialize peaks to zero
+    for (byte band = 0; band < SOUNDDETECTOR_BANDS_WIDTH; band++) {
+        peak[band] = 0;
+        prevPeak[band] = 0;
+    }
+
+
+    i2sConfig();
+    i2sPins();
   #endif
 
   // init temp & humidity sensor
@@ -683,15 +708,15 @@ void setup() {
   Config.reconnectInterval = 6;
   Portal.config(Config);      
 
-  Serial.println();
+  Serial.println("Wifi Starting");
   WiFi.hostname(host); //set hostname
 
   // setup AutoConnect to control WiFi
   if (Portal.begin()) {
-    Serial.println("WiFi connected: " + WiFi.localIP().toString());
+    Serial.println("WiFi Connected: " + WiFi.localIP().toString());
     WiFi_startTime = millis();
     WiFi_retryCount = 0;
-   }  
+   }  else {Serial.println("Wifi Failed");}
 
   //use mdns for host name resolution
   if (!MDNS.begin(host)) { //http://shelfclock
@@ -764,7 +789,7 @@ void setup() {
   #if HAS_BUZZER
     //init rtttl (functions that play the alarms)
     pinMode(BUZZER_PIN, OUTPUT);
-    rtttl::begin(BUZZER_PIN, "Intel:d=4,o=5,b=400:32p,d,g,d,2a");  //play mario sound and set initial brightness level
+   rtttl::begin(BUZZER_PIN, "Intel:d=4,o=5,b=400:32p,d,g,d,2a");  //play mario sound and set initial brightness level
     while( !rtttl::done() ){GetBrightnessLevel(); rtttl::play();}
         Serial.println("get list of songs");
     getListOfSongs();
@@ -832,6 +857,7 @@ void getRemoteWeather() {
 }
 
 void loop(){
+  
   server.handleClient(); 
   Portal.handleRequest(); 
   if (WiFi.status() != WL_CONNECTED) {
@@ -989,10 +1015,7 @@ void loop(){
   }
 
   displayRealtimeMode();  //always run outside time loop for speed, but only really show when it's needed
-
 }  // end of main loop
-
-
 
 
 void displayTimeMode() {  //main clock function
@@ -1231,10 +1254,17 @@ void displayTemperatureMode() {   //miain temp function
   static int countFlip = 1;
   currentMode = 0;
   #if HAS_DHT
-    float h = dht.readHumidity();        // read humidity
+    float humidTemp = dht.readHumidity();        // read humidity
     float sensorTemp = dht.readTemperature();     // read temperature
     float f = dht.readTemperature(true);
-    if (isnan(h) || isnan(sensorTemp) || isnan(f)) {
+    // float saturationVaporPressure = 6.1078 * pow(10, (7.5 * sensorTemp / (237.3 + sensorTemp)));  // Calculate saturation vapor pressure
+    // float vaporPressure = saturationVaporPressure * (humidTemp / 100.0);  // Calculate vapor pressure
+    // float absoluteHumidity = 217 * vaporPressure / (273.15 + sensorTemp);  // Calculate absolute humidity
+    // float humidityRatio = 0.622 * vaporPressure / (101325 - vaporPressure);
+    float heatIndex = -8.784695 + 1.61139411 * sensorTemp + 2.338549 * humidTemp + -0.14611605 * sensorTemp * humidTemp + -0.01230809 * pow(sensorTemp, 2) + -0.01642482 * pow(humidTemp, 2) + 0.00221173 * pow(sensorTemp, 2) * humidTemp + 0.00072546 * sensorTemp * pow(humidTemp, 2) + -0.00000358 * pow(sensorTemp, 2) * pow(humidTemp, 2);
+    heatIndex += altitudeLocal * 0.0065;  // Adjust heat index based on altitude
+    sensorTemp = heatIndex;
+    if (isnan(humidTemp) || isnan(sensorTemp) || isnan(f)) {
       Serial.println(F("Failed to read from DHT sensor!"));
       return;
     }
@@ -1345,6 +1375,7 @@ void displayHumidityMode() {   //main humidity function
     float sensorHumi = dht.readHumidity();        // read humidity
     float t = dht.readTemperature();     // read temperature
     float f = dht.readTemperature(true);
+
     if (isnan(sensorHumi) || isnan(t) || isnan(f)) {
       Serial.println(F("Failed to read from DHT sensor!"));
       return;
@@ -1606,12 +1637,14 @@ void displayRealtimeMode(){   //main RealtimeModes function, always is running
   if ( (suspendType == 0 || isAsleep == 0) && clockMode == 5 && lightshowMode == 7) {EVERY_N_MILLISECONDS(150) {Cylon(); FastLED.show();}}
 }//end of RealtimeModes
 
+
+
 #if HAS_SOUNDDETECTOR
 void rainbowBars(int band, int barHeight) {
   int xStart = LEDS_PER_SEGMENT * 2 * band;
-    for (int y = 0; y < TOP; y++) {
+    for (int y = 0; y < SOUNDDETECTOR_BANDS_HEIGHT; y++) {
       if ( barHeight >= y)  
-        LEDs[ANALYZER[xStart + y]] = CHSV(band * (255 / NUM_BANDS), 255, 255);
+        LEDs[ANALYZER[xStart + y]] = CHSV(band * (255 / SOUNDDETECTOR_BANDS_WIDTH), 255, 255);
       else
         LEDs[ANALYZER[xStart + y]] = CRGB::Black;  
     }
@@ -1619,7 +1652,7 @@ void rainbowBars(int band, int barHeight) {
 
 void purpleBars(int band, int barHeight) {
   int xStart = LEDS_PER_SEGMENT * 2 * band;
-    for (int y = 0; y < TOP; y++) {
+    for (int y = 0; y < SOUNDDETECTOR_BANDS_HEIGHT; y++) {
       if ( barHeight >= y)  
         LEDs[ANALYZER[xStart + y]] = ColorFromPalette(purplePal, y * (255 / (barHeight + 1)));
       else
@@ -1627,9 +1660,19 @@ void purpleBars(int band, int barHeight) {
     }
 }
 
+void fireBars(int band, int barHeight) {
+  int xStart = LEDS_PER_SEGMENT * 2 * band;
+    for (int y = 0; y < SOUNDDETECTOR_BANDS_HEIGHT; y++) {
+      if ( barHeight >= y)  
+        LEDs[ANALYZER[xStart + y]] = ColorFromPalette(heaterPal, y * (255 / (barHeight + 1)));
+      else
+        LEDs[ANALYZER[xStart + y]] = CRGB::Black;  
+    }
+}
+
 void changingBars(int band, int barHeight) {
   int xStart = LEDS_PER_SEGMENT * 2 * band;
-    for (int y = 0; y < TOP; y++) {
+    for (int y = 0; y < SOUNDDETECTOR_BANDS_HEIGHT; y++) {
       if ( barHeight >= y)  
         LEDs[ANALYZER[xStart + y]] = CHSV(y * (255 / (LEDS_PER_SEGMENT*2)) + colorTimer, 255, 255);
       else
@@ -1638,39 +1681,201 @@ void changingBars(int band, int barHeight) {
 }
 
 void centerBars(int band, int barHeight) {
-  int xStart = LEDS_PER_SEGMENT * 2 * band;
-  if (barHeight % 2 == 0) barHeight--;
-  int yStart = ((LEDS_PER_SEGMENT * 2 - barHeight) / 2 );
-    for (int y = yStart; y <= (yStart+barHeight); y++) {
-	  int colorIndex = constrain((y - yStart) * (255 / barHeight), 0, 255);
-      //if ( barHeight >= y)  
+    int xStart = LEDS_PER_SEGMENT * 2 * band;
+    int totalHeight = LEDS_PER_SEGMENT * 2;
+    // Clear the entire bar area first
+    for (int y = 0; y < totalHeight; y++) {
+        LEDs[ANALYZER[xStart + y]] = CRGB::Black;
+    }
+    if (barHeight % 2 == 0) barHeight--;
+    int yStart = (totalHeight - barHeight) / 2;
+    // Draw the bar
+    for (int y = yStart; y < yStart + barHeight; y++) {
+        int colorIndex = constrain((y - yStart) * (255 / barHeight), 0, 255);
         LEDs[ANALYZER[xStart + y]] = ColorFromPalette(heatPal, colorIndex);
-      //else
-        //LEDs[ANALYZER[xStart + y]] = CRGB::Black;  
     }
 }
 
 void whitePeak(int band) {
-  int xStart = LEDS_PER_SEGMENT * 2 * band;
-  int peakHeight = peak[band];
-  LEDs[ANALYZER[xStart + peakHeight]] = CHSV(0,0,255);  
+    int xStart = LEDS_PER_SEGMENT * 2 * band;
+    int peakHeight = peak[band];
+    // Clear the previous peak LED
+    LEDs[ANALYZER[xStart + prevPeak[band]]] = CRGB::Black;
+    // Draw the new peak
+    LEDs[ANALYZER[xStart + peakHeight]] = CHSV(0, 0, 255);
+    // Update the previous peak position
+    prevPeak[band] = peakHeight;
 }
 
 void outrunPeak(int band) {
-  int xStart = LEDS_PER_SEGMENT * 2 * band;
-  int peakHeight = peak[band];
-  LEDs[ANALYZER[xStart + peakHeight]] = ColorFromPalette(outrunPal, peakHeight * (255 / (LEDS_PER_SEGMENT * 2)));  
+    int xStart = LEDS_PER_SEGMENT * 2 * band;
+    int peakHeight = peak[band];
+    // Clear the previous peak LED
+    LEDs[ANALYZER[xStart + prevPeak[band]]] = CRGB::Black;
+    // Draw the new peak
+    LEDs[ANALYZER[xStart + peakHeight]] = ColorFromPalette(outrunPal, peakHeight * (255 / (LEDS_PER_SEGMENT * 2)));
+    // Update the previous peak position
+    prevPeak[band] = peakHeight;
 }
 
 void waterfall(int band) {
-  int xStart = LEDS_PER_SEGMENT * 2 * band;
-  //double highestBandValue = 60000;        // Set this to calibrate your waterfall
-  // Move bar up
-  for (int y = (LEDS_PER_SEGMENT * 2)-1; y >= 1; y--) {
-    LEDs[ANALYZER[xStart + y]] = LEDs[ANALYZER[xStart + y-1]];
-  }
-  // Draw bottom point
-  LEDs[ANALYZER[xStart]] = CHSV(constrain(map(bandValues[band], 0,Amplitude*TOP, 160,0), 0,160), 255, 255);  
+    int totalHeight = LEDS_PER_SEGMENT * 2;
+    int xStart = totalHeight * band;
+    // Move bar up
+    for (int y = totalHeight - 1; y > 0; y--) {
+        int indexTo = xStart + y;
+        int indexFrom = xStart + y - 1;
+        // Check for out-of-bounds access
+        if (indexTo >= ANALYZER_SIZE || indexFrom >= ANALYZER_SIZE) {
+            Serial.println("Index out of bounds!");
+            continue; // Skip to avoid crashing
+        }
+        LEDs[ANALYZER[indexTo]] = LEDs[ANALYZER[indexFrom]];
+    }
+    // Map band value to hue
+    int hue = constrain(map(SOUNDDETECTOR_bandValues[band], 0, SOUNDDETECTOR_BANDS_HEIGHT, 160, 0), 0, 160);
+    // Draw bottom point
+    LEDs[ANALYZER[xStart]] = CHSV(hue, 255, 255);
+}
+
+void i2sConfig() {
+  const i2s_config_t i2s_config = {
+    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX),
+    .sample_rate = SOUNDDETECTOR_SAMPLING_FREQ,
+    .bits_per_sample = (i2s_bits_per_sample_t)SOUNDDETECTOR_BITS_PER_SAMPLE,
+    .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
+    .communication_format = (i2s_comm_format_t)(I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB),
+    .intr_alloc_flags = 0,
+    .dma_buf_count = 8,
+    .dma_buf_len = SOUNDDETECTOR_SAMPLES,
+    .use_apll = false
+  };
+  i2s_driver_install(SOUNDDETECTOR_I2S_PORT, &i2s_config, 0, NULL);
+  Serial.println("I2S Config Setup");
+}
+
+void i2sPins() {
+  const i2s_pin_config_t pin_config = {
+    .bck_io_num = SOUNDDETECTOR_I2S_SCK,
+    .ws_io_num = SOUNDDETECTOR_I2S_WS,
+    .data_out_num = I2S_PIN_NO_CHANGE,
+    .data_in_num = SOUNDDETECTOR_I2S_SD
+  };
+  i2s_set_pin(SOUNDDETECTOR_I2S_PORT, &pin_config);
+  Serial.println("I2S Pins Setup");
+}
+
+int i2sWaveformRead() {
+    static int16_t sBuffer[8]; // Buffer for I2S data
+    size_t bytesIn = 0;
+    float mean = 0;
+    // Perform I2S read
+    esp_err_t result = i2s_read(SOUNDDETECTOR_I2S_PORT, &sBuffer, sizeof(sBuffer), &bytesIn, portMAX_DELAY);
+    if (result != ESP_OK) {
+        Serial.println("I2S read failed");
+        return 0; // Return 0 if read fails
+    }
+    // Calculate mean value of the samples
+    int samples_read = bytesIn / sizeof(int16_t); // Calculate number of samples read
+    if (samples_read > 0) {
+        for (int i = 0; i < samples_read; ++i) {
+         if (sBuffer[i] < 0) { mean += (sBuffer[i]*-1); } else { mean += sBuffer[i]; }
+        }
+        mean /= samples_read; // Compute average
+    }
+    // Map the mean value from its range to 30-1023
+    // Assuming the mean ranges from -4096 to 4096 (16-bit signed)
+    if (mean < 30) mean = 0;
+    int scaledValue = map(mean, 30, 4096, 0, 1023);
+    scaledValue = constrain(mean, 0, 1023); // Ensure the value is within 0-4095
+   //   Serial.println(scaledValue);
+    return scaledValue;
+}
+
+void readAndProcessAudio() {
+    static double vReal[SOUNDDETECTOR_SAMPLES];
+    static double vImag[SOUNDDETECTOR_SAMPLES];
+    int16_t buffer[SOUNDDETECTOR_SAMPLES];
+    size_t bytesIn = 0;
+    static double AGC_amp = 1.0; // Initialize AGC amplitude
+    const double agcSpeed = 0.1;  // AGC adaptation speed (adjust as needed)
+    const double noiseFloor = 500.0; // Set this value to your noise floor threshold
+
+    // Reset SOUNDDETECTOR_bandValues for each loop iteration
+    memset(SOUNDDETECTOR_bandValues, 0, sizeof(SOUNDDETECTOR_bandValues));
+
+    // Read audio data (non-blocking)
+    i2s_read(SOUNDDETECTOR_I2S_PORT, &buffer, sizeof(buffer), &bytesIn, 0);
+    if (bytesIn < sizeof(buffer)) {
+        // Not enough data read, fill the rest with zeros
+        memset(&buffer[bytesIn / sizeof(int16_t)], 0, sizeof(buffer) - bytesIn);
+    }
+
+    // Convert samples to double
+    for (int i = 0; i < SOUNDDETECTOR_SAMPLES; i++) {
+        vReal[i] = (double)buffer[i];
+        vImag[i] = 0.0;
+    }
+
+    // Perform FFT
+    FFT.Windowing(vReal, SOUNDDETECTOR_SAMPLES, FFT_WIN_TYP_HAMMING, FFT_FORWARD);
+    FFT.Compute(vReal, vImag, SOUNDDETECTOR_SAMPLES, FFT_FORWARD);
+    FFT.ComplexToMagnitude(vReal, vImag, SOUNDDETECTOR_SAMPLES);
+
+    // Apply dynamic range compression and map FFT bins to frequency bands
+    double maxCompressedMagnitude = 0.0;
+
+    for (int i = 1; i < (SOUNDDETECTOR_SAMPLES / 2); i++) {
+        int bandIndex = -1;
+
+        if (i >= 1 && i <= 2) bandIndex = 0;          // 62.5 Hz - 125 Hz
+        else if (i >= 3 && i <= 4) bandIndex = 1;     // 187.5 Hz - 250 Hz
+        else if (i >= 5 && i <= 6) bandIndex = 2;     // 312.5 Hz - 375 Hz
+        else if (i >= 7 && i <= 8) bandIndex = 3;     // 437.5 Hz - 500 Hz
+        else if (i >= 9 && i <= 16) bandIndex = 4;    // 562.5 Hz - 1,000 Hz
+        else if (i >= 17 && i <= 52) bandIndex = 5;   // 1,062.5 Hz - 2,000 Hz
+        else if (i >= 53 && i <= 56) bandIndex = 6;   // 2,062.5 Hz - 3,000 Hz
+        else if (i >= 57 && i <= 100) bandIndex = 7;   // 3,062.5 Hz - 4,000 Hz
+
+        if (bandIndex != -1) {
+            // Apply noise floor threshold
+            if (vReal[i] < noiseFloor) {
+                vReal[i] = 0.0; // Ignore values below the noise floor
+            } else {
+                // Apply dynamic range compression using logarithmic scaling
+                double magnitude = vReal[i];
+                double compressedMagnitude = log10(magnitude - noiseFloor + 1.0); // +1 to avoid log(0)
+
+                // Sum the compressed magnitudes into the band
+                SOUNDDETECTOR_bandValues[bandIndex] += compressedMagnitude;
+
+                // Update maxCompressedMagnitude
+                if (compressedMagnitude > maxCompressedMagnitude) {
+                    maxCompressedMagnitude = compressedMagnitude;
+                }
+            }
+        }
+    }
+
+    // Update AGC amplitude towards the current maximum compressed magnitude
+    AGC_amp = (1.0 - agcSpeed) * AGC_amp + agcSpeed * maxCompressedMagnitude;
+
+    // Map compressed magnitudes to bar heights
+    for (int band = 0; band < SOUNDDETECTOR_BANDS_WIDTH; band++) {
+        double magnitude = SOUNDDETECTOR_bandValues[band];
+
+        // Scale using AGC amplitude
+        double scaledMagnitude = magnitude / (AGC_amp + 1e-6); // Avoid division by zero
+
+        // Map to bar height
+        int barHeight = (int)(scaledMagnitude * SOUNDDETECTOR_BANDS_HEIGHT);
+
+        // Constrain barHeight
+        barHeight = constrain(barHeight, 0, SOUNDDETECTOR_BANDS_HEIGHT);
+
+        // Store barHeight in SOUNDDETECTOR_bandValues[band]
+        SOUNDDETECTOR_bandValues[band] = barHeight;
+    }
 }
 
 void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-FastLED-Music-Visualizer/blob/master/music_visualizer.ino
@@ -1679,9 +1884,10 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
 	  const TProgmemRGBPalette16 FireColors = {0xFFFFCC, 0xFFFF99, 0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
 	  const TProgmemRGBPalette16 FireColors2 = {0xFFFF99, 0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
 	  const TProgmemRGBPalette16 FireColors3 = {0xFFFF66, 0xFFFF33, 0xFFFF00, 0xFFCC00, 0xFF9900, 0xFF6600, 0xFF3300, 0xFF3300, 0xFF0000, 0xCC0000, 0x990000, 0x660000, 0x330000, 0x110000};
-	  int audio_input = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); // ADD x2 HERE FOR MORE SENSITIVITY  
+	  int audio_input = i2sWaveformRead();
 	  if (audio_input > 0) {
-		SOUNDDETECTOR_pre_react = ((long)SPECTRUM_PIXELS * (long)audio_input) / 1023L; // TRANSLATE AUDIO LEVEL TO NUMBER OF LEDs
+   //   Serial.println("spectrum running");
+		SOUNDDETECTOR_pre_react = (SPECTRUM_PIXELS * audio_input) / 1023L; // TRANSLATE AUDIO LEVEL TO NUMBER OF LEDs
 		if (SOUNDDETECTOR_pre_react > SOUNDDETECTOR_react) // ONLY ADJUST LEVEL OF LED IF LEVEL HIGHER THAN CURRENT LEVEL
 		  SOUNDDETECTOR_react = SOUNDDETECTOR_pre_react;
 	   }
@@ -1743,87 +1949,21 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
 	  }
 	}// end spectrumMode < 12
   else {
-    if (buttonPushCounter != 5) {
-      // clear analyzer;
-      for (int x=0; x < ((NUMBER_OF_DIGITS+1) *(LEDS_PER_SEGMENT*2)); x++) {
-        LEDs[ANALYZER[x]] = CRGB::Black;
-      }
+
+    // Reset SOUNDDETECTOR_bandValues[]
+    for (int i = 0; i<SOUNDDETECTOR_BANDS_WIDTH; i++){
+      SOUNDDETECTOR_bandValues[i] = 0;
     }
 
-    // Reset bandValues[]
-    for (int i = 0; i<NUM_BANDS; i++){
-      bandValues[i] = 0;
-    }
-
-    // Sample the audio pin
-    for (int i = 0; i < SAMPLES; i++) {
-      newTime = micros();
-      //vReal[i] = analogRead(AUDIO_IN_PIN); // A conversion takes about 9.7uS on an ESP32
-      vReal[i] = adc1_get_raw(ADC1_GPIO32_CHANNEL);
-      vImag[i] = 0;
-      while ((micros() - newTime) < sampling_period_us) { /* chill */ }
-    }
-
-    // Remove spikes
-    for (int i = 1; i < SAMPLES-1; i++) {
-      if (vReal[i] > 4093)
-        if (vReal[i+1] > 4093) {
-          if (i < (SAMPLES-2))
-            vReal[i] = (vReal[i-1] + vReal[i+2]) / 2;
-          else
-            vReal[i] = vReal[i-1];
-        }
-        else 
-          vReal[i] = (vReal[i-1] + vReal[i+1]) / 2;
-    }
-
-	/*long maxr = 0;
-	long minr = 4085;
-    for (int i = 0; i < SAMPLES; i++) {
-		if (maxr < vReal[i]) maxr = vReal[i];
-		if (minr > vReal[i]) minr = vReal[i];
-	}*/
-
-	//char buffer[15];
-  /*for (int i = 0; i < SAMPLES; i++) {
-    sprintf(buffer, "%d\r\n", (int)vReal[i]);
-    prn(buffer);
-  }
-  prn("0\r\n");*/
-
-    // Compute FFT
-    FFT.DCRemoval();
-    FFT.Windowing(FFT_WIN_TYP_HAMMING, FFT_FORWARD);
-    FFT.Compute(FFT_FORWARD);
-    FFT.ComplexToMagnitude();
-
-    // Analyse FFT results
-    for (int i = 2; i < (SAMPLES/2); i++){       // Don't use sample 0 and only first SAMPLES/2 are usable. Each array element represents a frequency bin and its value the amplitude.
-      if (vReal[i] > NOISE) {                    // Add a crude noise filter
-
-        //8 bands, 12kHz top band
-        if ( i<=3 )       bandValues[0]  += (int)vReal[i];
-        else if ( i<=6 )  bandValues[1]  += (int)vReal[i];
-        else if ( i<=13 ) bandValues[2]  += (int)vReal[i];
-        else if ( i<=27 ) bandValues[3]  += (int)vReal[i];
-        else if ( i<=55 ) bandValues[4]  += (int)vReal[i];
-        else if ( i<=112) bandValues[5]  += (int)vReal[i];
-        else if ( i<=229) bandValues[6]  += (int)vReal[i];
-        else bandValues[7]  += (int)vReal[i];
-
-      }
-    }
+    readAndProcessAudio();
 
     // Process the FFT data into bar heights
-    for (byte band = 0; band < NUM_BANDS; band++) {
+    for (byte band = 0; band < SOUNDDETECTOR_BANDS_WIDTH; band++) {
 
       // Scale the bars for the display
-      int barHeight = bandValues[band] / Amplitude;
-      if (barHeight > TOP) {
-        Amplitude += ((barHeight - TOP) /8);
-        //sprintf(buffer, "%d %d %d\r\n", Amplitude, band, (barHeight - TOP));
-        //prn(buffer);
-        barHeight = TOP;
+      int barHeight = SOUNDDETECTOR_bandValues[band] ;     if (barHeight > SOUNDDETECTOR_BANDS_HEIGHT) {
+        SOUNDDETECTOR_Amplitude += ((barHeight - SOUNDDETECTOR_BANDS_HEIGHT) /8);
+        barHeight = SOUNDDETECTOR_BANDS_HEIGHT;
       }
 
       // Small amount of averaging between frames
@@ -1831,10 +1971,10 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
 
       // Move peak up
       if (barHeight > peak[band]) {
-        peak[band] = min(TOP, barHeight);
+        peak[band] = min(SOUNDDETECTOR_BANDS_HEIGHT, barHeight);
       }
 
-      if (spectrumMode < 12 + 6)
+      if (spectrumMode < 12 + 7)
 		    buttonPushCounter = spectrumMode - 12;
 
       // Draw bars
@@ -1855,6 +1995,9 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
           changingBars(band, barHeight);
           break;
         case 5:
+          fireBars(band, barHeight);
+          break;
+        case 6:
           waterfall(band);
           break;
       }
@@ -1879,38 +2022,47 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
         case 5:
           // No peaks
           break;
+        case 6:
+          // No peaks
+          break;
       }
 
       // Save oldBarHeights for averaging later
       oldBarHeights[band] = barHeight;
     }
 
-    // Decay peak
-    EVERY_N_MILLISECONDS(60) {
-      for (byte band = 0; band < NUM_BANDS; band++)
-        if (peak[band] > 0) peak[band] -= 1;
-    }
-
+	// Decay peak
+	EVERY_N_MILLISECONDS(60) {
+		for (byte band = 0; band < SOUNDDETECTOR_BANDS_WIDTH; band++) {
+			if (peak[band] > 0) {
+				peak[band] -= 1;
+			} else {
+				peak[band] = 0; // Ensure it doesn't go negative
+			}
+		}
+	}
+/*
+	Serial.print("Peak values: ");
+	for (byte band = 0; band < SOUNDDETECTOR_BANDS_WIDTH; band++) {
+		Serial.print(peak[band]);
+		Serial.print(" ");
+	}
+	Serial.println();
+*/
     // Used in some of the patterns
     EVERY_N_MILLISECONDS(10) {
       colorTimer++;
     }
 
     EVERY_N_SECONDS(1) {
-      if (Amplitude > 500) {
-        Amplitude -= (Amplitude /150);
-        //sprintf(buffer, "%d 0\r\n", Amplitude);
-        //prn(buffer);
+      if (SOUNDDETECTOR_Amplitude > 500) {
+        SOUNDDETECTOR_Amplitude -= (SOUNDDETECTOR_Amplitude /150);
       }
-     /* int audio_input = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN);
-      char buffer[15];
-      sprintf(buffer, "%d %d  ", Amplitude, audio_input);
-      prn(buffer);*/
     }
 
     EVERY_N_SECONDS(10) {
 		// Auto Switch mode
-      if (spectrumMode >= 12 + 6) buttonPushCounter = (buttonPushCounter + 1) % 6;
+      if (spectrumMode >= 12 + 7) buttonPushCounter = (buttonPushCounter + 1) % 7;
     }
 
     FastLED.show();
@@ -2162,18 +2314,18 @@ void checkSleepTimer(){  //controls suspend mode
   if(!rtttl::isPlaying()) {  // don't allow chimes to keep it awake. 
     if (suspendType != 0) {sleepTimerCurrent++;}  //sleep enabled? add one to timer
       #if HAS_SOUNDDETECTOR
-        //if (digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN)==HIGH) {sleepTimerCurrent = 0; isAsleep = 0;}   //sound sensor went off (while checking this function)? wake up
-        int audio_input1 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-        if (audio_input1 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-        int audio_input2 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-        if (audio_input2 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-        int audio_input3 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-        if (audio_input3 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-        int audio_input4 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-        if (audio_input4 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-        int audio_input5 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-        if (audio_input5 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-        SOUNDDETECTOR_averageAudioInput = (audio_input1 + audio_input2 + audio_input3 + audio_input4 + audio_input5) / 5;
+ /*       int audio_input1 = i2sWaveformRead(); 
+        if (audio_input1 > 100) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+        int audio_input2 = i2sWaveformRead(); 
+        if (audio_input2 > 100) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+        int audio_input3 = i2sWaveformRead(); 
+        if (audio_input3 > 100) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+        int audio_input4 = i2sWaveformRead(); 
+        if (audio_input4 > 100) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+        int audio_input5 = i2sWaveformRead();
+        if (audio_input5 > 100) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+        */
+        SOUNDDETECTOR_averageAudioInput = i2sWaveformRead();
         if (SOUNDDETECTOR_averageAudioInput > 50) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
       #endif
     if ((suspendType != 0) && sleepTimerCurrent >= (suspendFrequency * 60)) {sleepTimerCurrent = 0; isAsleep = 1; allBlank(); }  //sleep enabled, been some amount of time, go to sleep
@@ -2181,17 +2333,16 @@ void checkSleepTimer(){  //controls suspend mode
   #else
     #if HAS_SOUNDDETECTOR
       if (suspendType != 0) {sleepTimerCurrent++;}  //sleep enabled? add one to timer
-      //if (digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN)==HIGH) {sleepTimerCurrent = 0; isAsleep = 0;}   //sound sensor went off (while checking this function)? wake up
-      int audio_input1 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-      if (audio_input1 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-      int audio_input2 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-      if (audio_input2 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-      int audio_input3 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-      if (audio_input3 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-      int audio_input4 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-      if (audio_input4 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
-      int audio_input5 = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-      if (audio_input5 > 200) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+      int audio_input1 = i2sWaveformRead();
+      if (audio_input1 > 100) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+      int audio_input2 = i2sWaveformRead();
+      if (audio_input2 > 100) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+      int audio_input3 = i2sWaveformRead(); 
+      if (audio_input3 > 100) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+      int audio_input4 = i2sWaveformRead();
+      if (audio_input4 > 100) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
+      int audio_input5 = i2sWaveformRead(); 
+      if (audio_input5 > 100) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
       SOUNDDETECTOR_averageAudioInput = (audio_input1 + audio_input2 + audio_input3 + audio_input4 + audio_input5) / 5;
       if (SOUNDDETECTOR_averageAudioInput > 50) {sleepTimerCurrent = 0; isAsleep = 0;} //try it with the real sensor, the digital one was tripping false positives just as much
       if ((suspendType != 0) && sleepTimerCurrent >= (suspendFrequency * 60)) {sleepTimerCurrent = 0; isAsleep = 1; allBlank(); }  //sleep enabled, been some amount of time, go to sleep
@@ -2215,9 +2366,9 @@ void GetBrightnessLevel() {   //samples the photoresister and set brightness
      sumBrightness += photoresisterReadings[i];  // add all the current readings together
     }
  //   Serial.println(analogRead(PHOTORESISTER_PIN));
-   lightSensorValue = multiMap<int>(sumBrightness / PHOTO_SAMPLES, photo_in, photo_out, PHOTO_SIZE);
+  // lightSensorValue = multiMap<int>(sumBrightness / PHOTO_SAMPLES, photo_in, photo_out, PHOTO_SIZE);
   //lightSensorValue = 255 - (((sumBrightness / PHOTO_SAMPLES) * (254)) / 4095);  //linear conversion of 0-4095 to 255 to 40, after getting the average of the readings
-  //lightSensorValue = 275 - (((sumBrightness / PHOTO_SAMPLES) * (245)) / 4095);  //linear conversion of 0-4095 to 305 to 10 (a little brighter), after getting the average of the readings
+  lightSensorValue = 275 - (((sumBrightness / PHOTO_SAMPLES) * (245)) / 4095);  //linear conversion of 0-4095 to 305 to 10 (a little brighter), after getting the average of the readings
   if (lightSensorValue > 255) {lightSensorValue = 255;} //constrain brightness
     if (brightness != 10) {  //if not set to auto-dim just use user set brightness
       FastLED.setBrightness(brightness);
@@ -2511,10 +2662,10 @@ void Chase() {   //lightshow chase mode
  
 void Twinkles() {
 #if HAS_SOUNDDETECTOR
-  int audio_input = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-  int Level = map(audio_input, 100, 2000, 50, 210);
+  int audio_input = i2sWaveformRead();
+  int Level = map(audio_input, 0, 1023, 50, 210);
   if (audio_input < 100){  Level = 50;  }
-  if (audio_input > 2000){  Level = 210;  }
+  if (audio_input > 1023){  Level = 210;  }
 #else
   int Level = 100;  //set to default if no audio board
 #endif
@@ -2616,14 +2767,14 @@ void updateMatrix() {
 
 void blueRain() {
 #if HAS_SOUNDDETECTOR
-    int audio_input = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-  int Level = map(audio_input, 100, 2000, 0, 400);
+    int audio_input = i2sWaveformRead(); 
+  int Level = map(audio_input, 0, 1023, 0, 400);
   if (audio_input < 100){  Level = 0;  }
-  if (audio_input > 2000){  Level = 400;  }
+  if (audio_input > 1023){  Level = 400;  }
 #else
   int Level = 400;  //set to default if no sound board
 #endif
-    Serial.println(Level);
+  //  Serial.println(Level);
     int delayRain = 400-Level;
   EVERY_N_MILLIS_I( thistimer, 400 ) { // initial period = 100ms
 thistimer.setPeriod(delayRain);
@@ -2782,10 +2933,10 @@ void Snake() {  //real random snake mode with random food changing its color
   if (snakePosition == foodSpot) { oldsnakecolor = spotcolor;  snakeWaiting = 1; foodSpot = 40;}  //did snake find the food, change snake color
   if (snakeWaiting > 0) {snakeWaiting = snakeWaiting + 1;} //counting while waiting
 #if HAS_SOUNDDETECTOR
-  int audio_input = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN); 
-  int Level = map(audio_input, 100, 2000, 1, 10);
+  int audio_input = i2sWaveformRead(); 
+  int Level = map(audio_input, 0, 1023, 1, 10);
   if (audio_input < 100){  Level = 1;  }
-  if (audio_input > 2000){  Level = 10;  }
+  if (audio_input > 1023){  Level = 10;  }
 #else
   int Level = 10;
 #endif
@@ -4738,6 +4889,12 @@ void loadWebPageHandlers() {
     #if HAS_DHT
       int humidTemp = dht.readHumidity();        // read humidity
       float sensorTemp = dht.readTemperature();     // read temperature
+      float saturationVaporPressure = 6.1078 * pow(10, (7.5 * sensorTemp / (237.3 + sensorTemp)));  // Calculate saturation vapor pressure
+      float vaporPressure = saturationVaporPressure * (humidTemp / 100.0);  // Calculate vapor pressure
+      float absoluteHumidity = 217 * vaporPressure / (273.15 + sensorTemp);  // Calculate absolute humidity
+      float humidityRatio = 0.622 * vaporPressure / (101325 - vaporPressure);
+      float heatIndex = -8.784695 + 1.61139411 * sensorTemp + 2.338549 * humidTemp + -0.14611605 * sensorTemp * humidTemp + -0.01230809 * pow(sensorTemp, 2) + -0.01642482 * pow(humidTemp, 2) + 0.00221173 * pow(sensorTemp, 2) * humidTemp + 0.00072546 * sensorTemp * pow(humidTemp, 2) + -0.00000358 * pow(sensorTemp, 2) * pow(humidTemp, 2);
+      heatIndex += altitudeLocal * 0.0065;  // Adjust heat index based on altitude
     #endif
     char tempRTC[64]="";
     char tempRTCE[64]="";
@@ -4775,7 +4932,10 @@ void loadWebPageHandlers() {
       json["DHT_PIN"] = DHT_PIN;
       json["DHT11 C Temp"] = sensorTemp;
       json["DHT11 F Temp"] = (sensorTemp * 1.8000) + 32;
-      json["DHT11 Humidity"] = humidTemp;
+      json["DHT11 Humidity (Relative)"] = humidTemp;
+      json["DHT11 Humidity (Absolute)"] = absoluteHumidity;
+      json["DHT11 Humidity (Ratio)"] = humidityRatio;
+      json["DHT11 (Heat Index F)"] = (heatIndex * 1.8000) + 32;
       json["DHTTYPE"] = DHTTYPE;
     #endif
     json["DSTime"] = DSTime;
@@ -4800,14 +4960,46 @@ void loadWebPageHandlers() {
     json["SEGMENTS_LEDS"] = SEGMENTS_LEDS;
     json["SEGMENTS_PER_NUMBER"] = SEGMENTS_PER_NUMBER;
     #if HAS_SOUNDDETECTOR
-      json["SOUNDDETECTOR_AUDIO_GATE_PIN"] = SOUNDDETECTOR_AUDIO_GATE_PIN;
-      json["SOUNDDETECTOR_ENVELOPE_IN_PIN"] = SOUNDDETECTOR_ENVELOPE_IN_PIN;
+      json["SOUNDDETECTOR_I2S_WS"] = SOUNDDETECTOR_I2S_WS;
+      json["SOUNDDETECTOR_I2S_SD"] = SOUNDDETECTOR_I2S_SD;
+      json["SOUNDDETECTOR_I2S_SCK"] = SOUNDDETECTOR_I2S_SCK;
+      json["SOUNDDETECTOR_I2S_PORT"] = SOUNDDETECTOR_I2S_PORT;
+      json["SOUNDDETECTOR_SAMPLING_FREQ"] = SOUNDDETECTOR_SAMPLING_FREQ;
+      json["SOUNDDETECTOR_SAMPLES"] = SOUNDDETECTOR_SAMPLES;
+      json["SOUNDDETECTOR_BITS_PER_SAMPLE"] = SOUNDDETECTOR_BITS_PER_SAMPLE;
+      json["SOUNDDETECTOR_BANDS_WIDTH"] = SOUNDDETECTOR_BANDS_WIDTH;
+      json["SOUNDDETECTOR_BANDS_HEIGHT"] = SOUNDDETECTOR_BANDS_HEIGHT;
       json["SOUNDDETECTOR_averageAudioInput"] = SOUNDDETECTOR_averageAudioInput;
       json["SOUNDDETECTOR_decay"] = SOUNDDETECTOR_decay;
       json["SOUNDDETECTOR_decay_check"] = SOUNDDETECTOR_decay_check;
       json["SOUNDDETECTOR_post_react"] = SOUNDDETECTOR_post_react;
       json["SOUNDDETECTOR_pre_react"] = SOUNDDETECTOR_pre_react;
       json["SOUNDDETECTOR_react"] = SOUNDDETECTOR_react;
+      json["SOUNDDETECTOR_Amplitude"] = SOUNDDETECTOR_Amplitude;
+      json["SOUNDDETECTOR_noiseThresholds[0]"] = SOUNDDETECTOR_noiseThresholds[0];
+      json["SOUNDDETECTOR_noiseThresholds[1]"] = SOUNDDETECTOR_noiseThresholds[1];
+      json["SOUNDDETECTOR_noiseThresholds[2]"] = SOUNDDETECTOR_noiseThresholds[2];
+      json["SOUNDDETECTOR_noiseThresholds[3]"] = SOUNDDETECTOR_noiseThresholds[3];
+      json["SOUNDDETECTOR_noiseThresholds[4]"] = SOUNDDETECTOR_noiseThresholds[4];
+      json["SOUNDDETECTOR_noiseThresholds[5]"] = SOUNDDETECTOR_noiseThresholds[5];
+      json["SOUNDDETECTOR_noiseThresholds[6]"] = SOUNDDETECTOR_noiseThresholds[6];
+      json["SOUNDDETECTOR_noiseThresholds[7]"] = SOUNDDETECTOR_noiseThresholds[7];
+/*      json["SOUNDDETECTOR_bandWeightingFactors[0]"] = SOUNDDETECTOR_bandWeightingFactors[0];
+      json["SOUNDDETECTOR_bandWeightingFactors[1]"] = SOUNDDETECTOR_bandWeightingFactors[1];
+      json["SOUNDDETECTOR_bandWeightingFactors[2]"] = SOUNDDETECTOR_bandWeightingFactors[2];
+      json["SOUNDDETECTOR_bandWeightingFactors[3]"] = SOUNDDETECTOR_bandWeightingFactors[3];
+      json["SOUNDDETECTOR_bandWeightingFactors[4]"] = SOUNDDETECTOR_bandWeightingFactors[4];
+      json["SOUNDDETECTOR_bandWeightingFactors[5]"] = SOUNDDETECTOR_bandWeightingFactors[5];
+      json["SOUNDDETECTOR_bandWeightingFactors[6]"] = SOUNDDETECTOR_bandWeightingFactors[6];
+      json["SOUNDDETECTOR_bandWeightingFactors[7]"] = SOUNDDETECTOR_bandWeightingFactors[7];*/
+      json["SOUNDDETECTOR_bandValues[0]"] = SOUNDDETECTOR_bandValues[0];
+      json["SOUNDDETECTOR_bandValues[1]"] = SOUNDDETECTOR_bandValues[1];
+      json["SOUNDDETECTOR_bandValues[2]"] = SOUNDDETECTOR_bandValues[2];
+      json["SOUNDDETECTOR_bandValues[3]"] = SOUNDDETECTOR_bandValues[3];
+      json["SOUNDDETECTOR_bandValues[4]"] = SOUNDDETECTOR_bandValues[4];
+      json["SOUNDDETECTOR_bandValues[5]"] = SOUNDDETECTOR_bandValues[5];
+      json["SOUNDDETECTOR_bandValues[6]"] = SOUNDDETECTOR_bandValues[6];
+      json["SOUNDDETECTOR_bandValues[7]"] = SOUNDDETECTOR_bandValues[7];
     #endif
     json["SPECTRUM_PIXELS"] = SPECTRUM_PIXELS;
     json["SPOT_LEDS"] = SPOT_LEDS;
@@ -4821,8 +5013,11 @@ void loadWebPageHandlers() {
     #if HAS_PHOTOSENSOR
       json["analogRead(PHOTORESISTER_PIN)"] = analogRead(PHOTORESISTER_PIN);
     #endif
+    #if HAS_DHT
+      json["altitudeLocal"] = altitudeLocal;
+    #endif
     #if HAS_SOUNDDETECTOR
-      json["analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN)"] = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN);
+   //   json["analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN)"] = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN);
     #endif
     json["breakOutSet"] = breakOutSet;
     json["brightness"] = brightness;
@@ -4846,7 +5041,7 @@ void loadWebPageHandlers() {
       json["defaultAudibleAlarm"] = SONGS[defaultAudibleAlarm];
     #endif
     #if HAS_SOUNDDETECTOR
-      json["digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN)"] = digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN);
+    //  json["digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN)"] = digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN);
     #endif
     json["dotsOn"] = dotsOn;
     json["endCountDownMillis"] = endCountDownMillis;
