@@ -1,7 +1,7 @@
 
 There is a newer VS Code and PlatformIO-based version of this code available but it hasn't been fully tested on all the hardware by me yet. <br>(I no longer have the original hardware, so my test rig is missing the LEDs and the audio circuit, but it compiles and seems to work blind via the web interface correctly)<br>
 It's located here if you want to give it a try.<br>
-https://github.com/MacGyverr/ShelfClock/tree/new-vscode-version
+https://github.com/MacGyverr/ShelfClock/tree/newer-vscode-wip
 
 
 <br>
