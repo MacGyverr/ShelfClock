@@ -25,3 +25,4 @@ All json settings to and from the webpages.
 Losts of problems.
 Hardly enough comments.
 VERY badly writen code.
+I have designed a printed circuit board to make the assembly of the control circuit easier. It is my first attempt at making a circuit board, as soon as I have built a verison from the manufactured test I'll post the gerbers. It costs $2 to have 5 of them made and anyone that wants one can go and have one made from it if they want.
