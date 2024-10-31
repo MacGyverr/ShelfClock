@@ -71,7 +71,7 @@
 #define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
 #define LED_PIN 2             // led control pin
 #define MILLI_AMPS 2400 
-#define LEDS_PER_SEGMENT 7    // can be 1 to 10 LEDS per segment (4 for test display, 7 for full)
+#define LEDS_PER_SEGMENT  7   // can be 1 to 10 LEDS per segment 
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
 #define PHOTO_SAMPLES 10      //number of samples to take from the photoresister
@@ -700,7 +700,15 @@ void setup() {
   FastLED.show();
   
   fakeClock(2);  // blink 12:00 like old clocks once did
-  
+
+  //display "no AP" while activating the wifi
+  allBlank();
+  displayNumber(79,6,CRGB::Red);  // n
+  displayNumber(80,4,CRGB::Red);  // o
+  displayNumber(34,2,CRGB::Red); // A
+  displayNumber(49,0,CRGB::Red);  // P
+  FastLED.show();
+
   Config.autoReconnect = true; // Enable auto-reconnect. 
   Config.portalTimeout = 20000; // Sets timeout value for the captive portal 
   Config.retainPortal = true; // Retains the portal function after timed-out 
@@ -716,6 +724,7 @@ void setup() {
     Serial.println("WiFi Connected: " + WiFi.localIP().toString());
     WiFi_startTime = millis();
     WiFi_retryCount = 0;
+    allBlank();  //clear "no AP" from screen once wifi is online
    }  else {Serial.println("Wifi Failed");}
 
   //use mdns for host name resolution
@@ -1692,7 +1701,7 @@ void centerBars(int band, int barHeight) {
     // Draw the bar
     for (int y = yStart; y < yStart + barHeight; y++) {
         int colorIndex = constrain((y - yStart) * (255 / barHeight), 0, 255);
-        LEDs[ANALYZER[xStart + y]] = ColorFromPalette(heatPal, colorIndex);
+        LEDs[ANALYZER[xStart + y]] = spectrumColor;
     }
 }
 
@@ -2063,6 +2072,7 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
     EVERY_N_SECONDS(10) {
 		// Auto Switch mode
       if (spectrumMode >= 12 + 7) buttonPushCounter = (buttonPushCounter + 1) % 7;
+      allBlank();
     }
 
     FastLED.show();
@@ -2440,12 +2450,12 @@ void allBlank() {   //clears all non-shelf LEDs to black
 void fakeClock(int loopy) {  //flashes 12:00 like all old clocks did
   fakeclockrunning = 1;
   for (int i=0; i<loopy; i++) {
-      for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Red;}
-      displayNumber(2,5,CRGB::Red);
-      for (int i=(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Black; }
-      for (int i=(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Black; }
-      displayNumber(0,2,CRGB::Red);
-      displayNumber(0,0,CRGB::Red); 
+      for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Red;}  // 1x:xx
+      displayNumber(2,5,CRGB::Red);  // x2:xx
+      for (int i=(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Black; }  // xx:xx
+      for (int i=(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1); i<(20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1); i++) { LEDs[i] = CRGB::Black; } // xx:xx
+      displayNumber(0,2,CRGB::Red); // xx:0x
+      displayNumber(0,0,CRGB::Red);  // xx:x0
       FastLED.show();
       delay(500);
       for (int i=(32*LEDS_PER_SEGMENT); i<(34*LEDS_PER_SEGMENT); i++) { LEDs[i] = CRGB::Black;}
@@ -2854,7 +2864,9 @@ void Fire2021() {
 void Snake() {  //real random snake mode with random food changing its color
   int move = 0;
   int fadeby = 130;
-  int pickOne = random(3);
+  int pickOne = random(4);
+  //Serial.print("Snake goes ");
+  //Serial.println(pickOne);
   //just write out every possible move, that's all, oh and make it random
   if (snakePosition == 0 && snakeLastDirection == 0 && move == 0)  {if (pickOne == 3) {snakeLastDirection = 3; snakePosition = 4; move = 1;} else {snakePosition = 5; move = 1;}}
   if (snakePosition == 0 && snakeLastDirection == 2 && move == 0)  {snakeLastDirection = 3; snakePosition = 1; move = 1;}
