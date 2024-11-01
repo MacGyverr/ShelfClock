@@ -71,7 +71,7 @@
 #define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
 #define LED_PIN 2             // led control pin
 #define MILLI_AMPS 2400 
-#define LEDS_PER_SEGMENT  7   // can be 1 to 10 LEDS per segment 
+#define LEDS_PER_SEGMENT  7   // can be 1 to 10 LEDS per segment
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
 #define PHOTO_SAMPLES 10      //number of samples to take from the photoresister
@@ -1096,10 +1096,9 @@ void displayTimeMode() {  //main clock function
   if (clockDisplayType == 1) {     //24-hour Military Time
     if (h1 < 1) { displayNumber(0,6,hourColor);}
     else  { displayNumber(h1,6,hourColor);}
-     
-      displayNumber(h2,4,hourColor);
-      displayNumber(m1,2,minColor);
-      displayNumber(m2,0,minColor); 
+    displayNumber(h2,4,hourColor);
+    displayNumber(m1,2,minColor);
+    displayNumber(m2,0,minColor); 
 	  BlinkDots();
   }
 
@@ -2520,13 +2519,13 @@ void ShelfDownLights() {  //turns on the drop lights on the underside of each sh
 
 
 
-void BlinkDots() {  //displays the 2 dots in the middle of the time (colon)
+void BlinkDots() {  //displays the dots in the middle of the time (colon, period, bar)
   if (dotsOn) {
   if (ClockColorSettings == 0 || ClockColorSettings == 1) {colonColor = CRGB(r3_val, g3_val, b3_val);}
     if (((ClockColorSettings == 2) || (ClockColorSettings == 4)) && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255));}
     if (ClockColorSettings == 3 && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { colonColor = hourColor;}
-    if (colonType == 0) {
-      if (clockDisplayType == 1 || clockDisplayType == 2) {     //12 24-hour Military Time
+    if (colonType == 0) {   //small colon
+      if (clockDisplayType == 1 || clockDisplayType == 2) {     //for 12 or 24-hour Military Time
         if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
         if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
         for (int i=17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2; i<17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
@@ -2534,7 +2533,7 @@ void BlinkDots() {  //displays the 2 dots in the middle of the time (colon)
         if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
         for (int i=19*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2; i<19*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}        
       }
-      else {
+      else {       //for non 12 or 24-hour Military Time
         if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
         if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
         for (int i=25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<25*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
@@ -2543,16 +2542,8 @@ void BlinkDots() {  //displays the 2 dots in the middle of the time (colon)
         for (int i=20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<20*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
       }
     }
-    if (colonType == 1) {
-      if (clockDisplayType == 1 || clockDisplayType == 2) {     //12 24-hour Military Time
-        if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
-        if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-        for (int i=17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+2; i++) { LEDs[i] = colonColor;}
-        if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
-        if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-        for (int i=19*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2-1; i<19*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+2; i++) { LEDs[i] = colonColor;}        
-      }
-      else {
+    if (colonType == 1) {  //big bar
+      if (clockDisplayType == 3) {     //anything but 12 or 24-hour Military Time
         if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
         if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
         for (int i=25*LEDS_PER_SEGMENT; i<26*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
@@ -2561,18 +2552,18 @@ void BlinkDots() {  //displays the 2 dots in the middle of the time (colon)
         for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
       }
     }
-    if (colonType == 2) {
+    if (colonType == 2) {  //small period
       if (ClockColorSettings == 4 && pastelColors == 0){ colonColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ colonColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-      if (clockDisplayType == 1 || clockDisplayType == 2) {     //12 24-hour Military Time
+      if (clockDisplayType == 1 || clockDisplayType == 2) {     //for 12 or 24-hour Military Time
         for (int i=17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2; i<17*LEDS_PER_SEGMENT+LEDS_PER_SEGMENT/2+1; i++) { LEDs[i] = colonColor;}
       }
-      else {
+      else {   //big period for non 12 or 24-hour Military Time
 	      for (int i=20*LEDS_PER_SEGMENT; i<21*LEDS_PER_SEGMENT; i++) { LEDs[i] = colonColor;}
       }
     }
-  } else {
-    if (clockDisplayType == 1 || clockDisplayType == 2) {     //12 24-hour Military Time
+  } else {  //hide all dots, blinking
+    if (clockDisplayType == 1 || clockDisplayType == 2) {     //12 or 24-hour Military Time
       for (int i=17*LEDS_PER_SEGMENT; i<18*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
       for (int i=19*LEDS_PER_SEGMENT; i<20*LEDS_PER_SEGMENT; i++) { LEDs[i] = CRGB::Black;}
     }
