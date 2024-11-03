@@ -71,7 +71,7 @@
 #define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
 #define LED_PIN 2             // led control pin
 #define MILLI_AMPS 2400 
-#define LEDS_PER_SEGMENT  7   // can be 1 to 10 LEDS per segment
+#define LEDS_PER_SEGMENT  4   // can be 1 to 10 LEDS per segment (4 for test display, 7 for full)
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
 #define PHOTO_SAMPLES 10      //number of samples to take from the photoresister
@@ -163,19 +163,21 @@
   a     a     a     a     a     a     a     a
   r     r     r     r     r     r     r     r
   0     1     2     3     4     5     6     7
+
     34    28    24    18    14     8     4
-  →→→ →→→  →→→ →→→ →→→ →→→  →→→
+    →→→   →→→   →→→  →→→   →→→   →→→   →→→
   ↑     ↓     ↑     ↓     ↑     ↓     ↑     ↓
   ↑33   ↓35   ↑23   ↓25   ↑13   ↓15   ↑3    ↓5
   ↑     ↓     ↑     ↓     ↑     ↓     ↑     ↓
   ↑ 36  ↓ 29  ↑ 26  ↓ 19  ↑ 16  ↓   9 ↑  6  ↓
-  ←←← ←←←  ←←← ←←← ←←← ←←←  ←←←
+    →→→   →→→   →→→  →→→   →→→   →→→   →→→
   ↑     ↓     ↑     ↓     ↑     ↓     ↑     ↓
   ↑32   ↓30   ↑22   ↓20   ↑12   ↓10   ↑2    ↓0
   ↑     ↓     ↑     ↓     ↑     ↓     ↑     ↓
   ↑ 31  ↓ 27  ↑ 21  ↓ 17  ↑ 11  ↓  7  ↑  1  ↓
-  ←←← ←←←  ←←← ←←← ←←← ←←←  ←←←
+   →→→   →→→   →→→  →→→   →→→   →→→   →→→  
   */
+
   #define bar0 seg(32), seg(33)
   #define bar1 nseg(30), nseg(35)
   #define bar2 seg(22), seg(23)
@@ -465,6 +467,7 @@ CRGB oldsnakecolor = CRGB::Green;
 CRGB spotcolor = CHSV(random(0, 255), 255, 255);
 
 const uint16_t FAKE_LEDs[FAKE_NUM_LEDS] = {digit0, fdigit1, digit2, fdigit3, digit4, fdigit5, digit6};
+
 //fake LED layout for spectrum (from the middle out)
 const uint16_t FAKE_LEDs_C_BMUP[SEGMENTS_LEDS] = {seg(17), seg(11), seg(21), seg(12), seg(20), seg(19), seg(27), seg(7), seg(22), seg(10), seg(26), seg(16), seg(25), seg(13), seg(18), seg(1), seg(31), seg(2), seg(30), seg(9), seg(29), seg(15), seg(23), seg(14), seg(24), seg(0), seg(32), seg(6), seg(36), seg(3), seg(35), seg(8), seg(28), seg(5), seg(33), seg(4), seg(34)};
 //fake LED layout for spectrum (bfrom the outside in)
@@ -638,12 +641,36 @@ QueueHandle_t jobQueue;
 
 void setup() {
   Serial.begin(115200);
+
+  //setup LEDs
+  FastLED.addLeds<LED_TYPE,LED_PIN,COLOR_ORDER>(LEDs,NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.setBrightness(255);
+  fill_solid(LEDs, NUM_LEDS, CRGB::Black);
+  FastLED.show();
+
+  fakeClock(2);  // blink 12:00 like old clocks once did
+
   #if HAS_SOUNDDETECTOR
     sampling_period_us = round(1000000 * (1.0 / SOUNDDETECTOR_SAMPLING_FREQ));
   #endif
+
+  //display "LoAd" while activating the websever
+  allBlank();
+  displayNumber(45,6,CRGB::Red);  // L
+  displayNumber(80,4,CRGB::Red);  // o
+  displayNumber(34,2,CRGB::Red); // A
+  displayNumber(69,0,CRGB::Red);  // d
+  FastLED.show();
   loadWebPageHandlers();  //load about 900 webpage handlers from the bottom of this sketch
 
   // Initialize FileFS 
+  //display "file" while activating the filesystem
+  allBlank();
+  displayNumber(39,6,CRGB::Red);  // F
+  displayNumber(42,4,CRGB::Red);  // I
+  displayNumber(45,2,CRGB::Red); // L
+  displayNumber(38,0,CRGB::Red);  // E
+  FastLED.show();
   Serial.println(F("Inizializing FS..."));
   if (FileFS.begin()){
       Serial.println(F("FileFS mounted correctly."));
@@ -653,54 +680,79 @@ void setup() {
       Serial.println(FileFS.usedBytes());
   }else{
       Serial.println(F("!An error occurred during FileFS mounting"));
+      //display "Err" if error
+      allBlank();
+      displayNumber(38,6,CRGB::Red);  // E
+      displayNumber(83,4,CRGB::Red);  // r
+      displayNumber(83,2,CRGB::Red); // r
+      FastLED.show();
   }
 
-    Serial.println("list setting folder files");
+  //display "SEtS"
+  allBlank();
+  displayNumber(52,6,CRGB::Red);  // S
+  displayNumber(38,4,CRGB::Red);  // E
+  displayNumber(85,2,CRGB::Red); // t
+  displayNumber(52,0,CRGB::Red);  // S
+  FastLED.show();
+  Serial.println("list setting folder files");
   listDir(FileFS, "/settings/", 0);
   //load settings from nvram and flash
-      Serial.println("load all settings from json file");
+  Serial.println("load all settings from json file");
   getclockSettings("generic"); //load all settings from json file
-      Serial.println("load all previously saved settings from Preferences");
+  Serial.println("load all previously saved settings from Preferences");
   loadSetupSettings();  //load all previously saved settings from Preferences
   
   #if HAS_RTC
+  //display "rtc"
+  allBlank();
+  displayNumber(83,6,CRGB::Red);  // r
+  displayNumber(85,4,CRGB::Red);  // t
+  displayNumber(68,2,CRGB::Red); // c
+  FastLED.show();
     //init DS3231 RTC
     if (! rtc.begin()) {
       Serial.println("Couldn't find DS3231 RTC");
       Serial.flush();
+      //display "Err"
+      allBlank();
+      displayNumber(38,6,CRGB::Red);  // E
+      displayNumber(83,4,CRGB::Red);  // r
+      displayNumber(83,2,CRGB::Red); // r
+      FastLED.show();
     //  abort();
     }
   #endif
 
 
-
-
   #if HAS_SOUNDDETECTOR
+    //display "Snd"
+    allBlank(); 
+    displayNumber(52,5,CRGB::Red); // S
+    displayNumber(79,3,CRGB::Red);  // n
+    displayNumber(69,1,CRGB::Red);  // d
+    FastLED.show();
     // Initialize peaks to zero
     for (byte band = 0; band < SOUNDDETECTOR_BANDS_WIDTH; band++) {
         peak[band] = 0;
         prevPeak[band] = 0;
     }
-
-
     i2sConfig();
     i2sPins();
   #endif
 
   // init temp & humidity sensor
   #if HAS_DHT
+    //display "dht"
+    allBlank();
+    displayNumber(69,6,CRGB::Red);  // d
+    displayNumber(73,4,CRGB::Red);  // h
+    displayNumber(85,2,CRGB::Red); // t
+    FastLED.show();
     Serial.println(F("DHTxx test!"));
     dht.begin();
   #endif
-
-  //setup LEDs
-  FastLED.addLeds<LED_TYPE,LED_PIN,COLOR_ORDER>(LEDs,NUM_LEDS).setCorrection(TypicalLEDStrip);
-  FastLED.setBrightness(255);
-  fill_solid(LEDs, NUM_LEDS, CRGB::Black);
-  FastLED.show();
   
-  fakeClock(2);  // blink 12:00 like old clocks once did
-
   //display "no AP" while activating the wifi
   allBlank();
   displayNumber(79,6,CRGB::Red);  // n
@@ -716,6 +768,11 @@ void setup() {
   Config.reconnectInterval = 6;
   Portal.config(Config);      
 
+  //display "AP" while activating the websever
+  allBlank();
+  displayNumber(34,4,CRGB::Red); // A
+  displayNumber(49,2,CRGB::Red);  // P
+  FastLED.show();
   Serial.println("Wifi Starting");
   WiFi.hostname(host); //set hostname
 
@@ -725,8 +782,22 @@ void setup() {
     WiFi_startTime = millis();
     WiFi_retryCount = 0;
     allBlank();  //clear "no AP" from screen once wifi is online
-   }  else {Serial.println("Wifi Failed");}
+   }  else {
+    Serial.println("Wifi Failed");
+    //display "Err" while activating the websever
+    allBlank();
+    displayNumber(38,6,CRGB::Red);  // E
+    displayNumber(83,4,CRGB::Red);  // r
+    displayNumber(83,2,CRGB::Red); // r
+    FastLED.show();
+    }
 
+  //display "dnS" while activating the websever
+  allBlank();
+  displayNumber(69,6,CRGB::Red);  // d
+  displayNumber(79,4,CRGB::Red);  // n
+  displayNumber(52,2,CRGB::Red); // S
+  FastLED.show();
   //use mdns for host name resolution
   if (!MDNS.begin(host)) { //http://shelfclock
     Serial.println("Error setting up MDNS responder!");
@@ -737,7 +808,13 @@ void setup() {
   Serial.println("mDNS responder started");
 
   //init and set the time of the internal RTC from NTP server
-      Serial.println("set the time of the internal RTC from NTP server");
+  //display "ntP" while activating the websever
+  allBlank();
+  displayNumber(79,6,CRGB::Red);  // n
+  displayNumber(85,4,CRGB::Red);  // t
+  displayNumber(49,2,CRGB::Red);  // P
+  FastLED.show();
+  Serial.println("set the time of the internal RTC from NTP server");
   configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
   
   #if HAS_RTC
@@ -758,6 +835,13 @@ void setup() {
     }
     //did the DS3231 lose power (battery dead/changed), if so, set from time recieved from the NTP above
     if (rtc.lostPower()) {
+      //display "bAtt" while activating the websever
+      allBlank();
+      displayNumber(67,6,CRGB::Red);  // b
+      displayNumber(34,4,CRGB::Red);  // A
+      displayNumber(85,2,CRGB::Red); // t
+      displayNumber(85,0,CRGB::Red);  // t
+      FastLED.show();
       Serial.println("DS3231's RTC lost power, setting the time via NTP!");
       if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
       int tempyear = (timeinfo.tm_year +1900);
@@ -777,13 +861,24 @@ void setup() {
   previousTimeMonth = timeinfo.tm_mon;
   
   // I assume this starts the OTA stuff
+  //display "OtA" 
+  allBlank();
+  displayNumber(48,6,CRGB::Red);  // O
+  displayNumber(85,4,CRGB::Red);  // t
+  displayNumber(34,2,CRGB::Red); // A
+  FastLED.show();
   httpUpdateServer.setup(&server);
 
   initGreenMatrix();   //setup lightshow functions
   raininit();          //setup lightshow functions
-  
-  allBlank();   //clear everything off the leds
-  
+    
+  //display "SErv" while activating the websever
+  allBlank();
+  displayNumber(52,6,CRGB::Red);  // S
+  displayNumber(38,4,CRGB::Red);  // E
+  displayNumber(83,2,CRGB::Red); // r
+  displayNumber(87,0,CRGB::Red);  // v
+  FastLED.show();
   server.enableCrossOrigin(true);
   server.enableCORS(true);
 
@@ -796,6 +891,13 @@ void setup() {
 
 
   #if HAS_BUZZER
+    //display "Song" while activating the websever
+    allBlank();
+    displayNumber(52,6,CRGB::Red);  // S
+    displayNumber(80,4,CRGB::Red);  // o
+    displayNumber(79,2,CRGB::Red); // n
+    displayNumber(72,0,CRGB::Red);  // g
+    FastLED.show();
     //init rtttl (functions that play the alarms)
     pinMode(BUZZER_PIN, OUTPUT);
    rtttl::begin(BUZZER_PIN, "Intel:d=4,o=5,b=400:32p,d,g,d,2a");  //play mario sound and set initial brightness level
@@ -805,17 +907,33 @@ void setup() {
   #endif
 
   
-        Serial.println("load array of schedule files on drive ");
+  //display "Schd" while activating the websever
+  allBlank();
+  displayNumber(52,6,CRGB::Red);  // S
+  displayNumber(68,4,CRGB::Red);  // c
+  displayNumber(73,2,CRGB::Red); // h
+  displayNumber(69,0,CRGB::Red);  // d
+  FastLED.show();
+  Serial.println("load array of schedule files on drive ");
   createSchedulesArray();  //load array of schedule files on drive
-        Serial.println("print out schedule array");
+  Serial.println("print out schedule array");
   processSchedules(0);  //print out schedule array
 
-        Serial.println("start of job queue");
-    jobQueue = xQueueCreate(30, sizeof(String *));
-        Serial.println("start of xTaskCreatePinnedToCore");
-    xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 0, &Task1, 0);
+  Serial.println("start of job queue");
+  jobQueue = xQueueCreate(30, sizeof(String *));
+  Serial.println("start of xTaskCreatePinnedToCore");
+  xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 0, &Task1, 0);
 
-        Serial.println("end of Setup");
+  //display "donE" while activating the websever
+  allBlank();
+  displayNumber(69,6,CRGB::Red);  // d
+  displayNumber(80,4,CRGB::Red);  // o
+  displayNumber(79,2,CRGB::Red); // n
+  displayNumber(38,0,CRGB::Red);  // E
+  FastLED.show();
+  Serial.println("end of Setup");
+  delay(1000);
+  allBlank();
 }    //end of Setup()
 
 void Task1code(void * parameter) {
@@ -1046,14 +1164,14 @@ void displayTimeMode() {  //main clock function
 	byte s1 = secs / 10;
 	byte s2 = secs % 10;
   
-  if (ClockColorSettings == 0) {	hourColor = CRGB(r1_val, g1_val, b1_val);  minColor = CRGB(r2_val, g2_val, b2_val); }
+  if (ClockColorSettings == 0) { hourColor = CRGB(r1_val, g1_val, b1_val);  minColor = CRGB(r2_val, g2_val, b2_val); }
   if (ClockColorSettings == 1) { hourColor = CRGB(r1_val, g1_val, b1_val);  minColor = hourColor; }
   if ((ClockColorSettings == 2 && pastelColors == 0)  && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { hourColor = CHSV(random(0, 255), 255, 255);  minColor = CHSV(random(0, 255), 255, 255);}
   if ((ClockColorSettings == 2 && pastelColors == 1)  && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { hourColor = CRGB(random(0, 255), random(0, 255), random(0, 255));  minColor = CRGB(random(0, 255), random(0, 255), random(0, 255));}
   if ((ClockColorSettings == 3 && pastelColors == 0) && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { hourColor = CHSV(random(0, 255), 255, 255);  minColor = hourColor;}
   if ((ClockColorSettings == 3 && pastelColors == 1) && ( (ColorChangeFrequency == 0 ) || (ColorChangeFrequency == 1 && randomMinPassed == 1) || (ColorChangeFrequency == 2 && randomHourPassed == 1) || (ColorChangeFrequency == 3 && randomDayPassed == 1) || (ColorChangeFrequency == 4 && randomWeekPassed == 1) || (ColorChangeFrequency == 5 && randomMonthPassed == 1) )) { hourColor = CRGB(random(0, 255), random(0, 255), random(0, 255));  minColor = hourColor;}
-  if ((clockDisplayType == 3)) {          //Blinking Center Light
-  	if (h1 > 0) {
+  if ((clockDisplayType == 3)) {          //Clock for Blinking Center Light
+  	if (h1 > 0) {   // draw a special hour digit to maximize space
       tinyhourColor = hourColor;
       if (ClockColorSettings == 4 && pastelColors == 0){ tinyhourColor = CHSV(random(0, 255), 255, 255); }
       if (ClockColorSettings == 4 && pastelColors == 1){ tinyhourColor = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
