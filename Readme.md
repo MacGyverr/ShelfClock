@@ -1,4 +1,4 @@
-# ShelfClock v2.0
+# ShelfClock v2.0 (WIP,new PCB not fully tested)
 
 Welcome to the ShelfClock project! A custom-built clock using an ESP32 microcontroller, enhanced by a purpose-designed PCB. ShelfClock v2.0 introduces several hardware and software upgrades over the previous version, focusing on expanding functionality and improving ease of use.
 
