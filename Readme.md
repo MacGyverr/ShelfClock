@@ -10,6 +10,11 @@ Original code at: [DIY-Machines/DigitalClockSmartShelving](https://github.com/DI
 
 A lot of feature ideas came from: [helpquick/7-Segment-WiFi-Clock](https://github.com/helpquick/7-Segment-WiFi-Clock)
 
+---
+***⚠️ I have done my best to maximize the circuit design to handle the current draw of 273 LEDs, but it's still high (12A high), so mistakes or shortcuts you make can still create a hazard.
+I'm also not an electrical engineer, so use anything here at your own risk!***
+---
+
 ## Features
 
 It has lots of features, those include:
@@ -76,7 +81,7 @@ Printing this will take forever, something like 300+ hours, so make sure it is r
 ## Assembly Instructions
 
 1. **Print all of the pieces.**
-2. **Cut the LEDs into strips of 7 LEDs.**
+2. **Cut the LEDs into 37 strips of 7 LEDs, and 14 single LEDs**
 3. **Tin all 6 leads on each strip** (this will make your life a lot easier later).
 4. **Plan how you are going to mount the scaffolding elements to a board of some sort** (it should fit on a 1055mm x 320mm board, with no lip).
 5. **Mount the special Arduino scaffolding, trace the opening, then remove it and remove the material to the back, mount the wire cover.**
@@ -87,9 +92,9 @@ Printing this will take forever, something like 300+ hours, so make sure it is r
 10. **Mount the LED strip to the mounting strip with hot glue or super glue.**
 11. **Wire the LED strips to each other** as outlined in the `LEDs.png` in the `diagrams.zip` file, making note to connect the 5V to 5V and GND to GND, and keep the arrow on the strip flowing in the right direction when connecting the Data from strip to strip.
 12. **Add extra runs of 5V and GND to each segment** to stop the voltage drop (voltage drop will present as a dimming the further out you go until the last LED is yellow when everything is supposed to be white).
-13. **Use the attached `shelfclockv2-gerbers.zip` to have a custom PCB created** to make assembly easier (it should cost less than $5 to have it made). Solder in the 1N5817 diode, the 470 and 1k resistors, and the 2N3904 NPN transistor. Solder the various sensor modules and ESP32 to the circuit board. I use 90-degree 3-pin terminals to attach the LED strips to the circuit board from both ends of the LED strip.
-14. **Or if you aren't using the custom circuit board**, try and assemble the circuit as best you can to fit in the top-right most segment. I did it that way the first time; you can too, or split them between segments if you have to, but don't forget to route the wires correctly through the wire paths so your sleeve will seat all the way.
-15. **Clamp your powercord into spades and bolt them to the board with 3mm bolts or solder the wires directly to the terminals (it will take a lot of hear given the size of the copper traces)**
+13a. **Use the attached `shelfclockv2-gerbers.zip` to have a custom PCB created** to make assembly easier (it should cost less than $5 to have it made). Solder in the 1N5817 diode, the 470 and 1k resistors, and the 2N3904 NPN transistor. Solder the various sensor modules and ESP32 to the circuit board. I use 90-degree 3-pin terminals to attach the LED strips to the circuit board from both ends of the LED strip.
+13b. **Or if you aren't using the custom circuit board**, try and assemble the circuit as best you can to fit in the top-right most segment. I did it that way the first time; you can too, or split them between segments if you have to, but don't forget to route the wires correctly through the wire paths so your sleeve will seat all the way.
+14. **Clamp your powercord into eyelets or spades and bolt them to the board with 3mm bolts or solder the wires directly to the terminals (it will take a lot of heat given the size of the copper traces)**
 
 The distance the LED diffusers (printed at 100% infill) are away from the LEDs mostly fixes the hotspots from the LEDs. The trade-off is that you will get bleed-through on the shelves, so if you look at the image with 9 smaller images in it, it shows my solution to the bleed-through problem: black spray paint (but only about an inch down).
 
@@ -168,7 +173,7 @@ The custom PCB includes labeled sections for each component:
 - **LDR for Ambient Light Detection**: Controls display brightness.
 - **Buzzer Circuit with 2N3904 Transistorc and 1k resistor**: Enables alarms and notifications.
 - **INMP441 Microphone**: A slot is available for sound and music detection.
-- **470 Ohm resister**: Inline with the LED output from the ESP32.
+- **470 Ohm resistor**: Inline with the LED output from the ESP32.
 
 ## Contributions
 
