@@ -43,7 +43,7 @@ It uses the following hardware:
 - **DHT11 Temperature Sensor**
 - **Photosensitive Resistance Sensor LDR** (Automatically adjusts display brightness based on ambient light levels)
 - **INMP441 Sound Detector**
-- **BTF-LIGHTING WS2812B RGB 5050SMD** (mine uses 273 of them, but can be changed; my test clock only uses 162)
+- **BTF-LIGHTING WS2812B RGB 5050SMD** (mine uses 273 of them, but can be changed; You can use whatever 5V LEDs you want, my test clock uses only 162 XGB1338 LEDs)
 - I used a **5V Computer Buzzer** as the speaker.
 - **NPN Transistor 2N3904** with either a 1k resistor as a simple 5V amplifier.
 - **1N5817 Diode**
