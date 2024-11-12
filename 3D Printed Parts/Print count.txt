@@ -9,5 +9,4 @@
 1 - Sleeve5-For Ardunio.STL or Sleeve5-For Ardunio with Mic-hole.STL
 1 - Back-Cover.STL
 1 - Back-Cover-plug.STL
-1 - Arduino-Mount Insert.STL
 1 - Corner Stand-off Legs.STL
