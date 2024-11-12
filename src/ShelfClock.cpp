@@ -69,9 +69,9 @@
 #define SEGMENTS_PER_NUMBER 7 // this can never change unless you redesign all display routines
 #define NUMBER_OF_DIGITS 7    // 7 = 4 real + 3 fake,  this should be always 7 unless you redesign all display routines
 #define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
-#define LED_PIN 2             // led control pin
+#define LED_PIN 16             // led control pin
 #define MILLI_AMPS 2400 
-#define LEDS_PER_SEGMENT  4   // can be 1 to 10 LEDS per segment (4 for test display, 7 for full)
+#define LEDS_PER_SEGMENT  7   // can be 1 to 10 LEDS per segment
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
 #define PHOTO_SAMPLES 10      //number of samples to take from the photoresister
@@ -85,32 +85,25 @@
 #if HAS_DHT
   #include "DHT.h"
   #define DHTTYPE DHT11         // DHT 11 tempsensor
-  #define DHT_PIN 33            // temp sensor pin
+  #define DHT_PIN 33             // temp sensor pin
 #endif
   #if HAS_SOUNDDETECTOR
-//  #define SOUNDDETECTOR_ENVELOPE_IN_PIN 34    // Use 34 for envelope pin input
-//  #define SOUNDDETECTOR_AUDIO_GATE_PIN 35     // for sound gate input trigger
-//  #define AUDIO_IN_PIN    32    // Analog audio in (audio pin)
-  #define SOUNDDETECTOR_I2S_WS 15
-#define SOUNDDETECTOR_I2S_SD 32
-#define SOUNDDETECTOR_I2S_SCK 14
-#define SOUNDDETECTOR_I2S_PORT I2S_NUM_0
-#define SOUNDDETECTOR_SAMPLING_FREQ 8000    // Lower sampling rate
-#define SOUNDDETECTOR_BITS_PER_SAMPLE 16
-#define SOUNDDETECTOR_SAMPLES 128           // Smaller FFT size
-  //#define SOUNDDETECTOR_SAMPLES         256          // Must be a power of 2
- // #define SOUNDDETECTOR_SAMPLING_FREQ   40000         // Hz, must be 40000 or less due to ADC conversion time. Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
+  #define SOUNDDETECTOR_I2S_WS 23 
+  #define SOUNDDETECTOR_I2S_SD 32
+  #define SOUNDDETECTOR_I2S_SCK 18
+  #define SOUNDDETECTOR_I2S_PORT I2S_NUM_0
+  #define SOUNDDETECTOR_SAMPLING_FREQ 8000    //sampling rate in Hz, must be 40000 or less due to ADC conversion time. Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
+  #define SOUNDDETECTOR_BITS_PER_SAMPLE 16
+  #define SOUNDDETECTOR_SAMPLES 128           // Smaller FFT size, Must be a power of 2
   #define SOUNDDETECTOR_BANDS_WIDTH       8            // To change this, you will need to change the bunch of if statements describing the mapping from bins to bands
-//  #define NOISE           500           // Used as a crude noise filter, values below this are ignored
   #define SOUNDDETECTOR_BANDS_HEIGHT            (LEDS_PER_SEGMENT * 2)                // Don't allow the bars to go offscreen
   const int ANALYZER_SIZE = SOUNDDETECTOR_BANDS_WIDTH * LEDS_PER_SEGMENT * 2;
-  #endif
+#endif
 #if HAS_BUZZER
-  #define BUZZER_PIN 16         // peizo speaker
-//  #define BUZZER_PIN 25         // peizo speaker
+  #define BUZZER_PIN 17         // peizo speaker
 #endif
 #if HAS_PHOTOSENSOR
-  #define PHOTORESISTER_PIN 36  // select the analog input pin for the photoresistor
+  #define PHOTORESISTER_PIN 36    // select the analog input pin for the photoresistor
 #endif
 #define digit0 seg(0), seg(1), seg(2), seg(3), seg(4), seg(5), seg(6)
 #define fdigit1 seg(2), seg(7), seg(10), seg(15), seg(8), seg(3), seg(9)
@@ -661,6 +654,7 @@ void setup() {
   displayNumber(34,2,CRGB::Red); // A
   displayNumber(69,0,CRGB::Red);  // d
   FastLED.show();
+  delay(500);
   loadWebPageHandlers();  //load about 900 webpage handlers from the bottom of this sketch
 
   // Initialize FileFS 
@@ -671,6 +665,7 @@ void setup() {
   displayNumber(45,2,CRGB::Red); // L
   displayNumber(38,0,CRGB::Red);  // E
   FastLED.show();
+  delay(500);
   Serial.println(F("Inizializing FS..."));
   if (FileFS.begin()){
       Serial.println(F("FileFS mounted correctly."));
@@ -686,6 +681,7 @@ void setup() {
       displayNumber(83,4,CRGB::Red);  // r
       displayNumber(83,2,CRGB::Red); // r
       FastLED.show();
+      delay(500);
   }
 
   //display "SEtS"
@@ -695,6 +691,7 @@ void setup() {
   displayNumber(85,2,CRGB::Red); // t
   displayNumber(52,0,CRGB::Red);  // S
   FastLED.show();
+  delay(500);
   Serial.println("list setting folder files");
   listDir(FileFS, "/settings/", 0);
   //load settings from nvram and flash
@@ -710,6 +707,7 @@ void setup() {
   displayNumber(85,4,CRGB::Red);  // t
   displayNumber(68,2,CRGB::Red); // c
   FastLED.show();
+  delay(500);
     //init DS3231 RTC
     if (! rtc.begin()) {
       Serial.println("Couldn't find DS3231 RTC");
@@ -720,6 +718,7 @@ void setup() {
       displayNumber(83,4,CRGB::Red);  // r
       displayNumber(83,2,CRGB::Red); // r
       FastLED.show();
+      delay(1000);
     //  abort();
     }
   #endif
@@ -732,6 +731,7 @@ void setup() {
     displayNumber(79,3,CRGB::Red);  // n
     displayNumber(69,1,CRGB::Red);  // d
     FastLED.show();
+    delay(500);
     // Initialize peaks to zero
     for (byte band = 0; band < SOUNDDETECTOR_BANDS_WIDTH; band++) {
         peak[band] = 0;
@@ -749,6 +749,7 @@ void setup() {
     displayNumber(73,4,CRGB::Red);  // h
     displayNumber(85,2,CRGB::Red); // t
     FastLED.show();
+    delay(500);
     Serial.println(F("DHTxx test!"));
     dht.begin();
   #endif
@@ -773,6 +774,7 @@ void setup() {
   displayNumber(34,4,CRGB::Red); // A
   displayNumber(49,2,CRGB::Red);  // P
   FastLED.show();
+  delay(500);
   Serial.println("Wifi Starting");
   WiFi.hostname(host); //set hostname
 
@@ -784,39 +786,55 @@ void setup() {
     allBlank();  //clear "no AP" from screen once wifi is online
    }  else {
     Serial.println("Wifi Failed");
-    //display "Err" while activating the websever
+    //display "Err" while activating the wifi
     allBlank();
     displayNumber(38,6,CRGB::Red);  // E
     displayNumber(83,4,CRGB::Red);  // r
     displayNumber(83,2,CRGB::Red); // r
     FastLED.show();
+    delay(1000);
     }
 
-  //display "dnS" while activating the websever
+  //display "dnS" while activating the mdns
   allBlank();
   displayNumber(69,6,CRGB::Red);  // d
   displayNumber(79,4,CRGB::Red);  // n
   displayNumber(52,2,CRGB::Red); // S
   FastLED.show();
+  delay(500);
   //use mdns for host name resolution
   if (!MDNS.begin(host)) { //http://shelfclock
     Serial.println("Error setting up MDNS responder!");
     while (1) {
+      allBlank();
+      displayNumber(38,6,CRGB::Red);  // E
+      displayNumber(83,4,CRGB::Red);  // r
+      displayNumber(83,2,CRGB::Red); // r
+      FastLED.show();
       delay(1000);
     }
   }
   Serial.println("mDNS responder started");
 
   //init and set the time of the internal RTC from NTP server
-  //display "ntP" while activating the websever
+  //display "ntP" while activating the ntp
   allBlank();
   displayNumber(79,6,CRGB::Red);  // n
   displayNumber(85,4,CRGB::Red);  // t
   displayNumber(49,2,CRGB::Red);  // P
   FastLED.show();
+  delay(500);
   Serial.println("set the time of the internal RTC from NTP server");
   configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
-  
+    if(!getLocalTime(&timeinfo)){ 
+      allBlank();
+      displayNumber(38,6,CRGB::Red);  // E
+      displayNumber(83,4,CRGB::Red);  // r
+      displayNumber(83,2,CRGB::Red); // r
+      FastLED.show();
+      delay(1000);
+    }
+
   #if HAS_RTC
     //was the internal RTC time set by the NTP server?, if not set it via the RTC DS3231 stored time, will be wrong if daylight savings time is active
     if(!getLocalTime(&timeinfo)){ 
@@ -835,13 +853,14 @@ void setup() {
     }
     //did the DS3231 lose power (battery dead/changed), if so, set from time recieved from the NTP above
     if (rtc.lostPower()) {
-      //display "bAtt" while activating the websever
+      //display "bAtt" while if batt dead/changed
       allBlank();
       displayNumber(67,6,CRGB::Red);  // b
       displayNumber(34,4,CRGB::Red);  // A
       displayNumber(85,2,CRGB::Red); // t
       displayNumber(85,0,CRGB::Red);  // t
       FastLED.show();
+      delay(1000);
       Serial.println("DS3231's RTC lost power, setting the time via NTP!");
       if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
       int tempyear = (timeinfo.tm_year +1900);
@@ -850,7 +869,7 @@ void setup() {
     }
   #endif
 
-      Serial.println("print time");
+  Serial.println("print time");
   printLocalTime(); 
 
   //create something to know if now is not then
@@ -867,6 +886,7 @@ void setup() {
   displayNumber(85,4,CRGB::Red);  // t
   displayNumber(34,2,CRGB::Red); // A
   FastLED.show();
+  delay(500);
   httpUpdateServer.setup(&server);
 
   initGreenMatrix();   //setup lightshow functions
@@ -891,7 +911,7 @@ void setup() {
 
 
   #if HAS_BUZZER
-    //display "Song" while activating the websever
+    //display "Song" while loading the songs from flash
     allBlank();
     displayNumber(52,6,CRGB::Red);  // S
     displayNumber(80,4,CRGB::Red);  // o
@@ -900,20 +920,21 @@ void setup() {
     FastLED.show();
     //init rtttl (functions that play the alarms)
     pinMode(BUZZER_PIN, OUTPUT);
-   rtttl::begin(BUZZER_PIN, "Intel:d=4,o=5,b=400:32p,d,g,d,2a");  //play mario sound and set initial brightness level
+    rtttl::begin(BUZZER_PIN, "Intel:d=4,o=5,b=400:32p,d,g,d,2a");  //play mario sound and set initial brightness level
     while( !rtttl::done() ){GetBrightnessLevel(); rtttl::play();}
-        Serial.println("get list of songs");
+    Serial.println("get list of songs");
     getListOfSongs();
   #endif
 
   
-  //display "Schd" while activating the websever
+  //display "Schd" while loading the schedules from flash
   allBlank();
   displayNumber(52,6,CRGB::Red);  // S
   displayNumber(68,4,CRGB::Red);  // c
   displayNumber(73,2,CRGB::Red); // h
   displayNumber(69,0,CRGB::Red);  // d
   FastLED.show();
+  delay(500);
   Serial.println("load array of schedule files on drive ");
   createSchedulesArray();  //load array of schedule files on drive
   Serial.println("print out schedule array");
@@ -924,16 +945,28 @@ void setup() {
   Serial.println("start of xTaskCreatePinnedToCore");
   xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 0, &Task1, 0);
 
-  //display "donE" while activating the websever
+  //display "donE" after setup
   allBlank();
   displayNumber(69,6,CRGB::Red);  // d
   displayNumber(80,4,CRGB::Red);  // o
   displayNumber(79,2,CRGB::Red); // n
   displayNumber(38,0,CRGB::Red);  // E
   FastLED.show();
-  Serial.println("end of Setup");
   delay(1000);
   allBlank();
+
+  //display IP adresss 3x after setup
+  char processedText[16] = {0};
+  if (WiFi.status() == WL_CONNECTED) {
+      snprintf(processedText, sizeof(processedText), "%s", WiFi.localIP().toString().c_str());
+  } else {
+      strcpy(processedText, "no AP, no IP");
+  }
+  scroll(processedText);
+  scroll(processedText);
+  allBlank();
+
+  Serial.println("end of Setup");
 }    //end of Setup()
 
 void Task1code(void * parameter) {
@@ -1023,7 +1056,7 @@ void loop(){
   //Change Frequency so as to not use hard-coded delays
   unsigned long currentMillis = millis();  
   //run everything inside here every second
-  if (((unsigned long)(currentMillis - prevTime) >= 1000) || ((unsigned long)(currentMillis - prevTime) <= 0)) {  //deals with millis() having a rollover period after approximately 49.7 days
+  if (((unsigned long)(currentMillis - prevTime) >= 500) || ((unsigned long)(currentMillis - prevTime) <= 0)) {  //deals with millis() having a rollover period after approximately 49.7 days
     prevTime = currentMillis;
     if(!getLocalTime(&timeinfo)){ 
       Serial.println("Failed to obtain time");
@@ -1041,7 +1074,7 @@ void loop(){
 
     checkSleepTimer();  //time to sleep?
 
-    if ((currentTimeHour == 23 && currentTimeMin == 11 && timeinfo.tm_sec == 0 && clockDisplayType != 1) || (currentTimeHour == 11 && currentTimeMin == 11 && timeinfo.tm_sec == 0)) { scroll("MAkE A WISH"); }  //at 1111 make a wish
+    //if ((currentTimeHour == 23 && currentTimeMin == 11 && timeinfo.tm_sec == 0 && clockDisplayType != 1) || (currentTimeHour == 11 && currentTimeMin == 11 && timeinfo.tm_sec == 0)) { scroll("MAkE A WISH"); }  //at 1111 make a wish
  
     if (abs(currentTimeMin - previousTimeMin) >= 1) { //run every minute
       previousTimeMin = currentTimeMin; 
@@ -2075,6 +2108,14 @@ void SpectrumAnalyzer() {    //mostly from github.com/justcallmekoko/Arduino-Fas
 	  }
 	}// end spectrumMode < 12
   else {
+
+    if (spectrumMode == 15) {
+      spectrumColor = CRGB(r15_val, g15_val, b15_val);  //spectrum selected color
+      if (spectrumColorSettings == 2) { spectrumColor = colorWheel((colorWheelPositionTwo * 256 / 50 + colorWheelPosition) % 256);}  //cycle fast
+      if (spectrumColorSettings == 6) { spectrumColor = colorWheel2((colorWheelPositionTwo));}  //cycle slow
+      colorWheelPosition = colorWheelPosition - colorWheelSpeed; // SPEED OF COLOR WHEEL
+      if (colorWheelPosition < 0){ colorWheelPosition = 255; } // RESET COLOR WHEEL
+    }
 
     // Reset SOUNDDETECTOR_bandValues[]
     for (int i = 0; i<SOUNDDETECTOR_BANDS_WIDTH; i++){
@@ -5137,9 +5178,6 @@ void loadWebPageHandlers() {
     #if HAS_DHT
       json["altitudeLocal"] = altitudeLocal;
     #endif
-    #if HAS_SOUNDDETECTOR
-   //   json["analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN)"] = analogRead(SOUNDDETECTOR_ENVELOPE_IN_PIN);
-    #endif
     json["breakOutSet"] = breakOutSet;
     json["brightness"] = brightness;
     json["clearOldLeds"] = clearOldLeds;
@@ -5160,9 +5198,6 @@ void loadWebPageHandlers() {
     json["daysUptime"] = daysUptime;
     #if HAS_BUZZER
       json["defaultAudibleAlarm"] = SONGS[defaultAudibleAlarm];
-    #endif
-    #if HAS_SOUNDDETECTOR
-    //  json["digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN)"] = digitalRead(SOUNDDETECTOR_AUDIO_GATE_PIN);
     #endif
     json["dotsOn"] = dotsOn;
     json["endCountDownMillis"] = endCountDownMillis;
