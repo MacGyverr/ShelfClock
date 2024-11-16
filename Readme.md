@@ -121,6 +121,9 @@ The clock will attempt to scroll the IP twice on bootup.
 
 ![Circuit Board Back](https://github.com/MacGyverr/ShelfClock/blob/newer-vscode-wip/diagrams/circuitboard-back.PNG)
 
+![Circuit Board Assembled](https://github.com/MacGyverr/ShelfClock/blob/newer-vscode-wip/diagrams/20241115_114702.jpg)
+
+
 ## Links to Code Examples Used
 
 Links to places I know I used code examples from:
@@ -173,7 +176,7 @@ The custom PCB includes labeled sections for each component:
 - **LDR for Ambient Light Detection**: Controls display brightness.
 - **Buzzer Circuit with 2N3904 Transistorc and 1k resistor**: Enables alarms and notifications.
 - **INMP441 Microphone**: A slot is available for sound and music detection.
-- **470 Ohm resistor**: Inline with the LED output from the ESP32.
+- **470 Ohm resistor**: Inline with the LED output from the ESP32. Not needed in every use, just if you have flickering, bypass it if it casues corruption.
 
 ## Contributions
 
