@@ -121,7 +121,7 @@ The clock will attempt to scroll the IP twice on bootup.
 
 ![Circuit Board Back](https://github.com/MacGyverr/ShelfClock/blob/newer-vscode-wip/diagrams/circuitboard-back.PNG)
 
-![Circuit Board Assembled](https://github.com/MacGyverr/ShelfClock/blob/newer-vscode-wip/diagrams/20241115_114702.jpg)
+![Circuit Board Assembled](https://github.com/MacGyverr/ShelfClock/blob/newer-vscode-wip/diagrams/20241115_173534.jpg)
 
 
 ## Links to Code Examples Used
