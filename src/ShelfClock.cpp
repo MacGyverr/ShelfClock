@@ -60,16 +60,16 @@
 #endif
 
 #define FORMAT_SPIFFS_IF_FAILED false
-
+#define STRINGIFY_HELPER(x) #x
+#define STRINGIFY(x) STRINGIFY_HELPER(x)
 #define LED_TYPE  WS2812B
-#define STRINGIFY(x) #x
 #define COLOR_ORDER GRB
 #define SEGMENTS_PER_NUMBER 7 // this can never change unless you redesign all display routines
 #define NUMBER_OF_DIGITS 7    // 7 = 4 real + 3 fake,  this should be always 7 unless you redesign all display routines
 #define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
-#define LED_PIN 16             //test rig  2             // led control pin
+#define LED_PIN 16             // led control pin
 #define MILLI_AMPS 2400 
-#define LEDS_PER_SEGMENT  4   // can be 1 to 10 LEDS per segment (4 for test display, 7 for full)
+#define LEDS_PER_SEGMENT  7   // can be 1 to 10 LEDS per segment (7 per instructions)
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
 #define PHOTO_SAMPLES 10      //number of samples to take from the photoresister
@@ -83,12 +83,12 @@
 #if HAS_DHT
   #include "DHT.h"
   #define DHTTYPE DHT11         // DHT 11 tempsensor
-  #define DHT_PIN 33             //test rig  33            // temp sensor pin
+  #define DHT_PIN 33             // DHT sensor pin
 #endif
   #if HAS_SOUNDDETECTOR
-  #define SOUNDDETECTOR_I2S_WS 23             //test rig 15
-  #define SOUNDDETECTOR_I2S_SD 32             //test rig  32
-  #define SOUNDDETECTOR_I2S_SCK 18             //test rig  14
+  #define SOUNDDETECTOR_I2S_WS 23             
+  #define SOUNDDETECTOR_I2S_SD 32             
+  #define SOUNDDETECTOR_I2S_SCK 18             
   #define SOUNDDETECTOR_I2S_PORT I2S_NUM_0
   #define SOUNDDETECTOR_SAMPLING_FREQ 8000    //sampling rate in Hz, must be 40000 or less due to ADC conversion time. Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
   #define SOUNDDETECTOR_BITS_PER_SAMPLE 16
@@ -98,10 +98,10 @@
   const int ANALYZER_SIZE = SOUNDDETECTOR_BANDS_WIDTH * LEDS_PER_SEGMENT * 2;
 #endif
 #if HAS_BUZZER
-  #define BUZZER_PIN 17             //test rig  16         // peizo speaker
+  #define BUZZER_PIN 17             // peizo speaker
 #endif
 #if HAS_PHOTOSENSOR
-  #define PHOTORESISTER_PIN 36             //test rig  36  // select the analog input pin for the photoresistor
+  #define PHOTORESISTER_PIN 36             // select the analog input pin for the photoresistor
 #endif
 #define digit0 seg(0), seg(1), seg(2), seg(3), seg(4), seg(5), seg(6)
 #define fdigit1 seg(2), seg(7), seg(10), seg(15), seg(8), seg(3), seg(9)
@@ -5345,7 +5345,7 @@ void loadWebPageHandlers() {
       json["BUZZER_PIN"] = BUZZER_PIN;
     #endif
     json["ClockColorSettings"] = ClockColorSettings;
-    json["COLOR_ORDER"] = COLOR_ORDER;
+    json["COLOR_ORDER"] = STRINGIFY(COLOR_ORDER);
     json["ColorChangeFrequency"] = ColorChangeFrequency;
     json["CountUpMillis"] = CountUpMillis;
     json["DateColorSettings"] = DateColorSettings;
@@ -5357,7 +5357,7 @@ void loadWebPageHandlers() {
       json["DHT11 Humidity (Absolute)"] = absoluteHumidity;
       json["DHT11 Humidity (Ratio)"] = humidityRatio;
       json["DHT11 (Heat Index F)"] = (heatIndex * 1.8000) + 32;
-      json["DHTTYPE"] = DHTTYPE;
+      json["DHTTYPE"] = STRINGIFY(DHTTYPE);
     #endif
     #if HAS_RTC
       DateTime now = rtc.now(); 
