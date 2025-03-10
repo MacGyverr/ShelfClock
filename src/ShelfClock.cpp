@@ -245,7 +245,7 @@ int colorWheelPositionTwo = 255; // 2nd COLOR WHEEL POSITION
 const int colorWheelSpeed = 3;
 int sleepTimerCurrent = 0;
 int isAsleep = 0;
-int photoresisterReadings[PHOTO_SAMPLES];      // the readings from the analog input
+int photoresisterReadings[PHOTO_SAMPLES] = {0};      // the readings from the analog input
 int readIndex = 0;              // the index of the current reading
 int lightSensorValue = 255;
 int previousTimeMin = 0;
@@ -922,7 +922,7 @@ void setup() {
     //init rtttl (functions that play the alarms)
     pinMode(BUZZER_PIN, OUTPUT);
     rtttl::begin(BUZZER_PIN, "Intel:d=4,o=5,b=400:32p,d,g,d,2a");  //play mario sound and set initial brightness level
-    while( !rtttl::done() ){GetBrightnessLevel(); rtttl::play();}
+    while( !rtttl::done() ){ rtttl::play();}
     Serial.println("get list of songs");
     getListOfSongs();
   #endif
@@ -953,7 +953,8 @@ void setup() {
   displayNumber(79,2,CRGB::Red); // n
   displayNumber(38,0,CRGB::Red);  // E
   FastLED.show();
-  delay(1000);
+  for (int i = 0; i < PHOTO_SAMPLES; i++) {GetBrightnessLevel();}
+  delay(800);
   allBlank();
 
   //display IP adresss 2x after setup
@@ -2530,31 +2531,49 @@ void checkSleepTimer(){  //controls suspend mode
 
 
 
-void GetBrightnessLevel() {   //samples the photoresister and set brightness
-#if HAS_PHOTOSENSOR
-  photoresisterReadings[readIndex] = analogRead(PHOTORESISTER_PIN); //get an average light level from previouse set of samples
-  readIndex = readIndex + 1; // advance to the next position in the array:
-  if (readIndex >= PHOTO_SAMPLES) {   //reset count of readings even N times around
-    readIndex = 0;
-  }
-  int sumBrightness = 0;
-  for (int i=0; i < PHOTO_SAMPLES; i++)
-    {
-     sumBrightness += photoresisterReadings[i];  // add all the current readings together
+void GetBrightnessLevel() {
+  #if HAS_PHOTOSENSOR
+    // Update the circular buffer with the current sensor reading.
+    photoresisterReadings[readIndex] = analogRead(PHOTORESISTER_PIN);
+    readIndex = (readIndex + 1) % PHOTO_SAMPLES;
+  
+    // Sum all samples in the array (even if not fully populated yet).
+    int sumBrightness = 0;
+    for (int i = 0; i < PHOTO_SAMPLES; i++) {
+      sumBrightness += photoresisterReadings[i];
     }
- //   Serial.println(analogRead(PHOTORESISTER_PIN));
-  //lightSensorValue = 255 - (((sumBrightness / PHOTO_SAMPLES) * (254)) / 4095);  //linear conversion of 0-4095 to 255 to 40, after getting the average of the readings
-  lightSensorValue = 275 - (((sumBrightness / PHOTO_SAMPLES) * (245)) / 4095);  //linear conversion of 0-4095 to 305 to 10 (a little brighter), after getting the average of the readings
-  if (lightSensorValue > 255) {lightSensorValue = 255;} //constrain brightness
-    if (brightness != 10) {  //if not set to auto-dim just use user set brightness
+    int avgReading = sumBrightness / PHOTO_SAMPLES;
+  
+    // Define discrete mapping: sensor reading thresholds and corresponding brightness levels.
+    const int NUM_LEVELS = 10;
+    const int sensorThresholds[NUM_LEVELS] = {0, 455, 910, 1365, 1820, 2275, 2730, 3185, 3640, 4095};
+    const int brightnessLevels[NUM_LEVELS] = {255, 228, 201, 173, 146, 119, 92, 64, 37, 10};
+    
+    // Map the average sensor value to a brightness level.
+    int level = 0;
+    for (int i = NUM_LEVELS - 1; i >= 0; i--) {
+      if (avgReading >= sensorThresholds[i]) {
+        level = i;
+        break;
+      }
+    }
+    lightSensorValue = brightnessLevels[level];
+    if (lightSensorValue > 255) {  // Safety check.
+      lightSensorValue = 255;
+    }
+  
+    // Use the user set brightness if not in auto mode (assumed auto is indicated by brightness==10),
+    // otherwise use the mapped brightness.
+    if (brightness != 10) {
       FastLED.setBrightness(brightness);
-    } else if (brightness == 10) {  //auto-dim use the value from above
-      FastLED.setBrightness(lightSensorValue);     
-    } 
-#else
-  FastLED.setBrightness(10); //SET TO MIN LEVEL IF NO SENSOR
-#endif
-}  // end of auto-brightness
+    } else {
+      FastLED.setBrightness(lightSensorValue);
+    }
+  #else
+    FastLED.setBrightness(brightness);  // Fallback if no sensor available.
+  #endif
+  }
+  
 
 
 void updateRainForecast() {
@@ -5094,15 +5113,13 @@ void loadWebPageHandlers() {
 
       // loadpreset1
       if (!json["loadPreset1"].isNull()) {
-        getclockSettings("preset1");
-        //GetBrightnessLevel();        
+        getclockSettings("preset1");  
         allBlank(); 
       }
 
       // loadpreset2
       if (!json["loadPreset2"].isNull()) {
-        getclockSettings("preset2");
-        //GetBrightnessLevel();        
+        getclockSettings("preset2");    
         allBlank();  
       }
 
@@ -5506,8 +5523,8 @@ void loadWebPageHandlers() {
     #endif
     json["pastelColors"] = pastelColors;
     #if HAS_PHOTOSENSOR
-    JsonArray photoresisterReadingsArray = json.createNestedArray("photoresisterReadings");
-    for (int i = 0; i < PHOTO_SAMPLES; i++) { photoresisterReadingsArray.add(String(photoresisterReadings[i], 1)); }   
+      JsonArray photoresisterReadingsArray = json.createNestedArray("photoresisterReadings");
+      for (int i = 0; i < PHOTO_SAMPLES; i++) { photoresisterReadingsArray.add(String(photoresisterReadings[i])); }   
     #endif
     json["prevTime"] = prevTime;
     json["prevTime2"] = prevTime2;
