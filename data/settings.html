@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <link rel="stylesheet" href="css/main.css">
-  <script type="text/javascript" src="js/main.js"></script>	
+  <link rel="stylesheet" href="css/main.css?v=1.0.6">
+  <script type="text/javascript" src="js/main.js?v=1.0.6"></script>	
   <title>Shelf Clock</title>
 </head>
 <body>
@@ -26,7 +26,7 @@
   </nav>
   <form name="shelfclock-settings">
     <section>
-      <h2>Global Shatings:</h2>
+      <h2>Global Settings:</h2>
       <div>
         <div>
           <h3>Random Color Palette:</h3>
@@ -87,6 +87,11 @@
           <label><input type="radio" name="spotlightsColorSettings" value="2"> Cycling Color Wheel</label>
           <label><input type="radio" name="spotlightsColorSettings" value="3"> Cycle All Colors Slow</label>
           <label><input type="radio" name="spotlightsColorSettings" value="4"> Twinkle & Fade</label>
+          <!-- Weather-dependent options with hidden attribute initially -->
+        <section id="NOTEMP7">
+          <label class="weather-dependent" hidden><input type="radio" name="spotlightsColorSettings" value="5"> Weekly Rain Forecast Lighting</label>
+          <label class="weather-dependent" hidden><input type="radio" name="spotlightsColorSettings" value="6"> Hourly Tide Tracking</label>
+        </section>
         </div>
       </div>
     </section>
@@ -250,9 +255,11 @@
           <label><input type="radio" name="tempColorSettings" value="4"> Random Color for All Segments Every Second</label>
         </div>
         <div>
+          <section id="NOTEMP8">
             <h3>Outdoor Temperature</h3>
             <label><input type="checkbox" name="temperature_outdoor_enable" disabled>Enable Outdoor Temperature</label>
             <span class="smaller weathercheckbox">Disabled until weather api is set (<a href="#outdoor">see below</a>).</span>
+          </section>
             
         </div>
       </div>
@@ -281,9 +288,11 @@
           <label><input type="radio" name="humiColorSettings" value="4"> Random Color for All Segments Every Second</label>
         </div>
         <div>
+        <section id="NOTEMP9">
           <h3>Outdoor Humidity</h3>
           <label><input type="checkbox" name="humidity_outdoor_enable" disabled>Enable Outdoor Humidity</label>
           <span class="smaller weathercheckbox">Disabled until weather api is set (<a href="#outdoor">see below</a>).</span>
+        </section>
       </div>
       </div>
     </section>

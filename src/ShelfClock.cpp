@@ -5,7 +5,6 @@
 #include "WebServer.h"
 #include <FS.h>     
 #include <HTTPUpdateServer.h>
-#include <Preferences.h>
 #include <ESPmDNS.h>
 #include <Update.h>
 #include <AutoConnect.h>
@@ -20,12 +19,11 @@
 #define HAS_SOUNDDETECTOR    true
 #define HAS_BUZZER    true
 #define HAS_PHOTOSENSOR    true
-#define HAS_ONLINEWEATHER    false
+#define HAS_ONLINEWEATHER    true
 
 #if HAS_RTC
   #include "RTClib.h"
 #endif
-
 
 #if HAS_SOUNDDETECTOR
   #include <arduinoFFT.h>				// Don't forget to change CPU Frequency to 240MHz in Arduino board settings
@@ -61,17 +59,17 @@
   #define FS_Name       "FFat"
 #endif
 
-
 #define FORMAT_SPIFFS_IF_FAILED false
 
 #define LED_TYPE  WS2812B
+#define STRINGIFY(x) #x
 #define COLOR_ORDER GRB
 #define SEGMENTS_PER_NUMBER 7 // this can never change unless you redesign all display routines
 #define NUMBER_OF_DIGITS 7    // 7 = 4 real + 3 fake,  this should be always 7 unless you redesign all display routines
 #define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
-#define LED_PIN 16             // led control pin
+#define LED_PIN 16             //test rig  2             // led control pin
 #define MILLI_AMPS 2400 
-#define LEDS_PER_SEGMENT  7   // can be 1 to 10 LEDS per segment
+#define LEDS_PER_SEGMENT  4   // can be 1 to 10 LEDS per segment (4 for test display, 7 for full)
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
 #define PHOTO_SAMPLES 10      //number of samples to take from the photoresister
@@ -85,12 +83,12 @@
 #if HAS_DHT
   #include "DHT.h"
   #define DHTTYPE DHT11         // DHT 11 tempsensor
-  #define DHT_PIN 33             // temp sensor pin
+  #define DHT_PIN 33             //test rig  33            // temp sensor pin
 #endif
   #if HAS_SOUNDDETECTOR
-  #define SOUNDDETECTOR_I2S_WS 23 
-  #define SOUNDDETECTOR_I2S_SD 32
-  #define SOUNDDETECTOR_I2S_SCK 18
+  #define SOUNDDETECTOR_I2S_WS 23             //test rig 15
+  #define SOUNDDETECTOR_I2S_SD 32             //test rig  32
+  #define SOUNDDETECTOR_I2S_SCK 18             //test rig  14
   #define SOUNDDETECTOR_I2S_PORT I2S_NUM_0
   #define SOUNDDETECTOR_SAMPLING_FREQ 8000    //sampling rate in Hz, must be 40000 or less due to ADC conversion time. Determines maximum frequency that can be analysed by the FFT Fmax=sampleF/2.
   #define SOUNDDETECTOR_BITS_PER_SAMPLE 16
@@ -100,10 +98,10 @@
   const int ANALYZER_SIZE = SOUNDDETECTOR_BANDS_WIDTH * LEDS_PER_SEGMENT * 2;
 #endif
 #if HAS_BUZZER
-  #define BUZZER_PIN 17         // peizo speaker
+  #define BUZZER_PIN 17             //test rig  16         // peizo speaker
 #endif
 #if HAS_PHOTOSENSOR
-  #define PHOTORESISTER_PIN 36    // select the analog input pin for the photoresistor
+  #define PHOTORESISTER_PIN 36             //test rig  36  // select the analog input pin for the photoresistor
 #endif
 #define digit0 seg(0), seg(1), seg(2), seg(3), seg(4), seg(5), seg(6)
 #define fdigit1 seg(2), seg(7), seg(10), seg(15), seg(8), seg(3), seg(9)
@@ -112,7 +110,6 @@
 #define digit4 seg(20), seg(21), seg(22), seg(23), seg(24), seg(25), seg(26)
 #define fdigit5 seg(22), seg(27), seg(30), seg(35), seg(28), seg(23), seg(29)
 #define digit6 seg(30), seg(31), seg(32), seg(33), seg(34), seg(35), seg(36)
-
 
 #if LEDS_PER_SEGMENT == 1
  #define seg(n) n*LEDS_PER_SEGMENT
@@ -147,7 +144,6 @@
 #else
  #error "Not supported Leds per segment. You need to add definition of seg(n) with needed number of elements according to formula above"
 #endif
-
 
 
 #if HAS_SOUNDDETECTOR
@@ -187,10 +183,9 @@
   byte peak[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};              // The length of these arrays must be >= SOUNDDETECTOR_BANDS_WIDTH
   int oldBarHeights[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
   int SOUNDDETECTOR_bandValues[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  int SOUNDDETECTOR_noiseThresholds[8] = {800, 300, 200, 200, 200, 200, 200, 200}; // Example thresholds
+  int SOUNDDETECTOR_noiseThresholds[SOUNDDETECTOR_BANDS_WIDTH] = {800, 300, 200, 200, 200, 200, 200, 200}; // Example thresholds
   double vReal[SOUNDDETECTOR_SAMPLES];
   double vImag[SOUNDDETECTOR_SAMPLES];
-  unsigned long newTime;
   long SOUNDDETECTOR_Amplitude = 1000;
   arduinoFFT FFT = arduinoFFT(vReal, vImag, SOUNDDETECTOR_SAMPLES, SOUNDDETECTOR_SAMPLING_FREQ);
   DEFINE_GRADIENT_PALETTE( purple_gp ) {
@@ -233,7 +228,7 @@
   int SOUNDDETECTOR_post_react = 0; // OLD SPIKE CONVERSION
 #endif
 
-String softwareVersion = "version-3.0.1-alpha";
+String softwareVersion = "version-2.0.0-alpha";
 const char* host = "shelfclock";
 const int   daylightOffset_sec = 3600;
 const char* ntpServer = "pool.ntp.org";
@@ -250,8 +245,6 @@ int colorWheelPositionTwo = 255; // 2nd COLOR WHEEL POSITION
 const int colorWheelSpeed = 3;
 int sleepTimerCurrent = 0;
 int isAsleep = 0;
-int photo_in[PHOTO_SIZE] = {   0, 150, 1180, 2170, 4095};
-int photo_out[PHOTO_SIZE] = {255, 160,   40,   14,    4};
 int photoresisterReadings[PHOTO_SAMPLES];      // the readings from the analog input
 int readIndex = 0;              // the index of the current reading
 int lightSensorValue = 255;
@@ -294,10 +287,24 @@ float outdoorTemp = -500;
 float outdoorHumidity = -1;
 bool humidity_outdoor_enable = 0;
 bool temperature_outdoor_enable = 0;
+float tideHeight[48];   // Stores hourly tide heights
+char textTides[128];    // Stores high/low tide information as a formatted string
+char stationID[11] = "9446484"; // Default station ID, can be modified by the user
+uint32_t tideColor[14];   // Stores RGB colors for each hour based on tide height
+bool dailyPollSuccess = false; //did the tide poll work?
+int dailyPollFailed = 0;
 const size_t songTaskbufferSize = 128;  // Adjust the buffer size as per your requirements
 char songTaskbuffer[songTaskbufferSize];
 
-struct WeatherAPI weatherapi;
+int rainForecast[14] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // Global array to store rain forecast data
+#if HAS_ONLINEWEATHER
+  #define LAT_SIZE 15
+  #define LON_SIZE 15
+  #define API_SIZE 50
+  char latitude[LAT_SIZE] = "";    // Default value if needed
+  char longitude[LON_SIZE] = "";
+  char apikey[API_SIZE] = "";
+#endif
 #if HAS_BUZZER
   bool useAudibleAlarm = 0;
   char defaultAudibleAlarm[100] = "Final Countdown";
@@ -306,9 +313,6 @@ struct WeatherAPI weatherapi;
 char filesArray[64][64];
 char songsArray[64][64];
 #endif
-
-const int NUM_ROWS = 7;
-const int NUM_COLS = 21;
 
 bool updateSettingsRequired = 0;
 int totalSongs = 0;
@@ -319,7 +323,6 @@ File fsUploadFile;
 
 struct tm timeinfo; 
 CRGB LEDs[NUM_LEDS];
-Preferences preferences;
 #if HAS_DHT
   DHT dht(DHT_PIN, DHTTYPE);
   int altitudeLocal = 81;  //in meters
@@ -430,9 +433,9 @@ int lightshowMode = 0;
 byte randomSpectrumMode = 0;
 int suspendFrequency = 1;  //in minutes
 byte suspendType = 0; //0-off, 1-digits-only, 2-everything
-static int prevPeak[SOUNDDETECTOR_BANDS_WIDTH] = {0}; // Initialize all elements to 0
-
-
+#if HAS_SOUNDDETECTOR
+  static int prevPeak[SOUNDDETECTOR_BANDS_WIDTH] = {0}; // Initialize all elements to 0
+#endif
 CRGB spectrumColor = CRGB(r15_val, g15_val, b15_val);
 CRGB spectrumBackground = CRGB(r17_val, g17_val, b17_val);
 CRGB hourColor = CRGB(r1_val, g1_val, b1_val); 
@@ -697,8 +700,6 @@ void setup() {
   //load settings from nvram and flash
   Serial.println("load all settings from json file");
   getclockSettings("generic"); //load all settings from json file
-  Serial.println("load all previously saved settings from Preferences");
-  loadSetupSettings();  //load all previously saved settings from Preferences
   
   #if HAS_RTC
   //display "rtc"
@@ -955,18 +956,19 @@ void setup() {
   delay(1000);
   allBlank();
 
-  //display IP adresss 3x after setup
-  char processedText[16] = {0};
+  //display IP adresss 2x after setup
+  char processedTextIP[16] = {0};
   if (WiFi.status() == WL_CONNECTED) {
-      snprintf(processedText, sizeof(processedText), "%s", WiFi.localIP().toString().c_str());
+      snprintf(processedTextIP, sizeof(processedTextIP), "%s", WiFi.localIP().toString().c_str());
   } else {
-      strcpy(processedText, "no AP, no IP");
+      strcpy(processedTextIP, "no AP, no IP");
   }
-  scroll(processedText);
-  scroll(processedText);
+  //scroll(processedTextIP);
+  //scroll(processedTextIP);
   allBlank();
-
   Serial.println("end of Setup");
+  if (spotlightsColorSettings == 5 ){ updateRainForecast(); }
+  if (spotlightsColorSettings == 6 ){ fetchTides(); processCurrentTide();}
 }    //end of Setup()
 
 void Task1code(void * parameter) {
@@ -992,9 +994,9 @@ void Task1code(void * parameter) {
 
 void getRemoteWeather() {
   #if HAS_ONLINEWEATHER
-    if (WiFi.status() == WL_CONNECTED && weatherapi.apikey && weatherapi.latitude && weatherapi.longitude) {
+    if (WiFi.status() == WL_CONNECTED && apikey && latitude && longitude) {
       HTTPClient http;
-      String serverPath = String("http://api.openweathermap.org/data/2.5/weather?lat=") + weatherapi.latitude + String("&lon=") + weatherapi.longitude + String("&APPID=") + weatherapi.apikey + String("&units=imperial");
+      String serverPath = String("http://api.openweathermap.org/data/2.5/weather?lat=") + latitude + String("&lon=") + longitude + String("&APPID=") + apikey + String("&units=imperial");
       Serial.println(serverPath);
       http.begin(serverPath.c_str());
       int httpResponseCode = http.GET();
@@ -1111,6 +1113,8 @@ void loop(){
       previousTimeHour = currentTimeHour; 
       randomHourPassed = 1;
       hoursUptime += 1;
+      if (spotlightsColorSettings == 5 ){ updateRainForecast(); }
+      if (spotlightsColorSettings == 6 ){ processCurrentTide(); scrollTide(); }
       if (scrollFrequency == 6 && (suspendType == 0 || isAsleep == 0) && scrollOverride == 1 && ((clockMode != 11) && (clockMode != 1) && (clockMode != 4))) {displayScrollMode();}
       if (scrollFrequency == 6 && randomSpectrumMode == 1 && clockMode == 9) {allBlank(); spectrumMode = random(11);}
       } //end of run every hour
@@ -1119,6 +1123,7 @@ void loop(){
         previousTimeDay = currentTimeDay; 
         randomDayPassed = 1; 
         configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
+        if (spotlightsColorSettings == 6 ){ fetchTides();}
         #if HAS_RTC
           int tempyear = (timeinfo.tm_year +1900);
           int tempmonth = (timeinfo.tm_mon + 1);
@@ -1126,7 +1131,7 @@ void loop(){
         #endif
         daysUptime = daysUptime + 1;
      }
-    if (abs(currentTimeWeek - previousTimeWeek) >= 1) { previousTimeWeek = currentTimeWeek; randomWeekPassed = 1;}
+    if (abs(currentTimeWeek - previousTimeWeek) >= 1) { previousTimeWeek = currentTimeWeek; randomWeekPassed = 1;if (spotlightsColorSettings == 5 ){ updateRainForecast(); }}
     
     if (abs(currentTimeMonth - previousTimeMonth) >= 1) { previousTimeMonth = currentTimeMonth; randomMonthPassed = 1;}
 
@@ -1427,18 +1432,21 @@ void displayTemperatureMode() {   //miain temp function
       Serial.println(F("Failed to read from DHT sensor!"));
       return;
     }
+    float correctedTemp = sensorTemp + temperatureCorrection;
+    if (temperatureSymbol == 39) {  correctedTemp = ((sensorTemp * 1.8000) + 32) + temperatureCorrection; }
   #else
     float h = 00.00;        // fake humidity
-    float sensorTemp = 00.00;     // fake temperature
+    float sensorTemp = outdoorTemp;     // fake temperature
+    float correctedTemp = sensorTemp;
+    if (temperatureSymbol != 39) {  correctedTemp = ((sensorTemp - 32) / 1.8); }
   #endif
-  float correctedTemp = sensorTemp + temperatureCorrection;
-  if (temperatureSymbol == 39) {  correctedTemp = ((sensorTemp * 1.8000) + 32) + temperatureCorrection; }
+
   byte t1 = 0;
   byte t2 = 0;
-
   if (temperature_outdoor_enable == true) {
     if (countFlip > 5) {
       correctedTemp = outdoorTemp;
+      if (temperatureSymbol != 39) {  correctedTemp = ((outdoorTemp - 32) / 1.8); }
     }
     if (countFlip > 9) {
       countFlip = 0;
@@ -1542,6 +1550,7 @@ void displayHumidityMode() {   //main humidity function
   #else
     float sensorHumi = 00.00;        // fake humidity
     float t = 00.00;     // fake temperature
+    sensorHumi = outdoorHumidity;
   #endif
   byte t1 = 0;
   byte t2 = 0;
@@ -2534,7 +2543,6 @@ void GetBrightnessLevel() {   //samples the photoresister and set brightness
      sumBrightness += photoresisterReadings[i];  // add all the current readings together
     }
  //   Serial.println(analogRead(PHOTORESISTER_PIN));
-  // lightSensorValue = multiMap<int>(sumBrightness / PHOTO_SAMPLES, photo_in, photo_out, PHOTO_SIZE);
   //lightSensorValue = 255 - (((sumBrightness / PHOTO_SAMPLES) * (254)) / 4095);  //linear conversion of 0-4095 to 255 to 40, after getting the average of the readings
   lightSensorValue = 275 - (((sumBrightness / PHOTO_SAMPLES) * (245)) / 4095);  //linear conversion of 0-4095 to 305 to 10 (a little brighter), after getting the average of the readings
   if (lightSensorValue > 255) {lightSensorValue = 255;} //constrain brightness
@@ -2547,6 +2555,337 @@ void GetBrightnessLevel() {   //samples the photoresister and set brightness
   FastLED.setBrightness(10); //SET TO MIN LEVEL IF NO SENSOR
 #endif
 }  // end of auto-brightness
+
+
+void updateRainForecast() {
+  #if HAS_ONLINEWEATHER
+
+  // Get the current time
+  time_t now;
+  time(&now);
+  localtime_r(&now, &timeinfo);
+
+  // Adjust weekday (tm_wday: Sunday=0, Monday=1, ..., Saturday=6)
+  int weekday = timeinfo.tm_wday; // Sunday=0, Monday=1, ..., Saturday=6
+
+  // Calculate days since last Monday
+  int daysSinceMonday = (weekday + 6) % 7;  // Monday => 0, Sunday => 6
+
+  // Calculate the date of the last Monday
+  time_t lastMonday = now - (daysSinceMonday * 86400);
+  char lastMondayDate[11];
+  struct tm mondayInfo;
+  localtime_r(&lastMonday, &mondayInfo);
+  strftime(lastMondayDate, sizeof(lastMondayDate), "%Y-%m-%d", &mondayInfo);
+
+  // Build the API URL
+  String apiUrl = "https://api.open-meteo.com/v1/forecast?latitude=" + String(latitude, 9)
+                + "&longitude=" + String(longitude, 9)
+                + "&daily=precipitation_probability_max"
+                + "&timezone=auto"
+                + "&past_days=7"
+                + "&forecast_days=14";
+
+  // Initialize rainForecast array to off
+  for (int i = 0; i < 14; i++) {
+    rainForecast[i] = 0;
+  }
+
+  HTTPClient http;
+  Serial.println("Grabbing forecast data:");
+  Serial.println(apiUrl);
+  http.begin(apiUrl);
+  int httpResponseCode = http.GET();
+
+  if (httpResponseCode == 200) {
+    String payload = http.getString();
+
+    // Parse JSON
+    DynamicJsonDocument doc(16384);
+    DeserializationError error = deserializeJson(doc, payload);
+    if (error) {
+      Serial.print("deserializeJson() failed: ");
+      Serial.println(error.f_str());
+      http.end();
+      return;
+    }
+
+    // Extract the date and precipitation_probability_max arrays
+    JsonArray dateArray = doc["daily"]["time"];
+    JsonArray precipProbArray = doc["daily"]["precipitation_probability_max"];
+    int totalDays = dateArray.size();
+
+    // Find the index corresponding to lastMondayDate
+    int startIndex = -1;
+    for (int i = 0; i < totalDays; i++) {
+      const char* dateStr = dateArray[i];
+      if (strcmp(dateStr, lastMondayDate) == 0) {
+        startIndex = i;
+        break;
+      }
+    }
+
+    if (startIndex == -1) {
+      Serial.println("Could not find last Monday in data.");
+      http.end();
+      return;
+    }
+
+    // Use a threshold for rain chance. Adjust as needed.
+    int threshold = 50;
+    // Now extract 14 days of data starting from startIndex
+    for (int i = 0; i < 14; i++) {
+      int dataIndex = startIndex + i;
+      if (dataIndex >= totalDays) {
+        break;
+      }
+      int rainChance = precipProbArray[dataIndex];
+      // Set LED to fully ON if rain chance meets/exceeds threshold, otherwise OFF
+      rainForecast[i] = (rainChance >= threshold) ? 255 : 0;
+    }
+  } else {
+    Serial.print("HTTP GET Request failed, error: ");
+    Serial.println(httpResponseCode);
+    http.end();
+    return;
+  }
+  http.end();
+
+  // Debug: Print rainForecast array
+  for (int i = 0; i < 14; i++) {
+    Serial.printf("Day %d: LED %s\n", i, (rainForecast[i] ? "ON" : "OFF"));
+  }
+  #endif
+
+  // --- Adjust the order of the Shelf LED array to match your wiring ---
+  // Required order: 0,1,2,3,4,5,6,13,12,11,10,9,8,7.
+  uint32_t temprainForecast[14];
+  // Copy the first 7 entries unchanged.
+  for (int i = 0; i < 7; i++) {
+    temprainForecast[i] = rainForecast[i];
+  }
+  // Reverse the order for indices 7 to 13.
+  for (int i = 7; i < 14; i++) {
+    temprainForecast[i] = rainForecast[13 - (i - 7)];
+  }
+  for (int i = 0; i < 14; i++) {
+    rainForecast[i] = temprainForecast[i];
+  }
+
+}
+
+
+
+
+void fetchTides() {
+  HTTPClient http;
+  String payload;
+  bool todayOk = false, tomorrowOk = false, highLowOk = false;
+  
+  // Build the base URL (common for all API calls)
+  String baseURL = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=";
+  baseURL += stationID;
+  baseURL += "&product=predictions&datum=MLLW&time_zone=lst_ldt&units=english&application=DataAPI_Sample&format=json";
+  
+  // --- Fetch today's hourly tide predictions ---
+  String todayURL = baseURL + "&date=today&interval=h";
+  Serial.println("Polling today's tide predictions...");
+  Serial.println(todayURL);
+  http.begin(todayURL);
+  int httpCode = http.GET();
+  if (httpCode == 200) {
+    payload = http.getString();
+    StaticJsonDocument<2048> doc;
+    deserializeJson(doc, payload);
+    JsonArray predictions = doc["predictions"];
+    // Assume 24 entries for today; store them in indices 0..23.
+    for (int i = 0; i < 24; i++) {
+      tideHeight[i] = predictions[i]["v"].as<float>();
+    }
+    todayOk = true;
+  } else {
+    Serial.println("Failed to fetch today's tide data");
+  }
+  http.end();
+
+  // --- Fetch tomorrow's hourly tide predictions ---
+  String tomorrowURL = baseURL + "&date=tomorrow&interval=h";
+  Serial.println("Polling tomorrow's tide predictions...");
+  Serial.println(tomorrowURL);
+  http.begin(tomorrowURL);
+  httpCode = http.GET();
+  if (httpCode == 200) {
+    payload = http.getString();
+    StaticJsonDocument<2048> doc;
+    deserializeJson(doc, payload);
+    JsonArray predictions = doc["predictions"];
+    // Store tomorrow's 24 hours in indices 24..47.
+    for (int i = 0; i < 24; i++) {
+      tideHeight[24 + i] = predictions[i]["v"].as<float>();
+    }
+    tomorrowOk = true;
+  } else {
+    Serial.println("Failed to fetch tomorrow's tide data");
+  }
+  http.end();
+
+  // --- Fetch high/low tide predictions for today for scrolling text ---
+  // Note: We use only today's hi/low data here.
+  String hilowURL = baseURL + "&date=today&interval=hilo";
+  Serial.println("Polling today's high/low tide data for scrolling text...");
+  Serial.println(hilowURL);
+  http.begin(hilowURL);
+  httpCode = http.GET();
+  if (httpCode == 200) {
+    payload = http.getString();
+    StaticJsonDocument<1024> doc;
+    deserializeJson(doc, payload);
+    JsonArray predictions = doc["predictions"];
+    String text = "";
+    for (JsonObject prediction : predictions) {
+      String type = prediction["type"].as<String>();
+      // Extract time (HH:MM) and remove the colon for compactness.
+      String timeStr = prediction["t"].as<String>().substring(11, 16);
+      timeStr.replace(":", "");
+      float value = prediction["v"].as<float>();
+      char buffer[32];
+      snprintf(buffer, sizeof(buffer), "%s %s %.1f ft     ", type.c_str(), timeStr.c_str(), value);
+      text += buffer;
+    }
+    text.toCharArray(textTides, sizeof(textTides));
+    Serial.println("Today's High/Low Tide Info:");
+    Serial.println(textTides);
+    highLowOk = true;
+  } else {
+    Serial.println("Failed to fetch today's high/low tide data");
+  }
+  http.end();
+  
+  // Set the global poll success flag based on all three API calls.
+  dailyPollSuccess = (todayOk && tomorrowOk && highLowOk);
+
+  if (dailyPollSuccess) {
+    dailyPollFailed = 0;
+    Serial.println("Daily poll succeeded.");
+    Serial.println("\nFull 48-Hour Tide Data:");
+    for (int i = 0; i < 48; i++) {
+      Serial.printf("Hour %02d: %.2f ft\n", i, tideHeight[i]);
+    }
+  } else {
+    Serial.println("Daily poll failed.");
+    // Reset LED colors if poll failed.
+    for (int i = 0; i < 14; i++) {
+      tideColor[i] = 0;
+    }
+    dailyPollFailed++;
+  }
+}
+
+
+void processCurrentTide() {
+  // If the daily poll previously failed, try to poll again (up to a limited number of retries).
+  if (!dailyPollSuccess && dailyPollFailed < 3) {
+    Serial.println("Daily poll failed last time. Retrying poll...");
+    fetchTides();
+  }
+  
+  // Get the current hour from the RTC.
+  time_t now = time(NULL);
+  struct tm *timeinfo = localtime(&now);
+  int startIndex = timeinfo->tm_hour;  // current hour (0–23)
+  if (startIndex > 48 - 14) {  // Ensure the 14-hour window fits.
+    startIndex = 48 - 14;
+  }
+  
+  // Determine global min and max from the full 48-hour data (for overall normalization if needed).
+  float globalMin = tideHeight[0];
+  float globalMax = tideHeight[0];
+  for (int i = 1; i < 48; i++) {
+    if (tideHeight[i] < globalMin) globalMin = tideHeight[i];
+    if (tideHeight[i] > globalMax) globalMax = tideHeight[i];
+  }
+  
+  // Determine the local (window) minimum and maximum tide values within the current 14-hour window.
+  float localMin = tideHeight[startIndex];
+  float localMax = tideHeight[startIndex];
+  int localMinIndex = startIndex;
+  int localMaxIndex = startIndex;
+  for (int i = startIndex; i < startIndex + 14; i++) {
+    if (tideHeight[i] < localMin) {
+      localMin = tideHeight[i];
+      localMinIndex = i;
+    }
+    if (tideHeight[i] > localMax) {
+      localMax = tideHeight[i];
+      localMaxIndex = i;
+    }
+  }
+  
+  // Determine the tide trend (rising if the minimum occurs before the maximum).
+  bool rising = (localMinIndex < localMaxIndex);
+
+  for (int i = 0; i < 14; i++) {
+    int idx = startIndex + i;
+    
+    // Choose brightness: full for window extremes; reduced for others.
+    uint8_t brightness = ( (idx == localMinIndex) || (idx == localMaxIndex) ) ? 255 : 20;  //use a reduced brightness (80).
+    
+    // Compute local normalization (within the window) for hue interpolation.
+    float localRange = (localMax != localMin) ? (localMax - localMin) : 1;
+    float localNorm = (tideHeight[idx] - localMin) / localRange;
+    
+    uint8_t red, blue;
+    if (rising) {
+      // Rising tide: gradient from blue (low) to red (high)
+      red = localNorm * 255;
+      blue = (1.0 - localNorm) * 255;
+    } else {
+      // Falling tide: gradient from red (high) to blue (low)
+      red = (1.0 - localNorm) * 255;
+      blue = localNorm * 255;
+    }
+    uint8_t green = 0;
+    
+    // Scale the red and blue channels by the chosen brightness.
+    red = (red * brightness) / 255;
+    blue = (blue * brightness) / 255;
+    
+    // Save the computed color (0x00RRGGBB format) into the tideColor array.
+    tideColor[i] = (red << 16) | (green << 8) | blue;
+  }
+  
+  // --- Adjust the order of the LED array to match your wiring ---
+  // Required order: 0,1,2,3,4,5,6,13,12,11,10,9,8,7.
+  uint32_t tempColors[14];
+  // Copy the first 7 entries unchanged.
+  for (int i = 0; i < 7; i++) {
+    tempColors[i] = tideColor[i];
+  }
+  // Reverse the order for indices 7 to 13.
+  for (int i = 7; i < 14; i++) {
+    tempColors[i] = tideColor[13 - (i - 7)];
+  }
+  for (int i = 0; i < 14; i++) {
+    tideColor[i] = tempColors[i];
+  }
+  
+  // Debug: Print the 14-hour LED mapping.
+  Serial.println("\n14-Hour LED Display Mapping:");
+  for (int i = 0; i < 14; i++) {
+    int hourIdx = startIndex + i;
+    Serial.printf("LED %02d (Hour %02d): Tide: %.2f ft -> Color: #%06X\n",
+                  i, hourIdx, tideHeight[hourIdx], tideColor[i]);
+  }
+
+}
+
+
+void scrollTide() {
+  char processedText[64] = {0}; // Buffer for formatted text
+  snprintf(processedText, sizeof(processedText), "%s", textTides);
+  scroll(processedText);  //Called to scroll the tide text stored in textTides.
+  scroll(processedText);
+}
 
 
 
@@ -2634,6 +2973,7 @@ void fakeClock(int loopy) {  //flashes 12:00 like all old clocks did
 
 
 void ShelfDownLights() {  //turns on the drop lights on the underside of each shelf
+int currentHour  = timeinfo.tm_hour;
  //   Serial.println("ShelfDownLights function");
  if ((suspendType != 2 || isAsleep == 0) && useSpotlights == 1) {  //not sleeping? suposed to be running?
   unsigned long currentMillis = millis();  
@@ -2645,20 +2985,21 @@ void ShelfDownLights() {  //turns on the drop lights on the underside of each sh
         if (spotlightsColorSettings == 2 ){ LEDs[i] = colorWheel2(((i-SEGMENTS_LEDS)  * 18 + colorWheelPositionTwo) % 256); }
         if (spotlightsColorSettings == 3 ){ LEDs[i] = colorWheel2(((255) + colorWheelPositionTwo) % 256); }
         if (spotlightsColorSettings == 4 ){
-    int seed = random(2500);         // A random number. Higher number => fewer twinkles. Use random16() for values >255.
-    if (seed < 30) {
-      CRGB color = CRGB::Black;
-      if (pastelColors == 0){ color = CHSV(random(0, 255), 255, 255); }
-      if (pastelColors == 1){ color = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
-            {              
-              LEDs[SEGMENTS_LEDS+random((NUM_LEDS-SEGMENTS_LEDS))] = color;
+          int seed = random(2500);         // A random number. Higher number => fewer twinkles. Use random16() for values >255.
+          if (seed < 30) {
+            CRGB color = CRGB::Black;
+            if (pastelColors == 0){ color = CHSV(random(0, 255), 255, 255); }
+            if (pastelColors == 1){ color = CRGB(random(0, 255), random(0, 255), random(0, 255)); }
+                  {              
+                    LEDs[SEGMENTS_LEDS+random((NUM_LEDS-SEGMENTS_LEDS))] = color;
+                  }
             }
-      }
-    
-      for (int j=SEGMENTS_LEDS; j<NUM_LEDS; j++) {
-        LEDs[j].fadeToBlackBy(1);
-        }
-     }
+            for (int j=SEGMENTS_LEDS; j<NUM_LEDS; j++) {
+              LEDs[j].fadeToBlackBy(1);
+              }
+         }
+        if (spotlightsColorSettings == 5 ){ LEDs[i] = CRGB(0, 0, rainForecast[i-SEGMENTS_LEDS]); }// Use rainForecast for the current and next week
+        if (spotlightsColorSettings == 6 ){ LEDs[i] = tideColor[(i-SEGMENTS_LEDS)]; } // Use tideColor for the current hour and next 13 hours
     }
     colorWheelPositionTwo = colorWheelPositionTwo - 1; // SPEED OF 2nd COLOR WHEEL
     if (colorWheelPositionTwo < 0) {colorWheelPositionTwo = 255;} // RESET 2nd COLOR WHEEL 
@@ -3139,14 +3480,6 @@ void Cylon() {
   }
   if (clockMode != 5) { allBlank(); }
 } //Cylon
-
-
-void loadSetupSettings(){  //setting stored in preffs and loaded at boot
-  preferences.begin("shelfclock", false);
-  preferences.getBytes("weatherapi", &weatherapi, preferences.getBytesLength("weatherapi"));
-  //   ssid = preferences.getChar("ssid");
-  //    password = preferences.getChar("password");
-}
 
 
 #if HAS_BUZZER
@@ -3896,10 +4229,25 @@ void getclockSettings(String fileType) {
   useAudibleAlarm = jsonObj["useAudibleAlarm"].as<bool>();
   #endif
   useSpotlights = jsonObj["useSpotlights"].as<bool>();
-  humidity_outdoor_enable = jsonObj["humidity_outdoor_enable"].as<bool>();
-  temperature_outdoor_enable = jsonObj["temperature_outdoor_enable"].as<bool>();
-  //weatherapi = jsonObj["weatherapi"];weatherapi.latitude
-
+  #if HAS_ONLINEWEATHER
+    humidity_outdoor_enable = jsonObj["humidity_outdoor_enable"].as<bool>();
+    temperature_outdoor_enable = jsonObj["temperature_outdoor_enable"].as<bool>();
+    const char* latStr = jsonObj["latitude"].as<const char*>();
+    if (latStr) {
+      strncpy(latitude, latStr, sizeof(latitude) - 1);
+      latitude[sizeof(latitude) - 1] = '\0';
+    }
+      const char* lonStr = jsonObj["longitude"].as<const char*>();
+    if (lonStr) {
+      strncpy(longitude, lonStr, sizeof(longitude) - 1);
+      longitude[sizeof(longitude) - 1] = '\0';
+    }
+      const char* keyStr = jsonObj["apikey"].as<const char*>();
+    if (keyStr) {
+      strncpy(apikey, keyStr, sizeof(apikey) - 1);
+      apikey[sizeof(apikey) - 1] = '\0';
+    }
+  #endif
   // Close the file.
   file.close();
 }  
@@ -3918,111 +4266,6 @@ void saveclockSettings(String fileType) {
   DynamicJsonDocument doc(8192);
   JsonObject clockSettings = doc.to<JsonObject>();
   // Add the values to the JSON object
-  /*
-  clockSettings["gmtOffset_sec"] = -28800;
-  clockSettings["DSTime"] = 0;
-  clockSettings["cd_r_val"] = 0;
-  clockSettings["cd_g_val"] = 255;
-  clockSettings["cd_b_val"] = 0;
-  clockSettings["r0_val"] = 193;
-  clockSettings["g0_val"] = 204;
-  clockSettings["b0_val"] = 78;
-  clockSettings["r1_val"] = 255;
-  clockSettings["g1_val"] = 0;
-  clockSettings["b1_val"] = 0;
-  clockSettings["r2_val"] = 255;
-  clockSettings["g2_val"] = 0;
-  clockSettings["b2_val"] = 0;
-  clockSettings["r3_val"] = 255;
-  clockSettings["g3_val"] = 0;
-  clockSettings["b3_val"] = 0;
-  clockSettings["r4_val"] = 255;
-  clockSettings["g4_val"] = 0;
-  clockSettings["b4_val"] = 0;
-  clockSettings["r5_val"] = 255;
-  clockSettings["g5_val"] = 0;
-  clockSettings["b5_val"] = 0;
-  clockSettings["r6_val"] = 255;
-  clockSettings["g6_val"] = 0;
-  clockSettings["b6_val"] = 0;
-  clockSettings["r7_val"] = 255;
-  clockSettings["g7_val"] = 0;
-  clockSettings["b7_val"] = 0;
-  clockSettings["r8_val"] = 255;
-  clockSettings["g8_val"] = 0;
-  clockSettings["b8_val"] = 0;
-  clockSettings["r9_val"] = 255;
-  clockSettings["g9_val"] = 0;
-  clockSettings["b9_val"] = 0;
-  clockSettings["r10_val"] = 255;
-  clockSettings["g10_val"] = 0;
-  clockSettings["b10_val"] = 0;
-  clockSettings["r11_val"] = 255;
-  clockSettings["g11_val"] = 0;
-  clockSettings["b11_val"] = 0;
-  clockSettings["r12_val"] = 255;
-  clockSettings["g12_val"] = 0;
-  clockSettings["b12_val"] = 0;
-  clockSettings["r13_val"] = 255;
-  clockSettings["g13_val"] = 0;
-  clockSettings["b13_val"] = 0;
-  clockSettings["r14_val"] = 255;
-  clockSettings["g14_val"] = 0;
-  clockSettings["b14_val"] = 0;
-  clockSettings["r15_val"] = 255;
-  clockSettings["g15_val"] = 0;
-  clockSettings["b15_val"] = 0;
-  clockSettings["r16_val"] = 255;
-  clockSettings["g16_val"] = 255;
-  clockSettings["b16_val"] = 255;
-  clockSettings["r17_val"] = 0;
-  clockSettings["g17_val"] = 0;
-  clockSettings["b17_val"] = 0;
-  clockSettings["clockMode"] = 11;
-  clockSettings["pastelColors"] = 0;
-  clockSettings["temperatureSymbol"] = 39;
-  clockSettings["ClockColorSettings"] = 0;
-  clockSettings["DateColorSettings"] = 0;
-  clockSettings["tempColorSettings"] = 0;
-  clockSettings["humiColorSettings"] = 0;
-  clockSettings["tempDisplayType"] = 0;
-  clockSettings["humiDisplayType"] = 0;
-  clockSettings["temperatureCorrection"] = 0;
-  clockSettings["colonType"] = 0;
-  clockSettings["ColorChangeFrequency"] = 0;
-  clockSettings["scrollText"] = "dAdS ArE tHE bESt";
-  clockSettings["clockDisplayType"] = 3;
-  clockSettings["dateDisplayType"] = 5;
-  clockSettings["colorchangeCD"] = 1;
-  clockSettings["useAudibleAlarm"] = 0;
-  clockSettings["spectrumMode"] = 0;
-  clockSettings["realtimeMode"] = 0;
-  clockSettings["spectrumColorSettings"] = 2;
-  clockSettings["spectrumBackgroundSettings"] = 0;
-  clockSettings["spotlightsColorSettings"] = 0;
-  clockSettings["brightness"] = 10;
-  clockSettings["useSpotlights"] = 1;
-  clockSettings["scrollColorSettings"] = 0;
-  clockSettings["scrollFrequency"] = 1;
-  clockSettings["randomSpectrumMode"] = 0;
-  clockSettings["scrollOverride"] = 0;
-  clockSettings["scrollOptions1"] = 0;
-  clockSettings["scrollOptions2"] = 0;
-  clockSettings["scrollOptions3"] = 0;
-  clockSettings["scrollOptions4"] = 0;
-  clockSettings["scrollOptions5"] = 0;
-  clockSettings["scrollOptions6"] = 0;
-  clockSettings["scrollOptions7"] = 0;
-  clockSettings["scrollOptions8"] = 1;
-  clockSettings["lightshowMode"] = 0;
-  clockSettings["suspendFrequency"] = 1;
-  clockSettings["suspendType"] = 0;
-  clockSettings["temperature"] = "";
-  clockSettings["humidity"] = "";
-  clockSettings["weatherapi"] = "";
-  clockSettings["humidity_outdoor_enable"] = 0;
-  clockSettings["temperature_outdoor_enable"] = 0;
-  */
   clockSettings["gmtOffset_sec"] = gmtOffset_sec;
   clockSettings["DSTime"] = DSTime;
   clockSettings["cd_r_val"] = cd_r_val;
@@ -4123,9 +4366,14 @@ void saveclockSettings(String fileType) {
   clockSettings["lightshowMode"] = lightshowMode;
   clockSettings["suspendFrequency"] = suspendFrequency;
   clockSettings["suspendType"] = suspendType;
-  clockSettings["humidity_outdoor_enable"] = humidity_outdoor_enable;
-  clockSettings["temperature_outdoor_enable"] = temperature_outdoor_enable;
-  //clockSettings["weatherapi"] = weatherapi;
+  #if HAS_ONLINEWEATHER
+    clockSettings["humidity_outdoor_enable"] = humidity_outdoor_enable;
+    clockSettings["temperature_outdoor_enable"] = temperature_outdoor_enable;
+    clockSettings["latitude"] = latitude;
+    clockSettings["longitude"] = longitude;
+    clockSettings["apikey"] = apikey;
+  #endif
+
   // Serialize the JSON document to a string
   String jsonStr;
   serializeJson(doc, jsonStr);
@@ -4264,9 +4512,11 @@ void loadWebPageHandlers() {
     sprintf(scrollingColor, "#%02X%02X%02X", r16_val, g16_val, b16_val);
     json["scrollColor"] = scrollingColor;
     json["scrollColorSettings"] = scrollColorSettings;
-    json["weatherapi"]["latitude"] = weatherapi.latitude;
-    json["weatherapi"]["longitude"] = weatherapi.longitude;
-    json["weatherapi"]["apikey"] = weatherapi.apikey;
+    #if HAS_ONLINEWEATHER
+      json["weatherapi"]["latitude"] = latitude;
+      json["weatherapi"]["longitude"] = longitude;
+      json["weatherapi"]["apikey"] = apikey;
+    #endif
     json["humidity_outdoor_enable"] = humidity_outdoor_enable;
     json["temperature_outdoor_enable"] = temperature_outdoor_enable;
     json["HAS_DHT"] = HAS_DHT;
@@ -4308,6 +4558,8 @@ void loadWebPageHandlers() {
       if (!json["spotlightsColorSettings"].isNull()) {
         spotlightsColorSettings = (int)json["spotlightsColorSettings"];
         updateSettingsRequired = 1;
+        if (spotlightsColorSettings == 5 ){ updateRainForecast(); }
+        if (spotlightsColorSettings == 6 ){ fetchTides(); processCurrentTide(); }
         ShelfDownLights(); 
       }
 
@@ -4910,13 +5162,29 @@ void loadWebPageHandlers() {
       }
   #endif
 
-      // outdoor weather api
-      if (!json["weatherapi"].isNull()) {       
-        if (!json["weatherapi"]["latitude"].isNull()) strncpy(weatherapi.latitude, json["weatherapi"]["latitude"], sizeof(weatherapi.latitude));
-        if (!json["weatherapi"]["longitude"].isNull()) strncpy(weatherapi.longitude, json["weatherapi"]["longitude"], sizeof(weatherapi.longitude));
-        if (!json["weatherapi"]["apikey"].isNull()) strncpy(weatherapi.apikey, json["weatherapi"]["apikey"], sizeof(weatherapi.apikey));
-        preferences.putBytes("weatherapi", &weatherapi, sizeof(weatherapi));
+  #if HAS_ONLINEWEATHER
+    if (!json["weatherapi"].isNull()) {
+      if (!json["weatherapi"]["latitude"].isNull()) {
+        const char* temp = json["weatherapi"]["latitude"].as<const char*>();
+        strncpy(latitude, temp, LAT_SIZE - 1);
+        latitude[LAT_SIZE - 1] = '\0';
       }
+      if (!json["weatherapi"]["longitude"].isNull()) {
+        const char* temp = json["weatherapi"]["longitude"].as<const char*>();
+        strncpy(longitude, temp, LON_SIZE - 1);
+        longitude[LON_SIZE - 1] = '\0';
+      }
+      if (!json["weatherapi"]["apikey"].isNull()) {
+        const char* temp = json["weatherapi"]["apikey"].as<const char*>();
+        strncpy(apikey, temp, API_SIZE - 1);
+        apikey[API_SIZE - 1] = '\0';
+      }
+        Serial.println(latitude);
+        Serial.println(longitude);
+        Serial.println(apikey);
+        updateSettingsRequired = 1;
+    }
+  #endif
 
       // humidity
       if (!json["humidity_outdoor_enable"].isNull()) {
@@ -5061,32 +5329,23 @@ void loadWebPageHandlers() {
     char tempRTC[64]="";
     char tempRTCE[64]="";
     String output;
-    DynamicJsonDocument json(3000);
-    #if HAS_RTC
-      DateTime now = rtc.now();
-      //DS3231 RTC    
-      sprintf(tempRTC, "%s, ", daysOfTheWeek[now.dayOfTheWeek()]);
-      sprintf(tempRTC + strlen(tempRTC), "%s ", monthsOfTheYear[now.month()-1]);
-      sprintf(tempRTC + strlen(tempRTC), "%02d ", now.day());
-      sprintf(tempRTC + strlen(tempRTC), "%d ", now.year());
-      sprintf(tempRTC + strlen(tempRTC), "%02d:", now.hour());
-      sprintf(tempRTC + strlen(tempRTC), "%02d:", now.minute());
-      sprintf(tempRTC + strlen(tempRTC), "%02d", now.second());
-      json["DS-3231"] = tempRTC;
-    #endif
-    //ESP32 RTC
-    sprintf(tempRTCE, "%s, ", daysOfTheWeek[timeinfo.tm_wday]);
-    sprintf(tempRTCE + strlen(tempRTCE), "%s ", monthsOfTheYear[timeinfo.tm_mon]);
-    sprintf(tempRTCE + strlen(tempRTCE), "%02d ", timeinfo.tm_mday);
-    sprintf(tempRTCE + strlen(tempRTCE), "%d ", timeinfo.tm_year+1900);
-    sprintf(tempRTCE + strlen(tempRTCE), "%02d:", timeinfo.tm_hour);
-    sprintf(tempRTCE + strlen(tempRTCE), "%02d:", timeinfo.tm_min);
-    sprintf(tempRTCE + strlen(tempRTCE), "%02d", timeinfo.tm_sec);
-      json["softwareVersion"] = softwareVersion;
+    DynamicJsonDocument json(11000);
+
+    json["softwareVersion"] = softwareVersion;
+    json["HAS_RTC"] = HAS_RTC;
+    json["HAS_DHT"] = HAS_DHT;
+    json["HAS_SOUNDDETECTOR"] = HAS_SOUNDDETECTOR;
+    json["HAS_BUZZER"] = HAS_BUZZER;
+    json["HAS_PHOTOSENSOR"] = HAS_PHOTOSENSOR;
+    json["HAS_ONLINEWEATHER"] = HAS_ONLINEWEATHER;
+    #if HAS_SOUNDDETECTOR
+      json["ANALYZER_SIZE"] = ANALYZER_SIZE;
+    #endif	
     #if HAS_BUZZER
       json["BUZZER_PIN"] = BUZZER_PIN;
     #endif
     json["ClockColorSettings"] = ClockColorSettings;
+    json["COLOR_ORDER"] = COLOR_ORDER;
     json["ColorChangeFrequency"] = ColorChangeFrequency;
     json["CountUpMillis"] = CountUpMillis;
     json["DateColorSettings"] = DateColorSettings;
@@ -5100,71 +5359,67 @@ void loadWebPageHandlers() {
       json["DHT11 (Heat Index F)"] = (heatIndex * 1.8000) + 32;
       json["DHTTYPE"] = DHTTYPE;
     #endif
+    #if HAS_RTC
+      DateTime now = rtc.now(); 
+      sprintf(tempRTC, "%s, ", daysOfTheWeek[now.dayOfTheWeek()]);
+      sprintf(tempRTC + strlen(tempRTC), "%s ", monthsOfTheYear[now.month()-1]);
+      sprintf(tempRTC + strlen(tempRTC), "%02d ", now.day());
+      sprintf(tempRTC + strlen(tempRTC), "%d ", now.year());
+      sprintf(tempRTC + strlen(tempRTC), "%02d:", now.hour());
+      sprintf(tempRTC + strlen(tempRTC), "%02d:", now.minute());
+      sprintf(tempRTC + strlen(tempRTC), "%02d", now.second());
+      json["DS-3231"] = tempRTC; //DS3231 RTC 
+    #endif
     json["DSTime"] = DSTime;
-    json["ESP32-NTP"] = tempRTCE;
+    sprintf(tempRTCE, "%s, ", daysOfTheWeek[timeinfo.tm_wday]);
+    sprintf(tempRTCE + strlen(tempRTCE), "%s ", monthsOfTheYear[timeinfo.tm_mon]);
+    sprintf(tempRTCE + strlen(tempRTCE), "%02d ", timeinfo.tm_mday);
+    sprintf(tempRTCE + strlen(tempRTCE), "%d ", timeinfo.tm_year+1900);
+    sprintf(tempRTCE + strlen(tempRTCE), "%02d:", timeinfo.tm_hour);
+    sprintf(tempRTCE + strlen(tempRTCE), "%02d:", timeinfo.tm_min);
+    sprintf(tempRTCE + strlen(tempRTCE), "%02d", timeinfo.tm_sec);
+    json["ESP32-NTP"] = tempRTCE; //ESP32 RTC
     json["FAKE_NUM_LEDS"] = FAKE_NUM_LEDS;
-    json["HAS_DHT"] = HAS_DHT;
-    json["HAS_BUZZER"] = HAS_BUZZER;
-    json["HAS_ONLINEWEATHER"] = HAS_ONLINEWEATHER;
-    json["HAS_PHOTOSENSOR"] = HAS_PHOTOSENSOR;
-    json["HAS_RTC"] = HAS_RTC;
-    json["HAS_SOUNDDETECTOR"] = HAS_SOUNDDETECTOR;
     json["LEDS_PER_DIGIT"] = LEDS_PER_DIGIT;
     json["LEDS_PER_SEGMENT"] = LEDS_PER_SEGMENT;
     json["LED_PIN"] = LED_PIN;
+    json["LED_TYPE"] = STRINGIFY(LED_TYPE);
     json["MILLI_AMPS"] = MILLI_AMPS;
     json["NUMBER_OF_DIGITS"] = NUMBER_OF_DIGITS;
     json["NUM_LEDS"] = NUM_LEDS;
     #if HAS_PHOTOSENSOR
-      json["PHOTORESISTER_PIN"] = PHOTORESISTER_PIN;
       json["PHOTO_SAMPLES"] = PHOTO_SAMPLES;
+      json["PHOTO_SIZE"] = PHOTO_SIZE;
+      json["PHOTORESISTER_PIN"] = PHOTORESISTER_PIN;
     #endif
     json["SEGMENTS_LEDS"] = SEGMENTS_LEDS;
     json["SEGMENTS_PER_NUMBER"] = SEGMENTS_PER_NUMBER;
     #if HAS_SOUNDDETECTOR
-      json["SOUNDDETECTOR_I2S_WS"] = SOUNDDETECTOR_I2S_WS;
-      json["SOUNDDETECTOR_I2S_SD"] = SOUNDDETECTOR_I2S_SD;
-      json["SOUNDDETECTOR_I2S_SCK"] = SOUNDDETECTOR_I2S_SCK;
-      json["SOUNDDETECTOR_I2S_PORT"] = SOUNDDETECTOR_I2S_PORT;
-      json["SOUNDDETECTOR_SAMPLING_FREQ"] = SOUNDDETECTOR_SAMPLING_FREQ;
-      json["SOUNDDETECTOR_SAMPLES"] = SOUNDDETECTOR_SAMPLES;
-      json["SOUNDDETECTOR_BITS_PER_SAMPLE"] = SOUNDDETECTOR_BITS_PER_SAMPLE;
-      json["SOUNDDETECTOR_BANDS_WIDTH"] = SOUNDDETECTOR_BANDS_WIDTH;
+      json["SOUNDDETECTOR_Amplitude"] = SOUNDDETECTOR_Amplitude;
       json["SOUNDDETECTOR_BANDS_HEIGHT"] = SOUNDDETECTOR_BANDS_HEIGHT;
+      json["SOUNDDETECTOR_BANDS_WIDTH"] = SOUNDDETECTOR_BANDS_WIDTH;
+      json["SOUNDDETECTOR_BITS_PER_SAMPLE"] = SOUNDDETECTOR_BITS_PER_SAMPLE;
+      json["SOUNDDETECTOR_I2S_PORT"] = SOUNDDETECTOR_I2S_PORT;
+      json["SOUNDDETECTOR_I2S_SCK"] = SOUNDDETECTOR_I2S_SCK;
+      json["SOUNDDETECTOR_I2S_SD"] = SOUNDDETECTOR_I2S_SD;
+      json["SOUNDDETECTOR_I2S_WS"] = SOUNDDETECTOR_I2S_WS;
+      json["SOUNDDETECTOR_SAMPLES"] = SOUNDDETECTOR_SAMPLES;
+      json["SOUNDDETECTOR_SAMPLING_FREQ"] = SOUNDDETECTOR_SAMPLING_FREQ;
       json["SOUNDDETECTOR_averageAudioInput"] = SOUNDDETECTOR_averageAudioInput;
+      JsonArray SOUNDDETECTOR_bandValuesArray = json.createNestedArray("SOUNDDETECTOR_bandValues");
+      for (int i = 0; i < SOUNDDETECTOR_BANDS_WIDTH; i++) { SOUNDDETECTOR_bandValuesArray.add(SOUNDDETECTOR_bandValues[i]); }
       json["SOUNDDETECTOR_decay"] = SOUNDDETECTOR_decay;
       json["SOUNDDETECTOR_decay_check"] = SOUNDDETECTOR_decay_check;
       json["SOUNDDETECTOR_post_react"] = SOUNDDETECTOR_post_react;
       json["SOUNDDETECTOR_pre_react"] = SOUNDDETECTOR_pre_react;
+      JsonArray SOUNDDETECTOR_noiseThresholdsArray = json.createNestedArray("SOUNDDETECTOR_noiseThresholds");
+      for (int i = 0; i < SOUNDDETECTOR_BANDS_WIDTH; i++) { SOUNDDETECTOR_noiseThresholdsArray.add(SOUNDDETECTOR_noiseThresholds[i]); }
       json["SOUNDDETECTOR_react"] = SOUNDDETECTOR_react;
-      json["SOUNDDETECTOR_Amplitude"] = SOUNDDETECTOR_Amplitude;
-      json["SOUNDDETECTOR_noiseThresholds[0]"] = SOUNDDETECTOR_noiseThresholds[0];
-      json["SOUNDDETECTOR_noiseThresholds[1]"] = SOUNDDETECTOR_noiseThresholds[1];
-      json["SOUNDDETECTOR_noiseThresholds[2]"] = SOUNDDETECTOR_noiseThresholds[2];
-      json["SOUNDDETECTOR_noiseThresholds[3]"] = SOUNDDETECTOR_noiseThresholds[3];
-      json["SOUNDDETECTOR_noiseThresholds[4]"] = SOUNDDETECTOR_noiseThresholds[4];
-      json["SOUNDDETECTOR_noiseThresholds[5]"] = SOUNDDETECTOR_noiseThresholds[5];
-      json["SOUNDDETECTOR_noiseThresholds[6]"] = SOUNDDETECTOR_noiseThresholds[6];
-      json["SOUNDDETECTOR_noiseThresholds[7]"] = SOUNDDETECTOR_noiseThresholds[7];
-/*      json["SOUNDDETECTOR_bandWeightingFactors[0]"] = SOUNDDETECTOR_bandWeightingFactors[0];
-      json["SOUNDDETECTOR_bandWeightingFactors[1]"] = SOUNDDETECTOR_bandWeightingFactors[1];
-      json["SOUNDDETECTOR_bandWeightingFactors[2]"] = SOUNDDETECTOR_bandWeightingFactors[2];
-      json["SOUNDDETECTOR_bandWeightingFactors[3]"] = SOUNDDETECTOR_bandWeightingFactors[3];
-      json["SOUNDDETECTOR_bandWeightingFactors[4]"] = SOUNDDETECTOR_bandWeightingFactors[4];
-      json["SOUNDDETECTOR_bandWeightingFactors[5]"] = SOUNDDETECTOR_bandWeightingFactors[5];
-      json["SOUNDDETECTOR_bandWeightingFactors[6]"] = SOUNDDETECTOR_bandWeightingFactors[6];
-      json["SOUNDDETECTOR_bandWeightingFactors[7]"] = SOUNDDETECTOR_bandWeightingFactors[7];*/
-      json["SOUNDDETECTOR_bandValues[0]"] = SOUNDDETECTOR_bandValues[0];
-      json["SOUNDDETECTOR_bandValues[1]"] = SOUNDDETECTOR_bandValues[1];
-      json["SOUNDDETECTOR_bandValues[2]"] = SOUNDDETECTOR_bandValues[2];
-      json["SOUNDDETECTOR_bandValues[3]"] = SOUNDDETECTOR_bandValues[3];
-      json["SOUNDDETECTOR_bandValues[4]"] = SOUNDDETECTOR_bandValues[4];
-      json["SOUNDDETECTOR_bandValues[5]"] = SOUNDDETECTOR_bandValues[5];
-      json["SOUNDDETECTOR_bandValues[6]"] = SOUNDDETECTOR_bandValues[6];
-      json["SOUNDDETECTOR_bandValues[7]"] = SOUNDDETECTOR_bandValues[7];
     #endif
     json["SPECTRUM_PIXELS"] = SPECTRUM_PIXELS;
     json["SPOT_LEDS"] = SPOT_LEDS;
+    json["USE_LITTLEFS"] = USE_LITTLEFS;
+    json["USE_SPIFFS"] = USE_SPIFFS;
     json["WiFi IP"] = WiFi.localIP().toString();
     json["WiFi_MAX_RETRIES"] = WiFi_MAX_RETRIES;
     json["WiFi_MAX_RETRY_DURATION"] = WiFi_MAX_RETRY_DURATION;
@@ -5172,14 +5427,17 @@ void loadWebPageHandlers() {
     json["WiFi_retryCount"] = WiFi_retryCount;
     json["WiFi_startTime"] = WiFi_startTime;
     json["WiFi_totalReconnections"] = WiFi_totalReconnections;
-    #if HAS_PHOTOSENSOR
-      json["analogRead(PHOTORESISTER_PIN)"] = analogRead(PHOTORESISTER_PIN);
-    #endif
     #if HAS_DHT
       json["altitudeLocal"] = altitudeLocal;
     #endif
+    #if HAS_PHOTOSENSOR
+      json["analogRead(PHOTORESISTER_PIN)"] = analogRead(PHOTORESISTER_PIN);
+    #endif
     json["breakOutSet"] = breakOutSet;
     json["brightness"] = brightness;
+    #if HAS_SOUNDDETECTOR
+      json["buttonPushCounter"] = buttonPushCounter;
+    #endif	
     json["clearOldLeds"] = clearOldLeds;
     json["clockDisplayType"] = clockDisplayType;
     json["clockMode"] = clockMode;
@@ -5188,11 +5446,16 @@ void loadWebPageHandlers() {
     json["colorWheelPositionTwo"] = colorWheelPositionTwo;
     json["colorWheelSpeed"] = colorWheelSpeed;
     json["colorchangeCD"] = colorchangeCD;
+    #if HAS_SOUNDDETECTOR
+      json["colorTimer"] = colorTimer;
+    #endif	
     json["countdownMilliSeconds"] = countdownMilliSeconds;
     json["countupMilliSeconds"] = countupMilliSeconds;
     json["currentMode"] = currentMode;
     json["currentReal"] = currentReal;
     json["cylonPosition"] = cylonPosition;
+    json["dailyPollSuccess"] = dailyPollSuccess;
+    json["dailyPollFailed"] = dailyPollFailed;
     json["dateDisplayType"] = dateDisplayType;
     json["daylightOffset_sec"] = daylightOffset_sec;
     json["daysUptime"] = daysUptime;
@@ -5202,9 +5465,15 @@ void loadWebPageHandlers() {
     json["dotsOn"] = dotsOn;
     json["endCountDownMillis"] = endCountDownMillis;
     json["fakeclockrunning"] = fakeclockrunning;
+    #if HAS_BUZZER
+      JsonArray filesArrayJson = json.createNestedArray("filesArray");
+      for (int i = 0; i < 64; i++) { filesArrayJson.add(filesArray[i]); }
+    #endif	
     json["foodSpot"] = foodSpot;
     json["getSlower"] = getSlower;
     json["gmtOffset_sec"] = gmtOffset_sec;
+    JsonArray greenMatrixArray = json.createNestedArray("greenMatrix");
+    for (int i = 0; i < SPECTRUM_PIXELS; i++) { greenMatrixArray.add(greenMatrix[i]); }
     json["host"] = host;
     json["hoursUptime"] = hoursUptime;
     #if HAS_ONLINEWEATHER || HAS_DHT
@@ -5219,26 +5488,26 @@ void loadWebPageHandlers() {
     json["millis"] = millis();
   	json["minutesUptime"] = minutesUptime;
     json["ntpServer"] = ntpServer;
+    #if HAS_SOUNDDETECTOR
+      JsonArray oldBarHeightsArray = json.createNestedArray("oldBarHeights");
+      for (unsigned int i = 0; i < sizeof(oldBarHeights) / sizeof(oldBarHeights[0]); i++) { oldBarHeightsArray.add(oldBarHeights[i]); }
+    #endif	
     #if HAS_ONLINEWEATHER
-      json["outdoortemp"] = outdoorTemp;
-      json["outdoorHumidity"] = outdoorTemp;
+      json["outdoorTemp"] = outdoorTemp;
+      json["outdoorHumidity"] = outdoorHumidity;
+      JsonArray tideHeightArray = json.createNestedArray("tideHeight");
+      for (int i = 0; i < 48; i++) { tideHeightArray.add(String(tideHeight[i], 1)); }
+      JsonArray tideColorArray = json.createNestedArray("tideColor");
+      for (int i = 0; i < 14; i++) {
+        char hexColor[7];  // 6 digits + null terminator
+        sprintf(hexColor, "%06X", tideColor[i]);
+        tideColorArray.add(hexColor);
+      }
     #endif
     json["pastelColors"] = pastelColors;
     #if HAS_PHOTOSENSOR
-      json["photoresisterReadings[0]"] = photoresisterReadings[0];
-      json["photoresisterReadings[1]"] = photoresisterReadings[1];
-      //json["photoresisterReadings[2]"] = photoresisterReadings[2];
-      //json["photoresisterReadings[3]"] = photoresisterReadings[3];
-      //json["photoresisterReadings[4]"] = photoresisterReadings[4];
-      //json["photoresisterReadings[5]"] = photoresisterReadings[5];
-      //json["photoresisterReadings[6]"] = photoresisterReadings[6];
-      //json["photoresisterReadings[7]"] = photoresisterReadings[7];
-      //json["photoresisterReadings[8]"] = photoresisterReadings[8];
-      //json["photoresisterReadings[9]"] = photoresisterReadings[9];
-      //json["photoresisterReadings[10]"] = photoresisterReadings[10];
-      //json["photoresisterReadings[11]"] = photoresisterReadings[11];
-      //json["photoresisterReadings[12]"] = photoresisterReadings[12];
-      //json["photoresisterReadings[13]"] = photoresisterReadings[13];
+    JsonArray photoresisterReadingsArray = json.createNestedArray("photoresisterReadings");
+    for (int i = 0; i < PHOTO_SAMPLES; i++) { photoresisterReadingsArray.add(String(photoresisterReadings[i], 1)); }   
     #endif
     json["prevTime"] = prevTime;
     json["prevTime2"] = prevTime2;
@@ -5247,6 +5516,12 @@ void loadWebPageHandlers() {
     json["previousTimeMin"] = previousTimeMin;
     json["previousTimeMonth"] = previousTimeMonth;
     json["previousTimeWeek"] = previousTimeWeek;
+    JsonArray rainArray = json.createNestedArray("rain");
+    for (int i = 0; i < SPECTRUM_PIXELS; i++) { rainArray.add(rain[i]); }
+    #if HAS_ONLINEWEATHER
+      JsonArray rainForecastArray = json.createNestedArray("rainForecast");
+      for (int i = 0; i < 14; i++) { rainForecastArray.add(rainForecast[i]); }
+    #endif
     json["randomDayPassed"] = randomDayPassed;
     json["randomHourPassed"] = randomHourPassed;
     json["randomMinPassed"] = randomMinPassed;
@@ -5257,6 +5532,9 @@ void loadWebPageHandlers() {
     json["randomWeekPassed"] = randomWeekPassed;
     json["readIndex"] = readIndex;
     json["realtimeMode"] = realtimeMode;
+    #if HAS_SOUNDDETECTOR
+      json["sampling_period_us"] = sampling_period_us; 
+    #endif	
     json["scoreboardLeft"] = scoreboardLeft;
     json["scoreboardRight"] = scoreboardRight;
     json["scrollColorSettings"] = scrollColorSettings;
@@ -5269,11 +5547,18 @@ void loadWebPageHandlers() {
     json["scrollOptions6"] = scrollOptions6;
     json["scrollOptions7"] = scrollOptions7;
     json["scrollOptions8"] = scrollOptions8;
+    json["scrollOverride"] = scrollOverride;
     json["scrollText"] = scrollText.c_str();
     json["sleepTimerCurrent"] = sleepTimerCurrent;
     json["snakeLastDirection"] = snakeLastDirection;
     json["snakePosition"] = snakePosition;
     json["snakeWaiting"] = snakeWaiting;
+    #if HAS_BUZZER
+      json["songTaskbuffer"] = songTaskbuffer;
+      json["songTaskbufferSize"] = songTaskbufferSize;
+      JsonArray songsArrayJson = json.createNestedArray("songsArray");
+      for (int i = 0; i < 64; i++) { songsArrayJson.add(songsArray[i]); }
+    #endif	
     #if HAS_BUZZER
       json["specialAudibleAlarm"] = SONGS[specialAudibleAlarm];
     #endif
@@ -5283,6 +5568,7 @@ void loadWebPageHandlers() {
       json["spectrumMode"] = spectrumMode;
     #endif
     json["spotlightsColorSettings"] = spotlightsColorSettings;
+    json["stationID"] = stationID; 
     json["suspendFrequency"] = suspendFrequency;
     json["suspendType"] = suspendType;
     #if HAS_ONLINEWEATHER || HAS_DHT
@@ -5292,11 +5578,28 @@ void loadWebPageHandlers() {
       json["temperature_outdoor_enable"] = temperature_outdoor_enable;
       json["temperatureSymbol"] = temperatureSymbol;
     #endif
+    json["textTides"] = textTides;
+    #if HAS_BUZZER
+      json["totalSongs"] = totalSongs;
+    #endif	
     json["updateSettingsRequired"] = updateSettingsRequired;
     #if HAS_BUZZER
       json["useAudibleAlarm"] = useAudibleAlarm;
     #endif
     json["useSpotlights"] = useSpotlights;
+    #if HAS_SOUNDDETECTOR
+      JsonArray validDurations = json.createNestedArray("valid_durations");
+      for (unsigned int i = 0; i < sizeof(valid_durations) / sizeof(valid_durations[0]); i++) { validDurations.add(valid_durations[i]); }
+      JsonArray validOctaves = json.createNestedArray("valid_octaves");
+      for (unsigned int i = 0; i < sizeof(valid_octaves) / sizeof(valid_octaves[0]); i++) { validOctaves.add(valid_octaves[i]); }
+      JsonArray validBeats = json.createNestedArray("valid_beats");
+      for (unsigned int i = 0; i < sizeof(valid_beats) / sizeof(valid_beats[0]); i++) { validBeats.add(valid_beats[i]); }
+    #endif	
+    #if HAS_ONLINEWEATHER
+      json["latitude"] = latitude;
+      json["longitude"] = longitude;
+      json["apikey"] = apikey;
+    #endif	
 
     serializeJson(json, output);
     server.send(200, "application/json", output);

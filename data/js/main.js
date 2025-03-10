@@ -311,7 +311,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.querySelectorAll("[name='temperature_outdoor_enable'], [name='humidity_outdoor_enable']").forEach(element => {
                     element.removeAttribute('disabled');
                 });
-
                 document.querySelectorAll(".weathercheckbox").forEach(element => {
                     element.setAttribute('hidden', true);
                 });
@@ -327,7 +326,9 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelector("[name='clearapikey']").addEventListener('click', async event => {
             let body = {
                 weatherapi: {
-                    'apikey': ''
+                    'apikey': '',
+                    'latitude': '',
+                    'longitude': ''
                 }
             }
             await fetch(`${url}/updateanything`, {
@@ -339,7 +340,6 @@ document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll("[name='temperature_outdoor_enable'], [name='humidity_outdoor_enable']").forEach(element => {
                 element.setAttribute('disabled', true);
             });
-
             document.querySelectorAll(".weathercheckbox").forEach(element => {
                 element.removeAttribute('hidden');
             });
@@ -359,7 +359,18 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 		}
 
-
+        // Check if both latitude and longitude are populated
+        if (settings.weatherapi && settings.weatherapi.latitude && settings.weatherapi.longitude) {
+            // If latitude and longitude are set, show the weather-dependent options
+            document.querySelectorAll(".weather-dependent").forEach(element => {
+                element.removeAttribute('hidden');
+            });
+        } else {
+            // If not set, keep them hidden
+            document.querySelectorAll(".weather-dependent").forEach(element => {
+                element.setAttribute('hidden', true);
+            });
+        }
 
     }
 
@@ -404,7 +415,8 @@ async function loadSettings() {
 				console.log("JSON data:", settings);
 		if (!settings.HAS_SOUNDDETECTOR) { document.getElementById("FFT").style.display = 'none'; document.getElementById("FFT2").style.display = 'none'; } //hide FFT if no sounddetector hardware
 		if (!settings.HAS_BUZZER) { document.getElementById("BUZZER").style.display = 'none'; document.getElementById("BUZZER2").style.display = 'none'; } //hide buzzer if no sounddetector hardware
-		if (!settings.HAS_ONLINEWEATHER && !settings.HAS_DHT) { document.getElementById("NOTEMP").style.display = 'none';  document.getElementById("NOTEMP2").style.display = 'none'; document.getElementById("NOTEMP3").style.display = 'none'; document.getElementById("NOTEMP4").style.display = 'none';} //hide TEMP STUFF if no sounddetector hardware
+		if (!settings.HAS_ONLINEWEATHER && !settings.HAS_DHT) { document.getElementById("NOTEMP").style.display = 'none';  document.getElementById("NOTEMP2").style.display = 'none'; document.getElementById("NOTEMP3").style.display = 'none'; document.getElementById("NOTEMP4").style.display = 'none'; } //hide TEMP STUFF if no sounddetector hardware
+		if (!settings.HAS_ONLINEWEATHER) { document.getElementById("NOTEMP3").style.display = 'none'; document.getElementById("NOTEMP7").style.display = 'none'; document.getElementById("NOTEMP8").style.display = 'none'; document.getElementById("NOTEMP9").style.display = 'none';} //hide TEMP STUFF if no sounddetector hardware
 		
         for (let [key, value] of Object.entries(settings)) {
             if (key in radioButtons) {
