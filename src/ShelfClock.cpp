@@ -19,7 +19,7 @@
 #define HAS_SOUNDDETECTOR    true
 #define HAS_BUZZER    true
 #define HAS_PHOTOSENSOR    true
-#define HAS_ONLINEWEATHER    true
+#define HAS_ONLINEWEATHER   true
 
 #if HAS_RTC
   #include "RTClib.h"
@@ -85,7 +85,7 @@
   #define DHTTYPE DHT11         // DHT 11 tempsensor
   #define DHT_PIN 33             // DHT sensor pin
 #endif
-  #if HAS_SOUNDDETECTOR
+#if HAS_SOUNDDETECTOR
   #define SOUNDDETECTOR_I2S_WS 23             
   #define SOUNDDETECTOR_I2S_SD 32             
   #define SOUNDDETECTOR_I2S_SCK 18             
@@ -232,9 +232,15 @@ String softwareVersion = "version-2.0.0-alpha";
 const char* host = "shelfclock";
 const int   daylightOffset_sec = 3600;
 const char* ntpServer = "pool.ntp.org";
-const int valid_durations[] = {1, 2, 4, 8, 16, 32};
-const int valid_octaves[] = {4, 5, 6, 7};
-const int valid_beats[] = {25, 28, 31, 35, 40, 45, 50, 56, 63, 70, 80, 90, 100, 112, 125, 140, 160, 180, 200, 225, 250, 285, 320, 355, 400, 450, 500, 565, 635, 715, 800, 900};
+
+#if HAS_BUZZER
+  const int valid_durations[] = {1, 2, 4, 8, 16, 32};
+  const int valid_octaves[] = {4, 5, 6, 7};
+  const int valid_beats[] = {25, 28, 31, 35, 40, 45, 50, 56, 63, 70, 80, 90, 100, 112, 125, 140, 160, 180, 200, 225, 250, 285, 320, 355, 400, 450, 500, 565, 635, 715, 800, 900};
+  int totalSongs = 0;
+  const size_t songTaskbufferSize = 128;  // Adjust the buffer size as per your requirements
+  char songTaskbuffer[songTaskbufferSize];
+#endif
 unsigned long WiFi_startTime = 0;
 unsigned long WiFi_elapsedTime = 0;
 int WiFi_retryCount = 0;
@@ -245,9 +251,11 @@ int colorWheelPositionTwo = 255; // 2nd COLOR WHEEL POSITION
 const int colorWheelSpeed = 3;
 int sleepTimerCurrent = 0;
 int isAsleep = 0;
-int photoresisterReadings[PHOTO_SAMPLES] = {0};      // the readings from the analog input
-int readIndex = 0;              // the index of the current reading
-int lightSensorValue = 255;
+#if HAS_PHOTOSENSOR
+  int photoresisterReadings[PHOTO_SAMPLES] = {0};      // the readings from the analog input
+  int readIndex = 0;              // the index of the current reading
+  int lightSensorValue = 255;
+#endif
 int previousTimeMin = 0;
 int previousTimeHour = 0;
 int previousTimeDay = 0;
@@ -283,39 +291,35 @@ int getSlower = 180;
 int daysUptime = 0;
 int hoursUptime = 0;
 int minutesUptime = 0;
-float outdoorTemp = -500;
-float outdoorHumidity = -1;
 bool humidity_outdoor_enable = 0;
 bool temperature_outdoor_enable = 0;
+float outdoorTemp = -500;
+float outdoorHumidity = -1;
 float tideHeight[48];   // Stores hourly tide heights
 char textTides[128];    // Stores high/low tide information as a formatted string
 char stationID[11] = "9446484"; // Default station ID, can be modified by the user
 uint32_t tideColor[14];   // Stores RGB colors for each hour based on tide height
 bool dailyPollSuccess = false; //did the tide poll work?
 int dailyPollFailed = 0;
-const size_t songTaskbufferSize = 128;  // Adjust the buffer size as per your requirements
-char songTaskbuffer[songTaskbufferSize];
-
-int rainForecast[14] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // Global array to store rain forecast data
 #if HAS_ONLINEWEATHER
-  #define LAT_SIZE 15
-  #define LON_SIZE 15
-  #define API_SIZE 50
-  char latitude[LAT_SIZE] = "";    // Default value if needed
-  char longitude[LON_SIZE] = "";
-  char apikey[API_SIZE] = "";
+  int rainForecast[14] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // Global array to store rain forecast data
+    #define LAT_SIZE 15
+    #define LON_SIZE 15
+    #define API_SIZE 50
+    char latitude[LAT_SIZE] = "";    // Default value if needed
+    char longitude[LON_SIZE] = "";
+    char apikey[API_SIZE] = "";
 #endif
 #if HAS_BUZZER
   bool useAudibleAlarm = 0;
   char defaultAudibleAlarm[100] = "Final Countdown";
   char specialAudibleAlarm[100] = "Final Countdown";
   DynamicJsonDocument SONGS(8192);
-char filesArray[64][64];
-char songsArray[64][64];
+  char songsArray[64][64];
+  char filesArray[64][64];
 #endif
 
 bool updateSettingsRequired = 0;
-int totalSongs = 0;
 
 DynamicJsonDocument jsonDoc(8192); // create a JSON document to store the data
 DynamicJsonDocument jsonScheduleData(8192);  //stores schedules
@@ -402,6 +406,7 @@ byte pastelColors = 0;
 byte temperatureSymbol = 39;   // 36=Celcius, 39=Fahrenheit check 'numbers'
 bool DSTime = 0;
 long gmtOffset_sec = -28800;
+bool fakeTime = 0;
 byte ClockColorSettings = 0;
 byte DateColorSettings = 0;
 byte tempColorSettings = 0;
@@ -663,10 +668,10 @@ void setup() {
   // Initialize FileFS 
   //display "file" while activating the filesystem
   allBlank();
-  displayNumber(39,6,CRGB::Red);  // F
-  displayNumber(42,4,CRGB::Red);  // I
-  displayNumber(45,2,CRGB::Red); // L
-  displayNumber(38,0,CRGB::Red);  // E
+  displayNumber(39,6,CRGB::Purple);  // F
+  displayNumber(42,4,CRGB::Purple);  // I
+  displayNumber(45,2,CRGB::Purple); // L
+  displayNumber(38,0,CRGB::Purple);  // E
   FastLED.show();
   delay(500);
   Serial.println(F("Inizializing FS..."));
@@ -680,9 +685,9 @@ void setup() {
       Serial.println(F("!An error occurred during FileFS mounting"));
       //display "Err" if error
       allBlank();
-      displayNumber(38,6,CRGB::Red);  // E
-      displayNumber(83,4,CRGB::Red);  // r
-      displayNumber(83,2,CRGB::Red); // r
+      displayNumber(38,6,CRGB::Purple);  // E
+      displayNumber(83,4,CRGB::Purple);  // r
+      displayNumber(83,2,CRGB::Purple); // r
       FastLED.show();
       delay(500);
   }
@@ -798,9 +803,9 @@ void setup() {
 
   //display "dnS" while activating the mdns
   allBlank();
-  displayNumber(69,6,CRGB::Red);  // d
-  displayNumber(79,4,CRGB::Red);  // n
-  displayNumber(52,2,CRGB::Red); // S
+  displayNumber(69,6,CRGB::Orange);  // d
+  displayNumber(79,4,CRGB::Orange);  // n
+  displayNumber(52,2,CRGB::Orange); // S
   FastLED.show();
   delay(500);
   //use mdns for host name resolution
@@ -808,9 +813,9 @@ void setup() {
     Serial.println("Error setting up MDNS responder!");
     while (1) {
       allBlank();
-      displayNumber(38,6,CRGB::Red);  // E
-      displayNumber(83,4,CRGB::Red);  // r
-      displayNumber(83,2,CRGB::Red); // r
+      displayNumber(38,6,CRGB::Orange);  // E
+      displayNumber(83,4,CRGB::Orange);  // r
+      displayNumber(83,2,CRGB::Orange); // r
       FastLED.show();
       delay(1000);
     }
@@ -820,25 +825,35 @@ void setup() {
   //init and set the time of the internal RTC from NTP server
   //display "ntP" while activating the ntp
   allBlank();
-  displayNumber(79,6,CRGB::Red);  // n
-  displayNumber(85,4,CRGB::Red);  // t
-  displayNumber(49,2,CRGB::Red);  // P
+  displayNumber(79,6,CRGB::Blue);  // n
+  displayNumber(85,4,CRGB::Blue);  // t
+  displayNumber(49,2,CRGB::Blue);  // P
   FastLED.show();
   delay(500);
   Serial.println("set the time of the internal RTC from NTP server");
   configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
     if(!getLocalTime(&timeinfo)){ 
       allBlank();
-      displayNumber(38,6,CRGB::Red);  // E
-      displayNumber(83,4,CRGB::Red);  // r
-      displayNumber(83,2,CRGB::Red); // r
+      displayNumber(38,6,CRGB::Blue);  // E
+      displayNumber(83,4,CRGB::Blue);  // r
+      displayNumber(83,2,CRGB::Blue); // r
       FastLED.show();
       delay(1000);
+      timeinfo.tm_hour = 0;
+      timeinfo.tm_min = 0;
+      timeinfo.tm_sec = 0;
+      timeinfo.tm_mday = 18;
+      timeinfo.tm_mon = 4;
+      timeinfo.tm_year = 125;
+      time_t t = mktime(&timeinfo);
+      struct timeval now = { .tv_sec = t};
+      settimeofday(&now, NULL);
+      fakeTime = 1;
     }
 
   #if HAS_RTC
     //was the internal RTC time set by the NTP server?, if not set it via the RTC DS3231 stored time, will be wrong if daylight savings time is active
-    if(!getLocalTime(&timeinfo)){ 
+    if(!getLocalTime(&timeinfo) || fakeTime == 1){ 
       struct tm tm;
       DateTime now = rtc.now();
       tm.tm_year = now.year() - 1900;
@@ -853,7 +868,7 @@ void setup() {
       settimeofday(&now1, NULL);
     }
     //did the DS3231 lose power (battery dead/changed), if so, set from time recieved from the NTP above
-    if (rtc.lostPower()) {
+    if (rtc.lostPower() && fakeTime == 0) {
       //display "bAtt" while if batt dead/changed
       allBlank();
       displayNumber(67,6,CRGB::Red);  // b
@@ -1176,7 +1191,9 @@ void loop(){
     if (brightness != 10) {  //if not set to auto-dim just use user set brightness
       FastLED.setBrightness(brightness);
     } else if (brightness == 10) {  //auto-dim use the value from above
-      FastLED.setBrightness(lightSensorValue);     
+        #if HAS_PHOTOSENSOR
+          FastLED.setBrightness(lightSensorValue);
+        #endif  
     } 
   }
 
@@ -1437,24 +1454,33 @@ void displayTemperatureMode() {   //miain temp function
     if (temperatureSymbol == 39) {  correctedTemp = ((sensorTemp * 1.8000) + 32) + temperatureCorrection; }
   #else
     float h = 00.00;        // fake humidity
-    float sensorTemp = outdoorTemp;     // fake temperature
+    float sensorTemp = 0;     // fake temperature
     float correctedTemp = sensorTemp;
-    if (temperatureSymbol != 39) {  correctedTemp = ((sensorTemp - 32) / 1.8); }
   #endif
 
-  byte t1 = 0;
-  byte t2 = 0;
-  if (temperature_outdoor_enable == true) {
+  if (temperature_outdoor_enable == true) {   //if outdoor temp show both outdoor and indoor
     if (countFlip > 5) {
-      correctedTemp = outdoorTemp;
-      if (temperatureSymbol != 39) {  correctedTemp = ((outdoorTemp - 32) / 1.8); }
+      if (temperatureSymbol != 39) {  
+        correctedTemp = ((outdoorTemp - 32) / 1.8); 
+      } else {
+        correctedTemp = outdoorTemp;
+       }
     }
     if (countFlip > 9) {
+      #if !HAS_DHT   //if outdoor temp and no DHT
+        if (temperatureSymbol != 39) {  
+          correctedTemp = ((outdoorTemp - 32) / 1.8); 
+        } else {
+          correctedTemp = outdoorTemp;
+        }
+      #endif
       countFlip = 0;
     }
     countFlip++;
   }
 
+  byte t1 = 0;
+  byte t2 = 0;
   int tempDecimal = correctedTemp * 10;
   if (correctedTemp >= 100) {
     int tempHundred = correctedTemp / 10;
@@ -1551,21 +1577,23 @@ void displayHumidityMode() {   //main humidity function
   #else
     float sensorHumi = 00.00;        // fake humidity
     float t = 00.00;     // fake temperature
-    sensorHumi = outdoorHumidity;
   #endif
-  byte t1 = 0;
-  byte t2 = 0;
 
-  if (humidity_outdoor_enable == true) {
+  if (humidity_outdoor_enable == true) {  //if outdoor humid also show dht
     if (countFlip > 5) {
       sensorHumi = outdoorHumidity;
     }
-    if (countFlip > 9) {
+    if (countFlip > 9) {  //no dht just show dht
+      #if !HAS_DHT
+        sensorHumi = outdoorHumidity;
+      #endif
       countFlip = 0;
     }
     countFlip++;
   }
 
+  byte t1 = 0;
+  byte t2 = 0;
   int humiDecimal = sensorHumi * 10;
   if (sensorHumi >= 100) {
     int humiHundred = sensorHumi / 10;
@@ -1787,7 +1815,7 @@ void displayLightshowMode() {
   //if (lightshowMode == 1) {Twinkles();}
   //if (lightshowMode == 2) {Rainbow();}
   //if (lightshowMode == 3) {GreenMatrix();}
-  //if (lightshowMode == 4) {Chase();}
+  //if (lightshowMode == 4) {blueRain();}
   //if (lightshowMode == 5) {Fire2021();}
   //if (lightshowMode == 6) {Snake();}
   //if (lightshowMode == 7) {Cylon();}
@@ -2674,7 +2702,7 @@ void updateRainForecast() {
   for (int i = 0; i < 14; i++) {
     Serial.printf("Day %d: LED %s\n", i, (rainForecast[i] ? "ON" : "OFF"));
   }
-  #endif
+
 
   // --- Adjust the order of the Shelf LED array to match your wiring ---
   // Required order: 0,1,2,3,4,5,6,13,12,11,10,9,8,7.
@@ -2690,7 +2718,7 @@ void updateRainForecast() {
   for (int i = 0; i < 14; i++) {
     rainForecast[i] = temprainForecast[i];
   }
-
+  #endif
 }
 
 
@@ -3017,7 +3045,9 @@ int currentHour  = timeinfo.tm_hour;
               LEDs[j].fadeToBlackBy(1);
               }
          }
-        if (spotlightsColorSettings == 5 ){ LEDs[i] = CRGB(0, 0, rainForecast[i-SEGMENTS_LEDS]); }// Use rainForecast for the current and next week
+        #if HAS_ONLINEWEATHER
+          if (spotlightsColorSettings == 5 ){ LEDs[i] = CRGB(0, 0, rainForecast[i-SEGMENTS_LEDS]); }// Use rainForecast for the current and next week
+        #endif
         if (spotlightsColorSettings == 6 ){ LEDs[i] = tideColor[(i-SEGMENTS_LEDS)]; } // Use tideColor for the current hour and next 13 hours
     }
     colorWheelPositionTwo = colorWheelPositionTwo - 1; // SPEED OF 2nd COLOR WHEEL
@@ -5482,6 +5512,7 @@ void loadWebPageHandlers() {
     json["dotsOn"] = dotsOn;
     json["endCountDownMillis"] = endCountDownMillis;
     json["fakeclockrunning"] = fakeclockrunning;
+    json["fakeTime"] = fakeTime;
     #if HAS_BUZZER
       JsonArray filesArrayJson = json.createNestedArray("filesArray");
       for (int i = 0; i < 64; i++) { filesArrayJson.add(filesArray[i]); }
@@ -5499,7 +5530,9 @@ void loadWebPageHandlers() {
       json["humidity_outdoor_enable"] = humidity_outdoor_enable;
     #endif
     json["isAsleep"] = isAsleep;
-    json["lightSensorValue"] = lightSensorValue;
+    #if HAS_PHOTOSENSOR
+      json["lightSensorValue"] = lightSensorValue;
+    #endif
     json["lightshowMode"] = lightshowMode;
     json["lightshowSpeed"] = lightshowSpeed;
     json["millis"] = millis();
@@ -5547,7 +5580,9 @@ void loadWebPageHandlers() {
       json["randomSpectrumMode"] = randomSpectrumMode;
     #endif
     json["randomWeekPassed"] = randomWeekPassed;
-    json["readIndex"] = readIndex;
+    #if HAS_PHOTOSENSOR
+      json["readIndex"] = readIndex;
+    #endif
     json["realtimeMode"] = realtimeMode;
     #if HAS_SOUNDDETECTOR
       json["sampling_period_us"] = sampling_period_us; 
@@ -5604,7 +5639,7 @@ void loadWebPageHandlers() {
       json["useAudibleAlarm"] = useAudibleAlarm;
     #endif
     json["useSpotlights"] = useSpotlights;
-    #if HAS_SOUNDDETECTOR
+    #if HAS_BUZZER
       JsonArray validDurations = json.createNestedArray("valid_durations");
       for (unsigned int i = 0; i < sizeof(valid_durations) / sizeof(valid_durations[0]); i++) { validDurations.add(valid_durations[i]); }
       JsonArray validOctaves = json.createNestedArray("valid_octaves");
