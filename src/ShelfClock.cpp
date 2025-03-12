@@ -69,7 +69,7 @@
 #define SPECTRUM_PIXELS 37    // 7 digits = 37 (5 unshared segments for every digit (7) and 2 more on the last from the side)
 #define LED_PIN 16             // led control pin
 #define MILLI_AMPS 2400 
-#define LEDS_PER_SEGMENT  7   // can be 1 to 10 LEDS per segment (7 per instructions)
+#define LEDS_PER_SEGMENT  4   // can be 1 to 10 LEDS per segment (7 per instructions)
 #define LEDS_PER_DIGIT (LEDS_PER_SEGMENT * SEGMENTS_PER_NUMBER)
 #define FAKE_NUM_LEDS (NUMBER_OF_DIGITS * LEDS_PER_DIGIT)
 #define PHOTO_SAMPLES 10      //number of samples to take from the photoresister
@@ -486,11 +486,11 @@ const uint16_t FAKE_LEDs_C_BRTL[SEGMENTS_LEDS] = {seg(0), seg(1), seg(7), seg(2)
 //fake LED layout for spectrum (top-right to bottom-left)
 const uint16_t FAKE_LEDs_C_TRBL[SEGMENTS_LEDS] = {seg(4), seg(5), seg(0), seg(6), seg(3), seg(8), seg(14), seg(15), seg(9), seg(2), seg(1), seg(7), seg(10), seg(16), seg(13), seg(18), seg(24), seg(25), seg(19), seg(12), seg(11), seg(17), seg(20), seg(26), seg(23), seg(28), seg(34), seg(35), seg(29), seg(22), seg(21), seg(27), seg(30), seg(36), seg(33), seg(32), seg(31)};
 //fake LED layout for spectrum (horizontal parts)   
-const uint16_t FAKE_LEDs_C_OUTS[SEGMENTS_LEDS] = {seg(31), seg(39), seg(36), seg(39), seg(34), seg(39), seg(27), seg(39), seg(29), seg(39), seg(28), seg(39), seg(21), seg(39), seg(26), seg(39), seg(24), seg(39), seg(17), seg(39), seg(19), seg(39), seg(18), seg(39), seg(11), seg(39), seg(16), seg(39), seg(14), seg(39), seg(7), seg(39),seg(9), seg(8), seg(1), seg(6), seg(4)};
-const uint16_t FAKE_LEDs_C_OUTS2[SEGMENTS_LEDS] = {seg(1), seg(39), seg(6), seg(39), seg(4), seg(39), seg(7), seg(39), seg(9), seg(39), seg(8), seg(39), seg(11), seg(39), seg(16), seg(39), seg(14), seg(39), seg(17), seg(39), seg(19), seg(39), seg(18), seg(39), seg(21), seg(39), seg(26), seg(39), seg(24), seg(39), seg(27), seg(39),seg(29), seg(28), seg(31), seg(36), seg(34)};
+const uint16_t FAKE_LEDs_C_VERT[SEGMENTS_LEDS] = {seg(17), seg(21), seg(11), seg(27), seg(7), seg(31), seg(1), seg(20), seg(12), seg(22), seg(10), seg(30), seg(2), seg(32), seg(0), seg(19), seg(26), seg(16), seg(29), seg(9), seg(36), seg(6), seg(25), seg(13), seg(23), seg(15), seg(35), seg(33), seg(33), seg(5), seg(18), seg(24),seg(14), seg(28), seg(8), seg(34), seg(4)};
+const uint16_t FAKE_LEDs_C_VERT2[SEGMENTS_LEDS] = {seg(18), seg(14), seg(24), seg(8), seg(28), seg(4), seg(34), seg(13), seg(25), seg(15), seg(23), seg(3), seg(35), seg(5), seg(33), seg(19), seg(16), seg(26), seg(9), seg(29), seg(6), seg(36), seg(12), seg(20), seg(10), seg(22), seg(2), seg(30), seg(0), seg(32), seg(17), seg(11),seg(21), seg(7), seg(27), seg(1), seg(31)};
 //fake LED layout for spectrum (vertical parts)  
-const uint16_t FAKE_LEDs_C_VERT[SEGMENTS_LEDS] = {seg(32), seg(39), seg(33), seg(39), seg(30), seg(39), seg(35), seg(39), seg(39), seg(22), seg(39), seg(23), seg(39), seg(39), seg(20), seg(39), seg(25), seg(39), seg(39), seg(12), seg(39), seg(13), seg(39), seg(39), seg(10), seg(39), seg(15), seg(39), seg(39), seg(2), seg(39), seg(3), seg(39), seg(0), seg(39), seg(5), seg(39)};
-const uint16_t FAKE_LEDs_C_VERT2[SEGMENTS_LEDS] = {seg(0), seg(39), seg(5), seg(39), seg(39), seg(2), seg(39), seg(3), seg(39), seg(39), seg(10), seg(39), seg(15), seg(39), seg(39), seg(12), seg(39), seg(13), seg(39), seg(39), seg(20), seg(39), seg(25), seg(39), seg(39), seg(22), seg(39), seg(23), seg(39), seg(30), seg(39), seg(35), seg(39), seg(32), seg(39), seg(33), seg(39)};
+const uint16_t FAKE_LEDs_C_OUTS[SEGMENTS_LEDS] = {seg(32), seg(33), seg(36), seg(31), seg(34), seg(30), seg(35), seg(29), seg(27), seg(28), seg(22), seg(23), seg(26), seg(21), seg(24), seg(20), seg(25), seg(19), seg(17), seg(18), seg(12), seg(13), seg(16), seg(11), seg(14), seg(10), seg(15), seg(9), seg(7), seg(8), seg(2), seg(3), seg(6), seg(1), seg(4), seg(0), seg(5)};
+const uint16_t FAKE_LEDs_C_OUTS2[SEGMENTS_LEDS] = {seg(0), seg(5), seg(6), seg(1), seg(4), seg(2), seg(3), seg(9), seg(7), seg(8), seg(10), seg(15), seg(16), seg(11), seg(14), seg(12), seg(13), seg(19), seg(17), seg(18), seg(20), seg(25), seg(26), seg(21), seg(24), seg(22), seg(23), seg(29), seg(27), seg(28), seg(30), seg(35), seg(36), seg(31), seg(34), seg(32), seg(33)};
 
 //fake LED layout for fire display  
 const uint16_t FAKE_LEDs_C_FIRE[SEGMENTS_LEDS] = {seg(17), seg(11), seg(21), seg(12), seg(20), seg(19), seg(27), seg(7), seg(22), seg(10), seg(26), seg(16), seg(25), seg(13), seg(18), seg(1), seg(31), seg(2), seg(30), seg(9), seg(29), seg(15), seg(23), seg(14), seg(24), seg(0), seg(32), seg(6), seg(36), seg(3), seg(35), seg(8), seg(28), seg(5), seg(33), seg(4), seg(34)};
