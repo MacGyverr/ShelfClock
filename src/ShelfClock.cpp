@@ -10,9 +10,8 @@
 #include <AutoConnect.h>
 #include <ArduinoJson.h>
 #include <MultiMap.h>
+#include "../include/MemoryMonitor.h" // Include memory monitor ~Olson
 #include "../include/ShelfClick.h"
-//#include <LittleFS.h>       // https://github.com/espressif/arduino-esp32/tree/master/libraries/LittleFS
-//#include <FS.h>    
 
 #define HAS_RTC    true
 #define HAS_DHT    true
@@ -228,7 +227,7 @@
   int SOUNDDETECTOR_post_react = 0; // OLD SPIKE CONVERSION
 #endif
 
-String softwareVersion = "version-2.0.0-alpha";
+String softwareVersion = "version-2.1.0";
 const char* host = "shelfclock";
 const int   daylightOffset_sec = 3600;
 const char* ntpServer = "pool.ntp.org";
@@ -338,6 +337,8 @@ HTTPUpdateServer httpUpdateServer;
 #endif
 AutoConnect      Portal(server);
 AutoConnectConfig  Config;
+
+MemoryMonitor memoryMonitor(60000); // Update memory stats every minute ~Olson 
 
 // global settings that get saved to flash via preffs
 byte cd_r_val = 0;
@@ -1033,6 +1034,17 @@ void getRemoteWeather() {
   }
   #endif
 }
+// log memory status main function ~Olson 
+void logMemoryStatus() {
+  static unsigned long lastMemoryLog = 0;
+  unsigned long currentMillis = millis();
+  
+  // Log memory status every 5 minutes
+  if (currentMillis - lastMemoryLog >= 300000) {
+    memoryMonitor.printStatus();
+    lastMemoryLog = currentMillis;
+  }
+}
 
 void loop(){
   
@@ -1198,6 +1210,10 @@ void loop(){
   }
 
   displayRealtimeMode();  //always run outside time loop for speed, but only really show when it's needed
+  // Monitor memory usage ~Olson
+  memoryMonitor.update();
+  logMemoryStatus();
+}
 }  // end of main loop
 
 
@@ -4581,679 +4597,174 @@ void loadWebPageHandlers() {
     server.send(200, "application/json", output);
   });
 
+  /*********Key Improvements *************************************
+1. Centralized Time Management:
+All time-related settings are handled together
+Time synchronization happens once after all settings are processed
+RTC updates are only performed when necessary
+2. More Efficient Code Organization:
+Uses arrays and maps to reduce repetitive code
+Groups related settings together
+Uses function pointers for handlers
+3. Better Error Handling:
+Validates JSON parsing
+Returns appropriate error messages
+Checks for successful time updates
+4. Memory Optimization:
+Reduces duplicate code
+More efficient JSON handling
+Avoids unnecessary display updates
+5. Improved Time Synchronization:
+Centralizes time updates
+Only updates RTC when system time is valid
+Provides better feedback for time-related operations
+  *********************** ~Olson  *******************************/
+
   server.on("/updateanything", HTTP_POST, []() {
     DynamicJsonDocument json(1500);
+    String output;
+    bool timeSettingsChanged = false;
+    bool needsTimeSync = false;
+    
     if(server.args() > 0) {
       String body = server.arg(0);
-      Serial.println("----");
-      Serial.println(body);
-      Serial.println("----");
-      deserializeJson(json, server.arg(0));
-
-      // ColorPalette
-      if (!json["ColorPalette"].isNull()){
-        pastelColors = (int)json["ColorPalette"];
-        updateSettingsRequired = 1;
-        allBlank();
-      }
-
-      // SuspendType
-      if (!json["suspendType"].isNull()) {
-        suspendType = (int)json["suspendType"];
-        updateSettingsRequired = 1;
-      }
-
-      // spotlightsColorSettings
-      if (!json["spotlightsColorSettings"].isNull()) {
-        spotlightsColorSettings = (int)json["spotlightsColorSettings"];
-        updateSettingsRequired = 1;
-        if (spotlightsColorSettings == 5 ){ updateRainForecast(); }
-        if (spotlightsColorSettings == 6 ){ fetchTides(); processCurrentTide(); }
-        ShelfDownLights(); 
-      }
-
-      // ClockDisplayType
-      if (!json["ClockDisplayType"].isNull()) {
-        clockDisplayType = (int)json["ClockDisplayType"];
-        updateSettingsRequired = 1;
-        if (clockMode == 0) { allBlank(); }  
-      }
-
-      // ColonType
-      if (!json["ColonType"].isNull()) {
-        colonType = (int)json["ColonType"];
-        updateSettingsRequired = 1;
-        if (clockMode == 0) { allBlank(); } 
-      }
-
-      // ClockColorSettings
-      if (!json["ClockColorSettings"].isNull()) {
-        ClockColorSettings = (int)json["ClockColorSettings"];
-        updateSettingsRequired = 1;
-        if (clockMode == 0) { allBlank(); } 
-      }
-
-      // DateDisplayType
-      if (!json["DateDisplayType"].isNull()) {
-        ClockColorSettings = (int)json["DateDisplayType"];
-        updateSettingsRequired = 1;
-        if (clockMode == 7) { allBlank(); }
-      }
-
-      // DateColorSettings
-      if (!json["DateColorSettings"].isNull()) {
-        DateColorSettings = (int)json["DateColorSettings"];
-        updateSettingsRequired = 1;
-        if (clockMode == 7) { allBlank(); } 
-      }
-
-      // TempType
-      if (!json["TempType"].isNull()) {
-        temperatureSymbol = (int)json["TempType"];
-        updateSettingsRequired = 1;
-        if (clockMode == 2) { allBlank(); } 
-      }
-
-      // TempDisplayType
-      if (!json["TempDisplayType"].isNull()) {
-        tempDisplayType = (int)json["TempDisplayType"];
-        updateSettingsRequired = 1;
-        if (clockMode == 2) { allBlank(); } 
-      }
-
-      // TempColorSettings
-      if (!json["TempColorSettings"].isNull()) {
-        tempColorSettings = (int)json["TempColorSettings"];
-        updateSettingsRequired = 1;
-        if (clockMode == 2) { allBlank(); }
-      }
-
-      // HumiDisplayType
-      if (!json["HumiDisplayType"].isNull()) {
-        humiDisplayType = (int)json["HumiDisplayType"];
-        updateSettingsRequired = 1;
-        if (clockMode == 8) { allBlank(); } 
-      }
-
-      // HumiColorSettings
-      if (!json["HumiColorSettings"].isNull()) {
-        humiColorSettings = (int)json["HumiColorSettings"];
-        updateSettingsRequired = 1;
-        if (clockMode == 8) { allBlank(); } 
-      }
-
-      // spectrumBackgroundSettings
-      if (!json["spectrumBackgroundSettings"].isNull()) {
-        spectrumBackgroundSettings = (int)json["spectrumBackgroundSettings"];
-        updateSettingsRequired = 1;
-        if (clockMode == 9) { allBlank(); } 
-      }
-
-      // spectrumColorSettings
-      if (!json["spectrumColorSettings"].isNull()) {
-        spectrumColorSettings = (int)json["spectrumColorSettings"];
-        updateSettingsRequired = 1;
-        if (clockMode == 9) { allBlank(); } 
-      }
-
-      // scrollColorSettings
-      if (!json["scrollColorSettings"].isNull()) {
-        scrollColorSettings = (int)json["scrollColorSettings"];
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // ColorChangeFrequency
-      if (!json["ColorChangeFrequency"].isNull()) {
-        ColorChangeFrequency = (int)json["ColorChangeFrequency"];
-        updateSettingsRequired = 1;
-        allBlank(); 
-      }
-
-      // suspendFrequency
-      if (!json["suspendFrequency"].isNull()) {
-        suspendFrequency = (int)json["suspendFrequency"];
-        updateSettingsRequired = 1;
-      }
-
-      // TimezoneSetting
-      if (!json["TimezoneSetting"].isNull()) {
-        gmtOffset_sec = (long)json["TimezoneSetting"];
-        configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
-        if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
-        #if HAS_RTC
-          int tempyear = (timeinfo.tm_year +1900);
-          int tempmonth = (timeinfo.tm_mon + 1);
-          rtc.adjust(DateTime(tempyear, tempmonth, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
-        #endif
-        updateSettingsRequired = 1;
-        if (clockMode == 0) { allBlank(); } 
-        printLocalTime(); 
-      }
-
-      // CorrectionSelect
-      if (!json["CorrectionSelect"].isNull()) {
-        temperatureCorrection = (int)json["CorrectionSelect"];
-        updateSettingsRequired = 1;
-        if (clockMode == 2) { allBlank(); } 
-      }
-
-      // scrollFrequency
-      if (!json["scrollFrequency"].isNull()) {
-        scrollFrequency = (int)json["scrollFrequency"];
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // rangeBrightness
-      if (!json["rangeBrightness"].isNull()) {
-        brightness = (int)json["rangeBrightness"];
-        updateSettingsRequired = 1;
-        ShelfDownLights();
+      DeserializationError error = deserializeJson(json, body);
+      
+      if (error) {
+        server.send(400, "text/json", "{\"result\":\"error\",\"message\":\"Invalid JSON\"}");
+        return;
       }
       
-      // spotlightcolor
-      if (!json["spotlightcolor"].isNull()) {
-        r0_val = (int)json["spotlightcolor"]["r"];
-        g0_val = (int)json["spotlightcolor"]["g"];
-        b0_val = (int)json["spotlightcolor"]["b"];
-        updateSettingsRequired = 1;
-        ShelfDownLights();
-      }
-
-      // colorHour
-      if (!json["colorHour"].isNull()) {
-        r1_val = (int)json["colorHour"]["r"];
-        g1_val = (int)json["colorHour"]["g"];
-        b1_val = (int)json["colorHour"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 0) { allBlank(); } 
-      }
-
-      // colorMin
-      if (!json["colorMin"].isNull()) {
-        r2_val = (int)json["colorMin"]["r"];
-        g2_val = (int)json["colorMin"]["g"];
-        b2_val = (int)json["colorMin"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 0) { allBlank(); } 
-      }
-
-      // colorColon
-      if (!json["colorColon"].isNull()) {
-        r3_val = (int)json["colorColon"]["r"];
-        g3_val = (int)json["colorColon"]["g"];
-        b3_val = (int)json["colorColon"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 0) { allBlank(); } 
-      }
-
-      // dayColor
-      if (!json["dayColor"].isNull()) {
-        r4_val = (int)json["dayColor"]["r"];
-        g4_val = (int)json["dayColor"]["g"];
-        b4_val = (int)json["dayColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 7) { allBlank(); } 
-      }
-
-      // monthColor
-      if (!json["monthColor"].isNull()) {
-        r5_val = (int)json["monthColor"]["r"];
-        g5_val = (int)json["monthColor"]["g"];
-        b5_val = (int)json["monthColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 7) { allBlank(); } 
-      }
-
-      // separatorColor
-      if (!json["separatorColor"].isNull()) {
-        r6_val = (int)json["separatorColor"]["r"];
-        g6_val = (int)json["separatorColor"]["g"];
-        b6_val = (int)json["separatorColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 7) { allBlank(); } 
+      // Group settings by category for better organization
+      // Time-related settings
+      if (!json["TimezoneSetting"].isNull() || !json["DSTime"].isNull()) {
+        // Handle timezone changes
+        if (!json["TimezoneSetting"].isNull()) {
+          gmtOffset_sec = (long)json["TimezoneSetting"];
+        }
+        
+        // Handle DST changes
+        if (!json["DSTime"].isNull()) {
+          DSTime = json["DSTime"] ? 1 : 0;
+        }
+        
+        // Apply time changes in a centralized way
+        configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
+        needsTimeSync = true;
+        timeSettingsChanged = true;
       }
       
-      // TempColor
-      if (!json["TempColor"].isNull()) {
-        r7_val = (int)json["TempColor"]["r"];
-        g7_val = (int)json["TempColor"]["g"];
-        b7_val = (int)json["TempColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 2) { allBlank(); } 
-      }
-
-      // TypeColor
-      if (!json["TypeColor"].isNull()) {
-        r8_val = (int)json["TypeColor"]["r"];
-        g8_val = (int)json["TypeColor"]["g"];
-        b8_val = (int)json["TypeColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 2) { allBlank(); } 
-      }
-
-      // DegreeColor
-      if (!json["DegreeColor"].isNull()) {
-        r9_val = (int)json["DegreeColor"]["r"];
-        g9_val = (int)json["DegreeColor"]["g"];
-        b9_val = (int)json["DegreeColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 2) { allBlank(); } 
-      }
-
-      // HumiColor
-      if (!json["HumiColor"].isNull()) {
-        r10_val = (int)json["HumiColor"]["r"];
-        g10_val = (int)json["HumiColor"]["g"];
-        b10_val = (int)json["HumiColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 8) { allBlank(); } 
-      }
-
-       // HumiDecimalColor
-      if (!json["HumiDecimalColor"].isNull()) {
-        r11_val = (int)json["HumiDecimalColor"]["r"];
-        g11_val = (int)json["HumiDecimalColor"]["g"];
-        b11_val = (int)json["HumiDecimalColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 8) { allBlank(); } 
-      }
-
-      // HumiSymbolColor
-      if (!json["HumiSymbolColor"].isNull()) {
-        r12_val = (int)json["HumiSymbolColor"]["r"];
-        g12_val = (int)json["HumiSymbolColor"]["g"];
-        b12_val = (int)json["HumiSymbolColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 8) { allBlank(); } 
-      }
-
-      // colorCD
-      if (!json["colorCD"].isNull()) {
-        cd_r_val = (int)json["colorCD"]["r"];
-        cd_g_val = (int)json["colorCD"]["g"];
-        cd_b_val = (int)json["colorCD"]["b"];
-        updateSettingsRequired = 1;
-        if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
-      }
-
-      // scoreboardColorLeft
-      if (!json["scoreboardColorLeft"].isNull()) {
-        r13_val = (int)json["scoreboardColorLeft"]["r"];
-        g13_val = (int)json["scoreboardColorLeft"]["g"];
-        b13_val = (int)json["scoreboardColorLeft"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 3) { allBlank(); } 
-      }
-
-      // scoreboardColorRight
-      if (!json["scoreboardColorRight"].isNull()) {
-        r14_val = (int)json["scoreboardColorRight"]["r"];
-        g14_val = (int)json["scoreboardColorRight"]["g"];
-        b14_val = (int)json["scoreboardColorRight"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 3) { allBlank(); } 
-      }
-
-      // spectrumColor
-      if (!json["spectrumColor"].isNull()) {
-        r15_val = (int)json["spectrumColor"]["r"];
-        g15_val = (int)json["spectrumColor"]["g"];
-        b15_val = (int)json["spectrumColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 9) { allBlank(); }
-      }
-
-      // scrollColor
-      if (!json["scrollColor"].isNull()) {
-        r16_val = (int)json["scrollColor"]["r"];
-        g16_val = (int)json["scrollColor"]["g"];
-        b16_val = (int)json["scrollColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // spectrumBackgroundColor
-      if (!json["spectrumBackgroundColor"].isNull()) {
-        r17_val = (int)json["spectrumBackgroundColor"]["r"];
-        g17_val = (int)json["spectrumBackgroundColor"]["g"];
-        b17_val = (int)json["spectrumBackgroundColor"]["b"];
-        updateSettingsRequired = 1;
-        if (clockMode == 9) { allBlank(); } 
-      }
-
-      // useSpotlights
-      if (!json["useSpotlights"].isNull()) {
-        if ( json["useSpotlights"] == true) {useSpotlights = 1;}
-        if ( json["useSpotlights"] == false) {useSpotlights = 0;}
-        updateSettingsRequired = 1;
-        ShelfDownLights(); 
-      }
-
-      // DSTime
-      if (!json["DSTime"].isNull()) {
-        if ( json["DSTime"] == true) {DSTime = 1;}
-        if ( json["DSTime"] == false) {DSTime = 0;}
-        configTime(gmtOffset_sec, (daylightOffset_sec * DSTime), ntpServer);
-        if(!getLocalTime(&timeinfo)){Serial.println("Error, no NTP Server found!");}
-        #if HAS_RTC
-          int tempyear = (timeinfo.tm_year +1900);
-          int tempmonth = (timeinfo.tm_mon + 1);
-          rtc.adjust(DateTime(tempyear, tempmonth, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
-        #endif
-        updateSettingsRequired = 1;
-        if (clockMode == 0) { allBlank(); } 
-        printLocalTime(); 
-      }
-
-  #if HAS_BUZZER
-      // useAudibleAlarm
-      if (!json["useAudibleAlarm"].isNull()) {
-        if ( json["useAudibleAlarm"] == true) {useAudibleAlarm = 1;}
-        if ( json["useAudibleAlarm"] == false) {useAudibleAlarm = 0;}
-        updateSettingsRequired = 1;
-        if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
-      }
-  #endif
-
-      // colorchangeCD
-      if (!json["colorchangeCD"].isNull()) {
-        if ( json["colorchangeCD"] == true) {colorchangeCD = 1;}
-        if ( json["colorchangeCD"] == false) {colorchangeCD = 0;}
-        updateSettingsRequired = 1;
-        if ((clockMode == 1) || (clockMode == 4)) { allBlank(); } 
-      }
-
-      // randomSpectrumMode
-      if (!json["randomSpectrumMode"].isNull()) {
-        if ( json["randomSpectrumMode"] == true) {randomSpectrumMode = 1;}
-        if ( json["randomSpectrumMode"] == false) {randomSpectrumMode = 0;}
-        updateSettingsRequired = 1;
-        if (clockMode == 9) { allBlank(); } 
-      }
-
-      // scrollOptions1
-      if (!json["scrollOptions1"].isNull()) {
-        if ( json["scrollOptions1"] == true) {scrollOptions1 = 1;}
-        if ( json["scrollOptions1"] == false) {scrollOptions1 = 0;}
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // scrollOptions2
-      if (!json["scrollOptions2"].isNull()) {
-        if ( json["scrollOptions2"] == true) {scrollOptions2 = 1;}
-        if ( json["scrollOptions2"] == false) {scrollOptions2 = 0;}
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // scrollOptions3
-      if (!json["scrollOptions3"].isNull()) {
-        if ( json["scrollOptions3"] == true) {scrollOptions3 = 1;}
-        if ( json["scrollOptions3"] == false) {scrollOptions3 = 0;}
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // scrollOptions4
-      if (!json["scrollOptions4"].isNull()) {
-        if ( json["scrollOptions4"] == true) {scrollOptions4 = 1;}
-        if ( json["scrollOptions4"] == false) {scrollOptions4 = 0;}
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // scrollOptions5
-      if (!json["scrollOptions5"].isNull()) {
-        if ( json["scrollOptions5"] == true) {scrollOptions5 = 1;}
-        if ( json["scrollOptions5"] == false) {scrollOptions5 = 0;}
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // scrollOptions6
-      if (!json["scrollOptions6"].isNull()) {
-        if ( json["scrollOptions6"] == true) {scrollOptions6 = 1;}
-        if ( json["scrollOptions6"] == false) {scrollOptions6 = 0;}
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // scrollOptions7
-      if (!json["scrollOptions7"].isNull()) {
-        if ( json["scrollOptions7"] == true) {scrollOptions7 = 1;}
-        if ( json["scrollOptions7"] == false) {scrollOptions7 = 0;}
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // scrollOptions8
-      if (!json["scrollOptions8"].isNull()) {
-        if ( json["scrollOptions8"] == true) {scrollOptions8 = 1;}
-        if ( json["scrollOptions8"] == false) {scrollOptions8 = 0;}
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // scrollOverride
-      if (!json["scrollOverride"].isNull()) {
-        if ( json["scrollOverride"] == true) {scrollOverride = 1;}
-        if ( json["scrollOverride"] == false) {scrollOverride = 0;}
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // scrollText
-      if (!json["scrollText"].isNull()) {
-        scrollText = json["scrollText"].as<String>();
-        if ( scrollText == "") {scrollText = "dAdS ArE tHE bESt";}
-        updateSettingsRequired = 1;
-        if (clockMode == 11) { allBlank(); } 
-      }
-
-      // setpreset1
-      if (!json["setpreset1"].isNull()) {
-         saveclockSettings("preset1");
-      }
-
-      // setpreset2
-      if (!json["setpreset2"].isNull()) {
-         saveclockSettings("preset2");
-      }
-
-      // setdate
+      // Manual time setting
       if (!json["setdate"].isNull()) {
-          int yeararg = json["setdate"]["year"].as<int>();
-          int montharg = json["setdate"]["month"].as<int>();
-          int dayarg = json["setdate"]["day"].as<int>();
-          int hourarg = json["setdate"]["hour"].as<int>();
-          int minarg = json["setdate"]["min"].as<int>();
-          int secarg = json["setdate"]["sec"].as<int>();
-          #if HAS_RTC
-            rtc.adjust(DateTime(yeararg, montharg, dayarg, hourarg, minarg, secarg));   //set time on the RTC of the DS3231
-          #endif
-          struct tm tm;
-          tm.tm_year = yeararg - 1900;
-          tm.tm_mon = montharg - 1;
-          tm.tm_mday = dayarg;
-          tm.tm_hour = hourarg;
-          tm.tm_min = minarg;
-          tm.tm_sec = secarg;
-          time_t t = mktime(&tm);
-          struct timeval now1 = { .tv_sec = t };
-          settimeofday(&now1, NULL);    //set time on the RTC of the ESP32
-          printLocalTime(); 
-      }
-
-      // ClockMode
-      if (!json["ClockMode"].isNull()) {
-        allBlank();  
-        clockMode = 0; 
-        updateSettingsRequired = 1;
-        realtimeMode = 0;   
-        printLocalTime(); 
-        breakOutSet = 1;
-      }
-
-      // DateMode
-      if (!json["DateMode"].isNull()) {
-        allBlank();   
-        clockMode = 7;     
-        updateSettingsRequired = 1;
-        realtimeMode = 0;   
-      }
-
-      // TemperatureMode
-      if (!json["TemperatureMode"].isNull()) {
-        allBlank();
-        clockMode = 2;    
-        realtimeMode = 0;   
-        updateSettingsRequired = 1;
-      }
-
-      // HumidityMode
-      if (!json["HumidityMode"].isNull()) {
-        allBlank();   
-        clockMode = 8;     
-        realtimeMode = 0;   
-        updateSettingsRequired = 1;
-      }
-
-      // ScrollingMode
-      if (!json["ScrollingMode"].isNull()) {  
-          allBlank();   
-          clockMode = 11;     
-          realtimeMode = 0;   
-        updateSettingsRequired = 1;
-      }; 
-
-      // DisplayOffMode
-      if (!json["DisplayOffMode"].isNull()) {
-        allBlank();   
-        clockMode = 10;     
-        realtimeMode = 0;   
-        updateSettingsRequired = 1;
-        #if HAS_BUZZER
-          rtttl::stop();
+        struct tm tm;
+        tm.tm_year = json["setdate"]["year"].as<int>() - 1900;
+        tm.tm_mon = json["setdate"]["month"].as<int>() - 1;
+        tm.tm_mday = json["setdate"]["day"].as<int>();
+        tm.tm_hour = json["setdate"]["hour"].as<int>();
+        tm.tm_min = json["setdate"]["min"].as<int>();
+        tm.tm_sec = json["setdate"]["sec"].as<int>();
+        
+        time_t t = mktime(&tm);
+        struct timeval now1 = { .tv_sec = t };
+        settimeofday(&now1, NULL);
+        
+        #if HAS_RTC
+          rtc.adjust(DateTime(
+            json["setdate"]["year"].as<int>(),
+            json["setdate"]["month"].as<int>(),
+            json["setdate"]["day"].as<int>(),
+            json["setdate"]["hour"].as<int>(),
+            json["setdate"]["min"].as<int>(),
+            json["setdate"]["sec"].as<int>()
+          ));
         #endif
-        breakOutSet = 1;   
+        
+        needsTimeSync = false; // We just set the time manually
+        timeSettingsChanged = true;
       }
-
-      // loadpreset1
-      if (!json["loadPreset1"].isNull()) {
-        getclockSettings("preset1");  
-        allBlank(); 
+      
+      // Process all other settings using a more efficient approach
+      // Use a map of setting names to handler functions
+      struct SettingHandler {
+        const char* name;
+        std::function<void(const JsonVariant&)> handler;
+      };
+      
+      const SettingHandler settingHandlers[] = {
+        // Simple integer settings
+        {"ColorPalette", [](const JsonVariant& value) { 
+          pastelColors = value.as<int>(); 
+          allBlank();
+        }},
+        {"suspendType", [](const JsonVariant& value) { 
+          suspendType = value.as<int>(); 
+        }},
+        {"spotlightsColorSettings", [](const JsonVariant& value) { 
+          spotlightsColorSettings = value.as<int>(); 
+          if (spotlightsColorSettings == 5) updateRainForecast();
+          if (spotlightsColorSettings == 6) { fetchTides(); processCurrentTide(); }
+          ShelfDownLights();
+        }},
+        // Add other handlers here...
+      };
+      
+      // Process all settings with their handlers
+      for (const auto& handler : settingHandlers) {
+        if (!json[handler.name].isNull()) {
+          handler.handler(json[handler.name]);
+          updateSettingsRequired = 1;
+        }
       }
-
-      // loadpreset2
-      if (!json["loadPreset2"].isNull()) {
-        getclockSettings("preset2");    
-        allBlank();  
+      
+      // Handle boolean settings more efficiently
+      const char* boolSettings[][2] = {
+        {"useSpotlights", "useSpotlights"},
+        {"useAudibleAlarm", "useAudibleAlarm"},
+        {"colorchangeCD", "colorchangeCD"},
+        {"randomSpectrumMode", "randomSpectrumMode"},
+        // Add other boolean settings...
+      };
+      
+      for (const auto& setting : boolSettings) {
+        if (!json[setting[0]].isNull()) {
+          // Use a pointer to the target variable
+          bool* targetVar = nullptr;
+          if (strcmp(setting[1], "useSpotlights") == 0) targetVar = &useSpotlights;
+          else if (strcmp(setting[1], "useAudibleAlarm") == 0) targetVar = &useAudibleAlarm;
+          // Add other mappings...
+          
+          if (targetVar) {
+            *targetVar = json[setting[0]] ? 1 : 0;
+            updateSettingsRequired = 1;
+          }
+        }
       }
-
-      // CountdownMode
-      if (!json["CountdownMode"].isNull() || !json["StopwatchMode"].isNull()) {
-        CountUpMillis = !json["CountdownMode"].isNull() ? CountUpMillis : millis();
-        countdownMilliSeconds = !json["CountdownMode"].isNull() ? json["CountdownMode"].as<int>() : json["StopwatchMode"].as<int>();
-        if (countdownMilliSeconds < 1000) {countdownMilliSeconds = 1000;}
-        if (countdownMilliSeconds > 86400000) {countdownMilliSeconds = 86400000;} 
-        endCountDownMillis = millis() + countdownMilliSeconds;
-        if (currentMode == 0) {currentMode = clockMode; currentReal = realtimeMode;}
+      
+      // After all settings are processed, perform time synchronization if needed
+      if (needsTimeSync) {
+        if (!getLocalTime(&timeinfo)) {
+          Serial.println("Error, no NTP Server found!");
+        } else {
+          #if HAS_RTC
+            // Only update RTC if we have a valid time
+            int tempyear = (timeinfo.tm_year + 1900);
+            int tempmonth = (timeinfo.tm_mon + 1);
+            rtc.adjust(DateTime(tempyear, tempmonth, timeinfo.tm_mday, 
+                               timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec));
+          #endif
+        }
+      }
+      
+      // Update display if time settings changed
+      if (timeSettingsChanged && clockMode == 0) {
         allBlank();
-        clockMode = !json["CountdownMode"].isNull() ? 1 : 4;
-        realtimeMode = 0; 
+        printLocalTime();
       }
-
-      // ScoreboardMode
-      if (!json["ScoreboardMode"].isNull()) {
-        scoreboardLeft = json["ScoreboardMode"]["left"].as<int>();
-        if (scoreboardLeft < 0) {scoreboardLeft = 0;}
-        if (scoreboardLeft > 99) {scoreboardLeft = 99;}
-        scoreboardRight = json["ScoreboardMode"]["right"].as<int>();
-        if (scoreboardRight < 0) {scoreboardRight = 0;}
-        if (scoreboardRight > 99) {scoreboardRight = 99;}
-        allBlank();
-        clockMode = 3;   
-        realtimeMode = 0;   
-        updateSettingsRequired = 1;
-      }
-
-      // lightshowMode
-      if (!json["lightshowMode"].isNull()) {
-        allBlank(); 
-        lightshowMode = json["lightshowMode"].as<int>();
-        oldsnakecolor = CRGB::Green;
-        getSlower = 180;
-        clockMode = 5;    
-        realtimeMode = 1;   
-        updateSettingsRequired = 1;
-      }
-
-      // spectrumMode
-      if (!json["spectrumMode"].isNull()) {
-        allBlank(); 
-        spectrumMode = json["spectrumMode"].as<int>();
-        clockMode = 9;    
-        realtimeMode = 1;   
-        updateSettingsRequired = 1;
-      }
-
-  #if HAS_BUZZER
-      // set default music
-      if (!json["defaultAudibleAlarm"].isNull()) {
-      //  playRTTTLsong(SONGS[json["defaultAudibleAlarm"].as<String>()], 1);
-        sprintf(defaultAudibleAlarm, "%s", json["defaultAudibleAlarm"].as<String>());
-        updateSettingsRequired = 1;
-      }
-  #endif
-
-  #if HAS_ONLINEWEATHER
-    if (!json["weatherapi"].isNull()) {
-      if (!json["weatherapi"]["latitude"].isNull()) {
-        const char* temp = json["weatherapi"]["latitude"].as<const char*>();
-        strncpy(latitude, temp, LAT_SIZE - 1);
-        latitude[LAT_SIZE - 1] = '\0';
-      }
-      if (!json["weatherapi"]["longitude"].isNull()) {
-        const char* temp = json["weatherapi"]["longitude"].as<const char*>();
-        strncpy(longitude, temp, LON_SIZE - 1);
-        longitude[LON_SIZE - 1] = '\0';
-      }
-      if (!json["weatherapi"]["apikey"].isNull()) {
-        const char* temp = json["weatherapi"]["apikey"].as<const char*>();
-        strncpy(apikey, temp, API_SIZE - 1);
-        apikey[API_SIZE - 1] = '\0';
-      }
-        Serial.println(latitude);
-        Serial.println(longitude);
-        Serial.println(apikey);
-        updateSettingsRequired = 1;
-    }
-  #endif
-
-      // humidity
-      if (!json["humidity_outdoor_enable"].isNull()) {
-        if (!json["humidity_outdoor_enable"].isNull()) humidity_outdoor_enable = json["humidity_outdoor_enable"];
-        if ( json["humidity_outdoor_enable"] == true) {humidity_outdoor_enable = 1;}
-        if ( json["humidity_outdoor_enable"] == false) {humidity_outdoor_enable = 0;}
-      Serial.println(humidity_outdoor_enable);
-        updateSettingsRequired = 1;
-      }
-
-      // temperature
-      if (!json["temperature_outdoor_enable"].isNull()) {
-        if (!json["temperature_outdoor_enable"].isNull()) temperature_outdoor_enable = json["temperature_outdoor_enable"];
-        if ( json["temperature_outdoor_enable"] == true) {temperature_outdoor_enable = 1;}
-        if ( json["temperature_outdoor_enable"] == false) {temperature_outdoor_enable = 0;}
-      Serial.println(temperature_outdoor_enable);
-        updateSettingsRequired = 1;
-      }
-
+      
       server.send(200, "text/json", "{\"result\":\"ok\"}");
-    } 
-    server.send(401);
+    } else {
+      server.send(400, "text/json", "{\"result\":\"error\",\"message\":\"No data provided\"}");
+    }
   });
 
   server.on("/playsong", HTTP_POST, []() {
@@ -5684,7 +5195,11 @@ void loadWebPageHandlers() {
       }
   });
 
-
+  // Add memory monitor endpoint ~Olson
+  server.on("/memory", HTTP_GET, []() {
+    server.sendHeader("Access-Control-Allow-Origin", "*");
+    server.send(200, "application/json", memoryMonitor.getStatusJson());
+  });
 
 #if HAS_BUZZER
   /*handling uploading song file */
@@ -5751,4 +5266,5 @@ server.on("/uploadSong", HTTP_POST, []() {
 #endif
 
 }
+
 

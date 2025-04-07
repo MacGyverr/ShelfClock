@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ShelfClock Memory Monitor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 20px; 
+      background-color: #f0f0f0;
+      color: #333;
+    }
+    .card { 
+      background: #fff; 
+      border-radius: 8px; 
+      padding: 20px; 
+      margin-bottom: 20px; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .warning { 
+      color: #d9534f; 
+      font-weight: bold;
+    }
+    .good { 
+      color: #5cb85c; 
+      font-weight: bold;
+    }
+    .chart-container { 
+      height: 300px; 
+      margin-top: 20px; 
+    }
+    h1 { 
+      color: #2c3e50; 
+      margin-bottom: 20px;
+    }
+    h2 {
+      color: #3498db;
+      margin-top: 0;
+    }
+    .metric { 
+      margin-bottom: 12px; 
+      font-size: 16px;
+    }
+    .metric-label { 
+      font-weight: bold; 
+      display: inline-block; 
+      width: 200px; 
+    }
+    .refresh-btn { 
+      background: #3498db; 
+      color: white; 
+      border: none; 
+      padding: 10px 20px; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      font-size: 16px;
+      transition: background 0.3s;
+    }
+    .refresh-btn:hover { 
+      background: #2980b9; 
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .auto-refresh {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+    }
+    .auto-refresh input {
+      margin-right: 5px;
+    }
+    .nav-button {
+      background: #34495e;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      text-decoration: none;
+      margin-left: 10px;
+      font-size: 14px;
+    }
+    .last-update {
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>ShelfClock Memory Monitor</h1>
+    <div>
+      <a href="/" class="nav-button">Home</a>
+      <a href="/debug" class="nav-button">Debug</a>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Current Memory Status</h2>
+    <div class="metric">
+      <span class="metric-label">Total Heap:</span> <span id="totalHeap">-</span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Free Heap:</span> <span id="freeHeap">-</span>
+      (<span id="freeHeapPercent">-</span>%)
+    </div>
+    <div class="metric">
+      <span class="metric-label">Minimum Free Heap:</span> <span id="minFreeHeap">-</span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Max Allocatable Block:</span> <span id="maxAllocHeap">-</span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Heap Fragmentation:</span> <span id="fragmentation">-</span>%
+    </div>
+    <div id="alerts" style="margin: 15px 0;"></div>
+    <div class="auto-refresh">
+      <input type="checkbox" id="autoRefresh" checked>
+      <label for="autoRefresh">Auto-refresh every 30 seconds</label>
+    </div>
+    <button class="refresh-btn" onclick="fetchMemoryData()">Refresh Now</button>
+    <div class="last-update">Last updated: <span id="lastUpdate">Never</span></div>
+  </div>
+  
+  <div class="card">
+    <h2>Memory History</h2>
+    <div class="chart-container">
+      <canvas id="memoryChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Memory Usage Tips</h2>
+    <ul>
+      <li><strong>High fragmentation</strong> occurs when memory is allocated and freed in patterns that leave small, unusable gaps.</li>
+      <li>If fragmentation is high, consider implementing a memory defragmentation routine or restarting the device.</li>
+      <li>Low free memory may indicate memory leaks in the application. ~Olson guesses number 1 reason usally</li>
+      <li>The ESP32 has approximately 320KB of RAM available for applications.</li>
+      <li>Regular monitoring helps identify memory issues before they cause crashes of course.</li>
+      <li>~Olson</li>
+    </ul>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    let memoryChart;
+    let autoRefreshInterval;
+    
+    function formatBytes(bytes, decimals = 2) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const dm = decimals < 0 ? 0 : decimals;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+    
+    function fetchMemoryData() {
+      fetch('/memory')
+        .then(response => response.json())
+        .then(data => {
+          // Update metrics
+          document.getElementById('totalHeap').textContent = formatBytes(data.totalHeap);
+          document.getElementById('freeHeap').textContent = formatBytes(data.freeHeap);
+          document.getElementById('freeHeapPercent').textContent = 
+            ((data.freeHeap / data.totalHeap) * 100).toFixed(1);
+          document.getElementById('minFreeHeap').textContent = formatBytes(data.minFreeHeap);
+          document.getElementById('maxAllocHeap').textContent = formatBytes(data.maxAllocHeap);
+          document.getElementById('fragmentation').textContent = data.fragmentation;
+          
+          // Show alerts
+          let alertsHtml = '';
+          if (data.lowMemory) {
+            alertsHtml += '<div class="warning">⚠️ WARNING: Low memory available!</div>';
+          }
+          if (data.highFragmentation) {
+            alertsHtml += '<div class="warning">⚠️ WARNING: High heap fragmentation!</div>';
+          }
+          if (!data.lowMemory && !data.highFragmentation) {
+            alertsHtml = '<div class="good">✅ Memory status is good</div>';
+          }
+          document.getElementById('alerts').innerHTML = alertsHtml;
+          
+          // Update last update time
+          const now = new Date();
+          document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+          
+          // Update chart
+          updateChart(data);
+        })
+        .catch(error => {
+          console.error('Error fetching memory data:', error);
+          document.getElementById('alerts').innerHTML = 
+            '<div class="warning">⚠️ Failed to fetch memory data. Device may be offline.</div>';
+        });
+    }
+    
+    function updateChart(data) {
+      const ctx = document.getElementById('memoryChart').getContext('2d');
+      
+      // Create labels (last 24 data points)
+      const labels = Array.from({ length: data.freeHeapHistory.length }, (_, i) => `Point ${i + 1}`);
+      
+      // Filter out zero values from history (not yet populated)
+      const validFreeHeapHistory = data.freeHeapHistory.filter(val => val > 0);
+      const validFragHistory = data.fragHistory.filter(val => val > 0);
+      
+      // If chart already exists, update it
+      if (memoryChart) {
+        memoryChart.data.labels = labels.slice(0, validFreeHeapHistory.length);
+        memoryChart.data.datasets[0].data = validFreeHeapHistory;
+        memoryChart.data.datasets[1].data = validFragHistory;
+        memoryChart.update();
+        return;
+      }
+      
+      // Create new chart, not my best skill set! ~Olson
+      memoryChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels.slice(0, validFreeHeapHistory.length),
+          datasets: [
+            {
+              label: 'Free Heap',
+              data: validFreeHeapHistory,
+              borderColor: 'rgb(75, 192, 192)',
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              tension: 0.1,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Fragmentation %',
+              data: validFragHistory,
+              borderColor: 'rgb(255, 99, 132)',
+              backgroundColor: 'rgba(255, 99, 132, 0.2)',
+              tension: 0.1,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Free Heap (bytes)'
+              },
+              ticks: {
+                callback: function(value) {
+                  return formatBytes(value, 0);
+                }
+              }
+            },
+            y1: {
+              beginAtZero: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: 'Fragmentation (%)'
+              },
+              min: 0,
+              max: 100,
+              ticks: {
+                callback: function(value) {
+                  return value + '%';
+                }
+              },
+              grid: {
+                drawOnChartArea: false
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.dataset.label || '';
+                  const value = context.raw;
+                  if (label === 'Free Heap') {
+                    return label + ': ' + formatBytes(value);
+                  } else {
+                    return label + ': ' + value + '%';
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Toggle auto-refresh
+    document.getElementById('autoRefresh').addEventListener('change', function(e) {
+      if (e.target.checked) {
+        autoRefreshInterval = setInterval(fetchMemoryData, 30000);
+      } else {
+        clearInterval(autoRefreshInterval);
+      }
+    });
+    
+    // Initial data fetch
+    fetchMemoryData();
+    
+    // Set up auto-refresh
+    autoRefreshInterval = setInterval(fetchMemoryData, 30000);
+  </script>
+</body>
+</html>

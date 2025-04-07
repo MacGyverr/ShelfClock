@@ -1,0 +1,53 @@
+{
+	"nodes":[
+		{"id":"func3","type":"text","text":"System Functions\n- Web Handlers\n- Settings Management\n- File Operations\n- Scheduling\n- Memory Monitoring","x":-560,"y":215,"width":200,"height":235,"color":"5"},
+		{"id":"func1","type":"text","text":"Display Functions\n- Time/Date Modes\n- Temperature/Humidity\n- Countdown/Stopwatch\n- Scoreboard","x":-560,"y":485,"width":200,"height":270,"color":"5"},
+		{"id":"func2","type":"text","text":"Visual Effects\n- Light Shows\n- Matrix Effects\n- Rainbow/Fire\n- Music Visualization","x":-560,"y":790,"width":200,"height":220,"color":"5"},
+		{"id":"func4","type":"text","text":"Sensor Functions\n- Audio Processing\n- Weather Updates\n- Temperature/Humidity\n- Light Sensing","x":-560,"y":1050,"width":200,"height":280,"color":"5"},
+		{"id":"build1","type":"text","text":"CMakeLists.txt\nBuild Configuration","x":-860,"y":-80,"width":200,"height":100,"color":"3"},
+		{"id":"core1","type":"text","text":"ShelfClock.cpp\nMain Application","x":-560,"y":80,"width":200,"height":75,"color":"4"},
+		{"id":"data1","type":"text","text":"Web Interface\n/data/\n- HTML/CSS/JS\n- Settings Files\n- Scheduler Config","x":370,"y":233,"width":250,"height":200,"color":"6"},
+		{"id":"web2","type":"text","text":"Static Assets\n- CSS Styles\n- JavaScript\n- Favicon","x":405,"y":485,"width":180,"height":150,"color":"6"},
+		{"id":"config1","type":"text","text":"Configuration\n- Settings/\n- Scheduler/\n- Songs/","x":620,"y":485,"width":180,"height":150,"color":"6"},
+		{"id":"web1","type":"text","text":"Web Pages\n- index.html\n- scheduler.html\n- settings.html\n- debug.html\n- memory.html","x":170,"y":485,"width":200,"height":210,"color":"6"},
+		{"id":"header1","type":"text","text":"ShelfClick.h\nFunction Declarations\nWeatherAPI Structure","x":-380,"y":-80,"width":320,"height":100,"color":"3"},
+		{"id":"header2","type":"text","text":"MemoryMonitor.h\nMemory Tracking System","x":170,"y":-80,"width":220,"height":100,"color":"3"}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"core1","fromSide":"top","toNode":"header1","toSide":"left"},
+		{"id":"e2","fromNode":"core1","fromSide":"left","toNode":"build1","toSide":"right"},
+		{"id":"e3","fromNode":"core1","fromSide":"bottom","toNode":"func1","toSide":"top"},
+		{"id":"e4","fromNode":"core1","fromSide":"bottom","toNode":"func2","toSide":"top"},
+		{"id":"e5","fromNode":"core1","fromSide":"bottom","toNode":"func3","toSide":"top"},
+		{"id":"e6","fromNode":"core1","fromSide":"bottom","toNode":"func4","toSide":"top"},
+		{"id":"e7","fromNode":"core1","fromSide":"right","toNode":"data1","toSide":"top"},
+		{"id":"e8","fromNode":"data1","fromSide":"bottom","toNode":"web1","toSide":"top"},
+		{"id":"e9","fromNode":"data1","fromSide":"bottom","toNode":"web2","toSide":"top"},
+		{"id":"e10","fromNode":"data1","fromSide":"bottom","toNode":"config1","toSide":"top"},
+		{"id":"e11","fromNode":"func3","fromSide":"right","toNode":"data1","toSide":"left"},
+		{"id":"e12","fromNode":"header1","fromSide":"bottom","toNode":"func1","toSide":"right"},
+		{"id":"e13","fromNode":"header1","fromSide":"bottom","toNode":"func2","toSide":"right"},
+		{"id":"e14","fromNode":"header1","fromSide":"bottom","toNode":"func3","toSide":"right"},
+		{"id":"e15","fromNode":"header1","fromSide":"bottom","toNode":"func4","toSide":"right"},
+		{"id":"e16","fromNode":"core1","fromSide":"right","toNode":"header2","toSide":"left"},
+		{"id":"e17","fromNode":"header2","fromSide":"bottom","toNode":"func3","toSide":"right"},
+		{"id":"e18","fromNode":"web1","fromSide":"left","toNode":"header2","toSide":"bottom"}
+	],
+	"groups":[
+		{
+			"id":"g1",
+			"title":"Core Components",
+			"nodeIds":["core1","header1","header2","build1"]
+		},
+		{
+			"id":"g2",
+			"title":"Functional Modules",
+			"nodeIds":["func1","func2","func3","func4"]
+		},
+		{
+			"id":"g3",
+			"title":"Web & Data",
+			"nodeIds":["data1","web1","web2","config1"]
+		}
+	]
+}
